@@ -1,0 +1,6 @@
+bin/
+pb_data/
+web/game.wasm
+web/wasm_exec.js
+*.test
+.DS_Store

@@ -1,0 +1,91 @@
+// Bridge between the Go game (WASM) and the browser: storage, PocketBase auth,
+// and an offline-tolerant queue for run/label events. The game only ever calls
+// window.badMartians.{load,save,emit}.
+(() => {
+  const API = location.origin;
+  const LS = {
+    get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+    del(k) { try { localStorage.removeItem(k); } catch {} },
+  };
+
+  let auth = null;
+  try { auth = JSON.parse(LS.get('bm.auth') || 'null'); } catch {}
+  let queue = [];
+  try { queue = JSON.parse(LS.get('bm.queue') || '[]'); } catch {}
+  const saveQueue = () => LS.set('bm.queue', JSON.stringify(queue.slice(-500)));
+
+  async function pb(path, opts = {}) {
+    const headers = { 'Content-Type': 'application/json' };
+    if (auth && auth.token) headers.Authorization = auth.token;
+    const res = await fetch(API + path, { ...opts, headers });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) { const e = new Error(body.message || res.statusText); e.status = res.status; e.body = body; throw e; }
+    return body;
+  }
+
+  const toRecord = (ev, p) => {
+    if (ev === 'run') return ['bm_runs', { level: p.level, won: p.won, stars: p.stars, time: p.time, samples: p.samples, cost: p.cost, design: p.design }];
+    if (ev === 'label') return ['bm_labels', { level: p.level, segment: p.segment, x0: p.x0, x1: p.x1, class: p.class, gold: p.gold, correct: p.correct }];
+    return null;
+  };
+
+  let flushing = false;
+  async function flush() {
+    if (flushing || !auth || !queue.length) return;
+    flushing = true;
+    try {
+      while (queue.length) {
+        const [col, data] = queue[0];
+        try {
+          await pb(`/api/collections/${col}/records`, { method: 'POST', body: JSON.stringify({ ...data, user: auth.record.id }) });
+        } catch (e) {
+          if (e.status === 400) { /* invalid or duplicate: drop it */ }
+          else throw e; // offline / auth expired: keep for later
+        }
+        queue.shift(); saveQueue();
+      }
+    } catch (e) {
+      if (e.status === 401 || e.status === 403) signOut();
+    } finally { flushing = false; }
+  }
+
+  // ---- account UI ----
+  const $ = (id) => document.getElementById(id);
+  const btn = $('acct'), dlg = $('dlg'), msg = $('msg');
+  function render() { btn.textContent = auth ? auth.record.email + ' · sign out' : 'Sign in'; }
+  function signOut() { auth = null; LS.del('bm.auth'); render(); }
+  async function setAuth(r) { auth = { token: r.token, record: r.record }; LS.set('bm.auth', JSON.stringify(auth)); render(); flush(); }
+  async function login(email, password) {
+    await setAuth(await pb('/api/collections/users/auth-with-password', { method: 'POST', body: JSON.stringify({ identity: email, password }) }));
+  }
+  btn.addEventListener('click', () => { if (auth) signOut(); else { msg.textContent = ''; dlg.showModal(); } });
+  $('close').addEventListener('click', () => dlg.close());
+  $('form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try { await login($('email').value, $('pw').value); dlg.close(); } catch (err) { msg.textContent = err.message; }
+  });
+  $('signup').addEventListener('click', async () => {
+    const email = $('email').value, password = $('pw').value;
+    if (!email || password.length < 8) { msg.textContent = 'Enter an email and a password of 8+ characters.'; return; }
+    try {
+      await pb('/api/collections/users/records', { method: 'POST', body: JSON.stringify({ email, password, passwordConfirm: password }) });
+      await login(email, password); dlg.close();
+    } catch (err) { msg.textContent = err.message; }
+  });
+  render();
+  if (auth) pb('/api/collections/users/auth-refresh', { method: 'POST' }).then(setAuth).catch((e) => { if (e.status === 401 || e.status === 403) signOut(); });
+  addEventListener('online', flush);
+
+  window.badMartians = {
+    load: (k) => LS.get('bm.' + k),
+    save: (k, v) => LS.set('bm.' + k, v),
+    emit: (ev, json) => {
+      let p; try { p = JSON.parse(json); } catch { return; }
+      if (ev === 'scene') { btn.hidden = p.name !== 'menu'; return; } // keep the HTML chrome off the in-game HUD
+      const rec = toRecord(ev, p);
+      if (!rec) return;
+      queue.push(rec); saveQueue(); flush();
+    },
+  };
+})();

@@ -1,0 +1,199 @@
+package game
+
+import (
+	"encoding/json"
+	"testing"
+
+	"github.com/signal-k/bad-martians/engine"
+)
+
+type nullR struct{ calls int }
+
+func (n *nullR) Line(a, b engine.Vec2, w float64, c engine.Color)          { n.calls++ }
+func (n *nullR) Circle(c engine.Vec2, r float64, col engine.Color, f bool) { n.calls++ }
+func (n *nullR) Rect(x, y, w, h float64, c engine.Color, f bool)           { n.calls++ }
+func (n *nullR) Poly(p []engine.Vec2, c engine.Color)                      { n.calls++ }
+func (n *nullR) Text(s string, x, y, sz float64, c engine.Color, a engine.Align) {
+	n.calls++
+}
+
+type harness struct {
+	t *testing.T
+	g *engine.Game
+	h *engine.MemHost
+}
+
+func newHarness(t *testing.T) *harness {
+	h := engine.NewMemHost()
+	g := engine.NewGame(ScreenW, ScreenH, h)
+	Setup(g)
+	hs := &harness{t, g, h}
+	hs.frames(2, engine.Input{})
+	return hs
+}
+
+func (h *harness) frames(n int, in engine.Input) {
+	for i := 0; i < n; i++ {
+		h.g.Tick(engine.FixedDT, in)
+	}
+	h.g.Draw(&nullR{}) // every frame must be drawable
+}
+
+// click presses and releases at (x,y) on separate frames.
+func (h *harness) click(x, y float64) {
+	p := engine.V(x, y)
+	h.frames(1, engine.Input{Pointer: p, Down: true})
+	h.frames(1, engine.Input{Pointer: p})
+	h.frames(1, engine.Input{Pointer: p}) // applies pending scene load
+}
+
+func (h *harness) count(name string) int {
+	n := 0
+	for _, e := range h.h.Events {
+		if e.Name == name {
+			n++
+		}
+	}
+	return n
+}
+
+func (h *harness) button(label string) *Button {
+	for _, o := range h.g.Scene().Objects {
+		if b, ok := engine.Get[*Button](o); ok && b.Label == label {
+			return b
+		}
+	}
+	h.t.Fatalf("no button %q in scene %s", label, h.g.Scene().Name)
+	return nil
+}
+
+func (h *harness) clickButton(label string) {
+	b := h.button(label)
+	h.click(b.X+b.W/2, b.Y+b.H/2)
+}
+
+func TestFullFlow(t *testing.T) {
+	h := newHarness(t)
+	if h.g.Scene().Name != "menu" {
+		t.Fatal("should start at menu")
+	}
+	// level 1 card
+	x0 := (ScreenW - (162.0*5 + 12*4)) / 2
+	h.click(x0+80, 190+90)
+	if h.g.Scene().Name != "label" {
+		t.Fatalf("expected label, got %s", h.g.Scene().Name)
+	}
+	// label first panel as soil (class button 0), second as sand
+	h.click(35+50, 112+60)
+	h.click(30+100, 330+30)
+	h.click(30+2*227.5+50, 330+30) // selection auto-advanced to panel 1: sand
+	h.clickButton("Done: build rover")
+	if h.g.Scene().Name != "build" {
+		t.Fatalf("expected build, got %s", h.g.Scene().Name)
+	}
+	if h.count("label") != 2 {
+		t.Fatalf("expected 2 label events, got %d", h.count("label"))
+	}
+	h.clickButton("GO")
+	if h.g.Scene().Name != "run" {
+		t.Fatalf("expected run, got %s", h.g.Scene().Name)
+	}
+	// hold gas via keyboard until the run ends and the result scene loads
+	for i := 0; i < 60*60 && h.g.Scene().Name == "run"; i++ {
+		h.g.Tick(engine.FixedDT, engine.Input{Right: true})
+	}
+	h.frames(2, engine.Input{})
+	if h.g.Scene().Name != "result" {
+		t.Fatalf("expected result, got %s", h.g.Scene().Name)
+	}
+	var ev struct {
+		Won   bool `json:"won"`
+		Stars int  `json:"stars"`
+	}
+	var last engine.HostEvent
+	for _, e := range h.h.Events {
+		if e.Name == "run" {
+			last = e
+		}
+	}
+	if last.Name != "run" {
+		t.Fatal("run event should be emitted to the host")
+	}
+	_ = json.Unmarshal(last.Payload, &ev)
+	if !ev.Won || ev.Stars < 1 {
+		t.Fatalf("starter should win level 1: %s", last.Payload)
+	}
+	if !LoadProgress(h.h).Unlocked(2) {
+		t.Fatal("level 2 should unlock")
+	}
+	h.clickButton("Next level")
+	if h.g.Scene().Name != "label" {
+		t.Fatalf("expected label for level 2, got %s", h.g.Scene().Name)
+	}
+}
+
+func TestBuildPainting(t *testing.T) {
+	h := newHarness(t)
+	ses := NewSession(GetLevel(1))
+	ses.Design = Design{}
+	h.g.Load("build", ses)
+	h.frames(2, engine.Input{})
+	cell := func(cx, cy int) engine.Vec2 {
+		return engine.V(bGX+float64(cx)*bCell+bCell/2, bGY+float64(GridH-1-cy)*bCell+bCell/2)
+	}
+	h.click(cell(0, 0).X, cell(0, 0).Y) // default tool is wheel
+	if k, ok := ses.Design.At(0, 0); !ok || k != KWheel {
+		t.Fatalf("expected a wheel at 0,0: %+v", ses.Design)
+	}
+	// drag across a row paints each cell once
+	h.frames(1, engine.Input{Pointer: cell(2, 3), Down: true})
+	h.frames(1, engine.Input{Pointer: cell(3, 3), Down: true})
+	h.frames(1, engine.Input{Pointer: cell(4, 3), Down: true})
+	h.frames(1, engine.Input{Pointer: cell(4, 3)})
+	for x := 2; x <= 4; x++ {
+		if _, ok := ses.Design.At(x, 3); !ok {
+			t.Fatalf("drag should paint %d,3", x)
+		}
+	}
+	if h.button("GO").Disabled == false {
+		t.Fatal("GO must be disabled for an invalid rover")
+	}
+}
+
+func TestMenuLocksLevels(t *testing.T) {
+	h := newHarness(t)
+	x0 := (ScreenW - (162.0*5 + 12*4)) / 2
+	h.click(x0+(162+12)*1+80, 190+90) // level 2 is locked
+	if h.g.Scene().Name != "menu" {
+		t.Fatal("locked level should not open")
+	}
+}
+
+func TestProgressKeepsBest(t *testing.T) {
+	p := &Progress{Levels: map[int]LevelProgress{}}
+	p.Record(1, 2, 20)
+	p.Record(1, 1, 15)
+	if p.Levels[1].Stars != 2 || p.Levels[1].Best != 15 {
+		t.Fatalf("%+v", p.Levels[1])
+	}
+}
+
+func TestLabelBonus(t *testing.T) {
+	l := GetLevel(1)
+	s := NewSession(l)
+	gold := -1
+	for i, sg := range l.Segments {
+		if sg.Gold {
+			gold = i
+			break
+		}
+	}
+	s.Labels[gold] = l.Segments[gold].Class
+	if s.Bonus() != 3 {
+		t.Fatalf("correct gold label = +3, got %d", s.Bonus())
+	}
+	s.Labels[gold] = (l.Segments[gold].Class + 1) % NumClasses
+	if s.Bonus() != 1 {
+		t.Fatalf("wrong gold label = +1, got %d", s.Bonus())
+	}
+}

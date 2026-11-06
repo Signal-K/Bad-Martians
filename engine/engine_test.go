@@ -1,0 +1,81 @@
+package engine
+
+import "testing"
+
+type counter struct{ starts, updates int }
+
+func (c *counter) Start(*GameObject)           { c.starts++ }
+func (c *counter) Update(*GameObject, float64) { c.updates++ }
+
+func newTestGame() (*Game, *MemHost) {
+	h := NewMemHost()
+	g := NewGame(100, 100, h)
+	g.Register("a", func(g *Game, arg any) *Scene {
+		s := &Scene{}
+		o := s.Spawn("o")
+		o.Add(&counter{})
+		return s
+	})
+	g.Register("b", func(g *Game, arg any) *Scene { return &Scene{} })
+	return g, h
+}
+
+func TestFixedStepAndLifecycle(t *testing.T) {
+	g, _ := newTestGame()
+	g.Load("a", nil)
+	g.Tick(0, Input{})
+	for i := 0; i < 10; i++ {
+		g.Tick(FixedDT*2.5, Input{}) // 25 fixed steps total, however frames fall
+	}
+	c, _ := Get[*counter](g.Scene().Find("o"))
+	if c.starts != 1 || c.updates < 24 || c.updates > 25 { // float accumulator may hold the last step back
+		t.Fatalf("starts=%d updates=%d", c.starts, c.updates)
+	}
+}
+
+func TestPressEdgeSurvivesFramesWithoutSteps(t *testing.T) {
+	g, _ := newTestGame()
+	g.Load("a", nil)
+	var seen int
+	g.Tick(0, Input{})
+	g.Scene().OnUpdate = func(float64) {
+		if g.In.Pressed {
+			seen++
+		}
+	}
+	g.Tick(FixedDT/4, Input{Down: true}) // frame too short for a step
+	g.Tick(FixedDT/4, Input{Down: true})
+	g.Tick(FixedDT, Input{Down: true})
+	g.Tick(FixedDT, Input{Down: true})
+	if seen != 1 {
+		t.Fatalf("press delivered %d times, want exactly 1", seen)
+	}
+}
+
+func TestSceneSwitchAndDestroy(t *testing.T) {
+	g, h := newTestGame()
+	g.Load("a", nil)
+	g.Tick(FixedDT, Input{})
+	g.Scene().Find("o").Destroy()
+	g.Tick(FixedDT, Input{})
+	if g.Scene().Find("o") != nil {
+		t.Fatal("destroyed object should be gone")
+	}
+	g.Load("b", nil)
+	g.Tick(FixedDT, Input{})
+	if g.Scene().Name != "b" {
+		t.Fatal("scene should have switched")
+	}
+	if len(h.Events) != 2 || h.Events[1].Name != "scene" {
+		t.Fatalf("scene events: %+v", h.Events)
+	}
+}
+
+func TestCameraRoundTrip(t *testing.T) {
+	c := Camera{Pos: V(5, 2), Zoom: 40, Screen: V(960, 540)}
+	p := V(7.5, 1.25)
+	q := c.ToWorld(c.ToScreen(p))
+	if q.Sub(p).Len() > 1e-9 {
+		t.Fatalf("round trip %v -> %v", p, q)
+	}
+}
