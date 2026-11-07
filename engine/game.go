@@ -14,6 +14,8 @@ type Game struct {
 	In        Input
 	scene     *Scene
 	factories map[string]SceneFactory
+	metas     map[string]SceneMeta
+	order     []string
 	pending   *pendingLoad
 	acc       float64
 	prevDown  bool
@@ -30,10 +32,8 @@ func NewGame(w, h float64, host Host) *Game {
 	if host == nil {
 		host = NewMemHost()
 	}
-	return &Game{W: w, H: h, Host: host, factories: map[string]SceneFactory{}}
+	return &Game{W: w, H: h, Host: host, factories: map[string]SceneFactory{}, metas: map[string]SceneMeta{}}
 }
-
-func (g *Game) Register(name string, f SceneFactory) { g.factories[name] = f }
 
 // Load switches scene at the next frame boundary (safe to call from inside an
 // Update).
@@ -52,13 +52,13 @@ func (g *Game) applyPending() {
 		panic("engine: unknown scene " + p.name)
 	}
 	s := f(g, p.arg)
-	s.Name, s.Game = p.name, g
+	s.Name, s.Game, s.Meta = p.name, g, g.metas[p.name]
 	s.Cam.Screen = Vec2{g.W, g.H}
 	if s.Cam.Zoom == 0 {
 		s.Cam.Zoom = 1
 	}
 	g.scene = s
-	g.Host.Emit("scene", []byte(`{"name":"`+p.name+`"}`)) // hosts may adapt their chrome
+	g.Host.Emit("scene", []byte(`{"name":"`+p.name+`","type":"`+string(s.Meta.Type)+`"}`)) // hosts may adapt their chrome
 }
 
 // Tick advances the game by frameDt seconds of wall time using the given

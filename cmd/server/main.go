@@ -1,4 +1,4 @@
-// Command server is the Bad Martians backend: PocketBase (database, auth,
+// Command server is the Haphazard Martians backend: PocketBase (database, auth,
 // admin UI at /_/) plus the PWA served from the same origin.
 package main
 
@@ -12,8 +12,8 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/plugins/migratecmd"
 
-	_ "github.com/signal-k/bad-martians/migrations"
-	"github.com/signal-k/bad-martians/web"
+	_ "github.com/signal-k/haphazard-martians/migrations"
+	"github.com/signal-k/haphazard-martians/web"
 )
 
 func main() {

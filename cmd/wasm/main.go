@@ -9,7 +9,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 
-	"github.com/signal-k/bad-martians/client"
+	"github.com/signal-k/haphazard-martians/client"
 )
 
 type jsHost struct{ bridge js.Value }
@@ -25,9 +25,18 @@ func (h jsHost) Save(key string, b []byte)   { h.bridge.Call("save", key, string
 func (h jsHost) Emit(event string, p []byte) { h.bridge.Call("emit", event, string(p)) }
 
 func main() {
-	bridge := js.Global().Get("badMartians")
-	ebiten.SetWindowTitle("Bad Martians")
-	if err := ebiten.RunGame(client.New(jsHost{bridge})); err != nil {
+	bridge := js.Global().Get("haphazard")
+	ebiten.SetWindowTitle("Haphazard Martians")
+	// ?scene=build opens one scene on its own fixture.
+	scene := js.Global().Get("URLSearchParams").New(js.Global().Get("location").Get("search")).Call("get", "scene")
+	name := ""
+	if !scene.IsNull() {
+		name = scene.String()
+	}
+	app := client.New(jsHost{bridge}, name)
+	bridge.Set("scenes", js.FuncOf(func(js.Value, []js.Value) any { return app.SceneList() }))
+	bridge.Set("open", js.FuncOf(func(_ js.Value, a []js.Value) any { app.Open(a[0].String()); return nil }))
+	if err := ebiten.RunGame(app); err != nil {
 		panic(err)
 	}
 }

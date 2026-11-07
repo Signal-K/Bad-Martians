@@ -3,22 +3,32 @@ package game
 import (
 	"encoding/json"
 
-	"github.com/signal-k/bad-martians/engine"
+	"github.com/signal-k/haphazard-martians/engine"
 )
 
 // Session is the data that travels between scenes for one attempt at a level.
 type Session struct {
-	Level     *Level
-	Labels    map[int]Class // segment index -> player's label
-	Design    Design
-	Submitted bool // labels already sent to the host
+	Level   *Level
+	Labels  map[int]Class // segment index -> player's review label
+	Design  Design
+	emitted map[int]Class // labels already sent to the host
 }
 
 func NewSession(l *Level) *Session {
-	return &Session{Level: l, Labels: map[int]Class{}, Design: StarterDesign()}
+	return &Session{Level: l, Labels: map[int]Class{}, Design: StarterDesign(), emitted: map[int]Class{}}
 }
 
-// Bonus is the extra parts budget earned by labelling: +1 per label, +2 more
+// NewSessionFor starts a session that remembers the player's earlier reviews of
+// this level, so credits earned by reviewing carry into new builds.
+func NewSessionFor(h engine.Host, l *Level) *Session {
+	s := NewSession(l)
+	for seg, c := range LoadProgress(h).Labels[l.ID] {
+		s.Labels[seg], s.emitted[seg] = Class(c), Class(c)
+	}
+	return s
+}
+
+// Bonus is the extra parts budget earned by reviewing: +1 per label, +2 more
 // when a gold-standard segment is labelled correctly.
 func (s *Session) Bonus() int {
 	b := 0
@@ -33,13 +43,14 @@ func (s *Session) Bonus() int {
 
 func (s *Session) Budget() int { return s.Level.Credits + s.Bonus() }
 
-// SubmitLabels emits one "label" event per labelled segment (once).
+// SubmitLabels sends each new or changed label to the host and remembers the
+// labels in the player's progress.
 func (s *Session) SubmitLabels(h engine.Host) {
-	if s.Submitted {
-		return
-	}
-	s.Submitted = true
 	for i, c := range s.Labels {
+		if prev, ok := s.emitted[i]; ok && prev == c {
+			continue
+		}
+		s.emitted[i] = c
 		seg := s.Level.Segments[i]
 		p, _ := json.Marshal(map[string]any{
 			"level": s.Level.ID, "segment": i, "x0": seg.X0, "x1": seg.X1,
@@ -48,26 +59,41 @@ func (s *Session) SubmitLabels(h engine.Host) {
 		})
 		h.Emit("label", p)
 	}
+	prog := LoadProgress(h)
+	if prog.Labels == nil {
+		prog.Labels = map[int]map[int]int{}
+	}
+	m := map[int]int{}
+	for i, c := range s.Labels {
+		m[i] = int(c)
+	}
+	prog.Labels[s.Level.ID] = m
+	prog.Save(h)
 }
 
 type LevelProgress struct {
 	Stars int     `json:"stars"`
-	Best  float64 `json:"best"`
+	Best  float64 `json:"best"`  // fastest winning time
+	Score int     `json:"score"` // best score
 }
 
 // Progress is the player's saved campaign state.
 type Progress struct {
 	Levels map[int]LevelProgress `json:"levels"`
+	Labels map[int]map[int]int   `json:"labels"` // level -> segment -> class
 }
 
-const progressKey = "bm.progress"
+const progressKey = "hm.progress"
 
 func LoadProgress(h engine.Host) *Progress {
-	p := &Progress{Levels: map[int]LevelProgress{}}
+	p := &Progress{Levels: map[int]LevelProgress{}, Labels: map[int]map[int]int{}}
 	if b := h.Load(progressKey); b != nil {
 		_ = json.Unmarshal(b, p)
 		if p.Levels == nil {
 			p.Levels = map[int]LevelProgress{}
+		}
+		if p.Labels == nil {
+			p.Labels = map[int]map[int]int{}
 		}
 	}
 	return p
@@ -82,14 +108,17 @@ func (p *Progress) Unlocked(id int) bool {
 	return id == LevelDefs[0].ID || p.Levels[id-1].Stars >= 1
 }
 
-// Record keeps the best stars/time.
-func (p *Progress) Record(id, stars int, t float64) {
+// Record keeps the best stars, time and score.
+func (p *Progress) Record(id, stars int, t float64, score int) {
 	cur := p.Levels[id]
 	if stars > cur.Stars {
 		cur.Stars = stars
 	}
 	if stars > 0 && (cur.Best == 0 || t < cur.Best) {
 		cur.Best = t
+	}
+	if score > cur.Score {
+		cur.Score = score
 	}
 	p.Levels[id] = cur
 }

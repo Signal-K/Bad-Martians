@@ -8,7 +8,7 @@ package physics
 import (
 	"math"
 
-	"github.com/signal-k/bad-martians/engine"
+	"github.com/signal-k/haphazard-martians/engine"
 )
 
 type Vec = engine.Vec2

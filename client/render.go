@@ -12,7 +12,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"golang.org/x/image/font/gofont/gobold"
 
-	"github.com/signal-k/bad-martians/engine"
+	"github.com/signal-k/haphazard-martians/engine"
 )
 
 var fontSrc *text.GoTextFaceSource

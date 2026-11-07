@@ -5,17 +5,20 @@
 package main
 
 import (
+	"flag"
 	"github.com/hajimehoshi/ebiten/v2"
 
-	"github.com/signal-k/bad-martians/client"
-	"github.com/signal-k/bad-martians/engine"
+	"github.com/signal-k/haphazard-martians/client"
+	"github.com/signal-k/haphazard-martians/engine"
 )
 
 func main() {
+	scene := flag.String("scene", "", "open one scene on its own fixture (menu, build, run, result, review, style)")
+	flag.Parse()
 	ebiten.SetWindowSize(960, 540)
-	ebiten.SetWindowTitle("Bad Martians")
+	ebiten.SetWindowTitle("Haphazard Martians")
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
-	if err := ebiten.RunGame(client.New(engine.NewMemHost())); err != nil {
+	if err := ebiten.RunGame(client.New(engine.NewMemHost(), *scene)); err != nil {
 		panic(err)
 	}
 }

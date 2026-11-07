@@ -1,6 +1,6 @@
 // Offline shell: cache-first for the game's static files (refreshed in the
 // background), network-only for the PocketBase API.
-const CACHE = 'bad-martians-v1';
+const CACHE = 'haphazard-martians-v1';
 const SHELL = ['./', 'index.html', 'host.js', 'wasm_exec.js', 'game.wasm', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {

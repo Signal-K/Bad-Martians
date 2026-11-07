@@ -1,11 +1,11 @@
-// Package game is Bad Martians itself, built on engine + physics. It holds no
+// Package game is Haphazard Martians itself, built on engine + physics. It holds no
 // rendering or platform code: scenes are GameObjects that draw through
 // engine.Renderer and talk to the outside world through engine.Host.
 package game
 
 import (
-	"github.com/signal-k/bad-martians/engine"
-	"github.com/signal-k/bad-martians/physics"
+	"github.com/signal-k/haphazard-martians/engine"
+	"github.com/signal-k/haphazard-martians/physics"
 )
 
 // Class is a terrain class from the AI4Mars labelling scheme.

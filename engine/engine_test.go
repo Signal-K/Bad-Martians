@@ -7,16 +7,22 @@ type counter struct{ starts, updates int }
 func (c *counter) Start(*GameObject)           { c.starts++ }
 func (c *counter) Update(*GameObject, float64) { c.updates++ }
 
+func testMeta(name string) SceneMeta {
+	return SceneMeta{Name: name, Type: TypeDebug,
+		Layout:  Layout{Name: "full", Regions: map[string]Rect{"main": {0, 0, 100, 100}}},
+		Fixture: func(*Game) any { return nil }}
+}
+
 func newTestGame() (*Game, *MemHost) {
 	h := NewMemHost()
 	g := NewGame(100, 100, h)
-	g.Register("a", func(g *Game, arg any) *Scene {
+	g.RegisterScene(testMeta("a"), func(g *Game, arg any) *Scene {
 		s := &Scene{}
 		o := s.Spawn("o")
 		o.Add(&counter{})
 		return s
 	})
-	g.Register("b", func(g *Game, arg any) *Scene { return &Scene{} })
+	g.RegisterScene(testMeta("b"), func(g *Game, arg any) *Scene { return &Scene{} })
 	return g, h
 }
 
@@ -77,5 +83,35 @@ func TestCameraRoundTrip(t *testing.T) {
 	q := c.ToWorld(c.ToScreen(p))
 	if q.Sub(p).Len() > 1e-9 {
 		t.Fatalf("round trip %v -> %v", p, q)
+	}
+}
+
+func TestRegisterSceneEnforcesContract(t *testing.T) {
+	bad := map[string]SceneMeta{
+		"no type":    {Name: "x", Layout: testMeta("x").Layout, Fixture: testMeta("x").Fixture},
+		"no layout":  {Name: "x", Type: TypeMenu, Fixture: testMeta("x").Fixture},
+		"no fixture": {Name: "x", Type: TypeMenu, Layout: testMeta("x").Layout},
+		"offscreen":  {Name: "x", Type: TypeMenu, Fixture: testMeta("x").Fixture, Layout: Layout{Name: "l", Regions: map[string]Rect{"main": {0, 0, 500, 5}}}},
+	}
+	for name, m := range bad {
+		func() {
+			defer func() {
+				if recover() == nil {
+					t.Errorf("%s: expected RegisterScene to panic", name)
+				}
+			}()
+			NewGame(100, 100, nil).RegisterScene(m, func(*Game, any) *Scene { return &Scene{} })
+		}()
+	}
+}
+
+func TestOpenStandaloneUsesFixture(t *testing.T) {
+	g, _ := newTestGame()
+	if !g.OpenStandalone("a") || g.OpenStandalone("nope") {
+		t.Fatal("OpenStandalone result wrong")
+	}
+	g.Tick(0, Input{})
+	if g.Scene().Meta.Type != TypeDebug {
+		t.Fatal("scene did not receive its meta")
 	}
 }

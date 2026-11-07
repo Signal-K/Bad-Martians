@@ -1,6 +1,6 @@
 // Bridge between the Go game (WASM) and the browser: storage, PocketBase auth,
 // and an offline-tolerant queue for run/label events. The game only ever calls
-// window.badMartians.{load,save,emit}.
+// window.haphazard.{load,save,emit}.
 (() => {
   const API = location.origin;
   const LS = {
@@ -10,10 +10,10 @@
   };
 
   let auth = null;
-  try { auth = JSON.parse(LS.get('bm.auth') || 'null'); } catch {}
+  try { auth = JSON.parse(LS.get('hm.auth') || 'null'); } catch {}
   let queue = [];
-  try { queue = JSON.parse(LS.get('bm.queue') || '[]'); } catch {}
-  const saveQueue = () => LS.set('bm.queue', JSON.stringify(queue.slice(-500)));
+  try { queue = JSON.parse(LS.get('hm.queue') || '[]'); } catch {}
+  const saveQueue = () => LS.set('hm.queue', JSON.stringify(queue.slice(-500)));
 
   async function pb(path, opts = {}) {
     const headers = { 'Content-Type': 'application/json' };
@@ -25,8 +25,8 @@
   }
 
   const toRecord = (ev, p) => {
-    if (ev === 'run') return ['bm_runs', { level: p.level, won: p.won, stars: p.stars, time: p.time, samples: p.samples, cost: p.cost, design: p.design }];
-    if (ev === 'label') return ['bm_labels', { level: p.level, segment: p.segment, x0: p.x0, x1: p.x1, class: p.class, gold: p.gold, correct: p.correct }];
+    if (ev === 'run') return ['hm_runs', { level: p.level, won: p.won, stars: p.stars, time: p.time, samples: p.samples, score: p.score, cost: p.cost, design: p.design }];
+    if (ev === 'label') return ['hm_labels', { level: p.level, segment: p.segment, x0: p.x0, x1: p.x1, class: p.class, gold: p.gold, correct: p.correct }];
     return null;
   };
 
@@ -54,8 +54,8 @@
   const $ = (id) => document.getElementById(id);
   const btn = $('acct'), dlg = $('dlg'), msg = $('msg');
   function render() { btn.textContent = auth ? auth.record.email + ' · sign out' : 'Sign in'; }
-  function signOut() { auth = null; LS.del('bm.auth'); render(); }
-  async function setAuth(r) { auth = { token: r.token, record: r.record }; LS.set('bm.auth', JSON.stringify(auth)); render(); flush(); }
+  function signOut() { auth = null; LS.del('hm.auth'); render(); }
+  async function setAuth(r) { auth = { token: r.token, record: r.record }; LS.set('hm.auth', JSON.stringify(auth)); render(); flush(); }
   async function login(email, password) {
     await setAuth(await pb('/api/collections/users/auth-with-password', { method: 'POST', body: JSON.stringify({ identity: email, password }) }));
   }
@@ -77,9 +77,9 @@
   if (auth) pb('/api/collections/users/auth-refresh', { method: 'POST' }).then(setAuth).catch((e) => { if (e.status === 401 || e.status === 403) signOut(); });
   addEventListener('online', flush);
 
-  window.badMartians = {
-    load: (k) => LS.get('bm.' + k),
-    save: (k, v) => LS.set('bm.' + k, v),
+  window.haphazard = {
+    load: (k) => LS.get('hm.' + k),
+    save: (k, v) => LS.set('hm.' + k, v),
     emit: (ev, json) => {
       let p; try { p = JSON.parse(json); } catch { return; }
       if (ev === 'scene') { btn.hidden = p.name !== 'menu'; return; } // keep the HTML chrome off the in-game HUD

@@ -36,22 +36,64 @@ Position-based dynamics, chosen because it is tiny, stable and deterministic:
   body and spin, which gives traction limits (sand slips) with no force solver.
 - Mars gravity (3.71 m/s²). 10 substeps × 6 constraint iterations per step.
 
-Rigid-body boxes and hinges can be added later behind the same `World`.
+Rigid-body boxes and hinges can be added later behind the same `World`. See
+`docs/PHYSICS.md` for the comparison against Box2D and Chipmunk and why we keep
+this solver.
+
+## Scene contract (`engine/scenemeta.go`)
+
+Every scene registers with `Game.RegisterScene(SceneMeta, factory)`. It panics
+unless the scene has:
+
+- a **type**: menu, build, play, activity, results, sandbox or debug;
+- a **layout**: named screen regions (`game/layouts.go`: `center`, `cargo`,
+  `hud`). Scenes with the same layout share the same bones;
+- a **fixture**: the argument it needs to boot on its own.
+
+Any scene runs alone: `?scene=build` in the browser, `go run ./cmd/desktop
+-scene build`, or `Game.OpenStandalone(name)` in tests. `engine/harness.go`
+has a headless `Recorder` renderer that hashes every draw call.
+`game/contract_test.go` walks the registry and, for every scene, checks that it
+boots alone, runs 600 frames, draws deterministically, and that every button
+is on screen, inside a layout region, and at least 40 px to tap. A new scene is
+covered the moment it registers.
+
+## Design system (`game/theme.go`, `widgets.go`, `icons.go`)
+
+The look follows Out There: black icon tiles with white glyphs, thick white
+chamfered panels with neon tab labels, resource chips, segmented meters, a dark
+nebula backdrop. Tokens (colours, line weight, type sizes) live in `theme.go`;
+widgets (`drawPanel`, `drawTile`, `drawChip`, `drawMeter`, `Button`) in
+`widgets.go` and `ui.go`; icons are drawn from primitives in `icons.go`, so
+there are no image assets to keep consistent. The `style` scene shows all of it.
+The assets are our own, in that style; nothing is copied from the game.
 
 ## Game (`game/`)
 
 - **Terrain classes** follow AI4Mars (soil, bedrock, sand, big rock); each maps
-  to a physics material. Levels are generated deterministically from a seed.
-- **Label scene** is the citizen-science task. Each level has 8 segments;
+  to a physics material. Levels are generated deterministically from a seed
+  (with multiplication-only maths, so they are bit-identical on every platform).
+- **Flow**: menu, then build, run and result. Players never have to label
+  anything to play. After a mission the result screen offers an optional
+  **review the accuracy** step: in the story, Mission Control wants a second
+  opinion on the navcam's terrain read. That is framing; the activity is
+  AI4Mars labelling. Reviewing earns build credits, which carry into later
+  builds of that mission.
+- **Review scene** is the citizen-science task. Each level has 8 segments;
   segments flagged `Gold` have known truth and score the labeller (+2 credits
   for a correct calibration label); the rest are collected for consensus. The
   procedural "Navcam" panels are a stand-in until real AI4Mars imagery is wired in.
-- **Build scene** is a 12×7 grid; parts cost credits; validation (one mast, a
-  motor, connected, within budget) gates the GO button. The course preview is
-  coloured by the *player's* labels, so a bad label misleads their build.
+- **Build scene** is a 12×7 cargo-style grid; parts cost credits; validation
+  (one mast, a motor, connected, within budget) gates the GO button. The course
+  preview is coloured by the *player's* review, so a bad label misleads their
+  build. The Specs panel summarises power, traction and mass.
 - **Run** (`game/run.go`) holds win/lose rules headless so tests exercise them.
   Tests assert every level is beatable by a reference rover and that the
   starter rover is not enough for level 4.
+- **Score** (`game/score.go`): finish 500, +150 per sample, plus up to 500 for
+  speed (full at 0.6 x par, none at 2 x par, linear between). Stars are
+  unchanged (finish, all samples, under par). Best score is saved per level and
+  sent with the run.
 
 ## Hosts
 
@@ -73,8 +115,8 @@ collection rules.
 
 | Collection | Access |
 |---|---|
-| `bm_runs` | Public read (leaderboard); create only as yourself |
-| `bm_labels` | Read own; create as yourself; unique per (user, level, segment) |
+| `hm_runs` | Public read (leaderboard); create only as yourself; carries score |
+| `hm_labels` | Read own; create as yourself; unique per (user, level, segment) |
 
 `correct`/`gold` on labels are client-computed for now; consensus and gold
 scoring should move server-side before the data is trusted.

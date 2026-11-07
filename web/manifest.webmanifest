@@ -1,6 +1,6 @@
 {
-  "name": "Bad Martians",
-  "short_name": "Bad Martians",
+  "name": "Haphazard Martians",
+  "short_name": "Haphazard Martians",
   "description": "Label Mars terrain, build a rover, cross the planet.",
   "start_url": "/",
   "scope": "/",

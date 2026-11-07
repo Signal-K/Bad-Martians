@@ -3,7 +3,7 @@ package game
 import (
 	"math"
 
-	"github.com/signal-k/bad-martians/physics"
+	"github.com/signal-k/haphazard-martians/physics"
 )
 
 type Outcome int

@@ -2,9 +2,10 @@ package game
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 
-	"github.com/signal-k/bad-martians/engine"
+	"github.com/signal-k/haphazard-martians/engine"
 )
 
 type nullR struct{ calls int }
@@ -72,43 +73,32 @@ func (h *harness) clickButton(label string) {
 	h.click(b.X+b.W/2, b.Y+b.H/2)
 }
 
+func (h *harness) menuTile(id int) *Button { return h.button(fmt.Sprintf("Mission %d", id)) }
+
 func TestFullFlow(t *testing.T) {
 	h := newHarness(t)
-	if h.g.Scene().Name != "menu" {
-		t.Fatal("should start at menu")
-	}
-	// level 1 card
-	x0 := (ScreenW - (162.0*5 + 12*4)) / 2
-	h.click(x0+80, 190+90)
-	if h.g.Scene().Name != "label" {
-		t.Fatalf("expected label, got %s", h.g.Scene().Name)
-	}
-	// label first panel as soil (class button 0), second as sand
-	h.click(35+50, 112+60)
-	h.click(30+100, 330+30)
-	h.click(30+2*227.5+50, 330+30) // selection auto-advanced to panel 1: sand
-	h.clickButton("Done: build rover")
-	if h.g.Scene().Name != "build" {
+	h.g.Load(SceneMenu, nil)
+	h.frames(2, engine.Input{})
+	// build first: a mission card goes straight to the rover bay, no labelling gate
+	h.clickButton("Mission 1")
+	if h.g.Scene().Name != SceneBuild {
 		t.Fatalf("expected build, got %s", h.g.Scene().Name)
 	}
-	if h.count("label") != 2 {
-		t.Fatalf("expected 2 label events, got %d", h.count("label"))
-	}
 	h.clickButton("GO")
-	if h.g.Scene().Name != "run" {
+	if h.g.Scene().Name != SceneRun {
 		t.Fatalf("expected run, got %s", h.g.Scene().Name)
 	}
-	// hold gas via keyboard until the run ends and the result scene loads
-	for i := 0; i < 60*60 && h.g.Scene().Name == "run"; i++ {
+	for i := 0; i < 60*60 && h.g.Scene().Name == SceneRun; i++ {
 		h.g.Tick(engine.FixedDT, engine.Input{Right: true})
 	}
 	h.frames(2, engine.Input{})
-	if h.g.Scene().Name != "result" {
+	if h.g.Scene().Name != SceneResult {
 		t.Fatalf("expected result, got %s", h.g.Scene().Name)
 	}
 	var ev struct {
 		Won   bool `json:"won"`
 		Stars int  `json:"stars"`
+		Score int  `json:"score"`
 	}
 	var last engine.HostEvent
 	for _, e := range h.h.Events {
@@ -120,15 +110,41 @@ func TestFullFlow(t *testing.T) {
 		t.Fatal("run event should be emitted to the host")
 	}
 	_ = json.Unmarshal(last.Payload, &ev)
-	if !ev.Won || ev.Stars < 1 {
-		t.Fatalf("starter should win level 1: %s", last.Payload)
+	if !ev.Won || ev.Stars < 1 || ev.Score < 500 {
+		t.Fatalf("starter should win level 1 with a score: %s", last.Payload)
 	}
-	if !LoadProgress(h.h).Unlocked(2) {
-		t.Fatal("level 2 should unlock")
+	prog := LoadProgress(h.h)
+	if !prog.Unlocked(2) || prog.Levels[1].Score != ev.Score {
+		t.Fatalf("level 2 should unlock and score be saved: %+v", prog.Levels[1])
 	}
-	h.clickButton("Next level")
-	if h.g.Scene().Name != "label" {
-		t.Fatalf("expected label for level 2, got %s", h.g.Scene().Name)
+	// the review is offered afterwards and is optional
+	if h.count("label") != 0 {
+		t.Fatal("no labels should be sent before the review")
+	}
+	h.clickButton("Review accuracy")
+	if h.g.Scene().Name != SceneReview {
+		t.Fatalf("expected review, got %s", h.g.Scene().Name)
+	}
+	h.clickButton("Panel 1")
+	h.clickButton("Soil")
+	h.clickButton("Sand") // selection auto-advanced to panel 2
+	h.clickButton("Send review")
+	if h.g.Scene().Name != SceneResult {
+		t.Fatalf("review should return to the result, got %s", h.g.Scene().Name)
+	}
+	if h.count("label") != 2 {
+		t.Fatalf("expected 2 label events, got %d", h.count("label"))
+	}
+	if h.count("run") != 1 {
+		t.Fatalf("returning to the result must not resend the run, got %d", h.count("run"))
+	}
+	// credits earned by the review carry into the next build of that level
+	if NewSessionFor(h.h, GetLevel(1)).Bonus() < 2 {
+		t.Fatal("review credits should persist")
+	}
+	h.clickButton("Next mission")
+	if h.g.Scene().Name != SceneBuild {
+		t.Fatalf("expected build for level 2, got %s", h.g.Scene().Name)
 	}
 }
 
@@ -136,7 +152,7 @@ func TestBuildPainting(t *testing.T) {
 	h := newHarness(t)
 	ses := NewSession(GetLevel(1))
 	ses.Design = Design{}
-	h.g.Load("build", ses)
+	h.g.Load(SceneBuild, ses)
 	h.frames(2, engine.Input{})
 	cell := func(cx, cy int) engine.Vec2 {
 		return engine.V(bGX+float64(cx)*bCell+bCell/2, bGY+float64(GridH-1-cy)*bCell+bCell/2)
@@ -145,7 +161,6 @@ func TestBuildPainting(t *testing.T) {
 	if k, ok := ses.Design.At(0, 0); !ok || k != KWheel {
 		t.Fatalf("expected a wheel at 0,0: %+v", ses.Design)
 	}
-	// drag across a row paints each cell once
 	h.frames(1, engine.Input{Pointer: cell(2, 3), Down: true})
 	h.frames(1, engine.Input{Pointer: cell(3, 3), Down: true})
 	h.frames(1, engine.Input{Pointer: cell(4, 3), Down: true})
@@ -162,18 +177,20 @@ func TestBuildPainting(t *testing.T) {
 
 func TestMenuLocksLevels(t *testing.T) {
 	h := newHarness(t)
-	x0 := (ScreenW - (162.0*5 + 12*4)) / 2
-	h.click(x0+(162+12)*1+80, 190+90) // level 2 is locked
-	if h.g.Scene().Name != "menu" {
+	h.g.Load(SceneMenu, nil)
+	h.frames(2, engine.Input{})
+	b := h.menuTile(2)
+	h.click(b.X+b.W/2, b.Y+b.H/2) // level 2 is locked
+	if h.g.Scene().Name != SceneMenu {
 		t.Fatal("locked level should not open")
 	}
 }
 
 func TestProgressKeepsBest(t *testing.T) {
 	p := &Progress{Levels: map[int]LevelProgress{}}
-	p.Record(1, 2, 20)
-	p.Record(1, 1, 15)
-	if p.Levels[1].Stars != 2 || p.Levels[1].Best != 15 {
+	p.Record(1, 2, 20, 900)
+	p.Record(1, 1, 15, 700)
+	if p.Levels[1].Stars != 2 || p.Levels[1].Best != 15 || p.Levels[1].Score != 900 {
 		t.Fatalf("%+v", p.Levels[1])
 	}
 }

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/signal-k/bad-martians/engine"
-	"github.com/signal-k/bad-martians/physics"
+	"github.com/signal-k/haphazard-martians/engine"
+	"github.com/signal-k/haphazard-martians/physics"
 )
 
 type Kind string

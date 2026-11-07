@@ -3,24 +3,7 @@ package game
 import (
 	"fmt"
 
-	"github.com/signal-k/bad-martians/engine"
-)
-
-// Virtual screen size every scene is laid out for. Hosts scale it to fit.
-const (
-	ScreenW = 960.0
-	ScreenH = 540.0
-)
-
-var (
-	colText   = engine.RGB(250, 240, 230)
-	colDim    = engine.RGB(200, 170, 150)
-	colPanel  = engine.RGB(42, 26, 28)
-	colPanel2 = engine.RGB(66, 42, 40)
-	colAccent = engine.RGB(236, 120, 60)
-	colGood   = engine.RGB(130, 220, 140)
-	colBad    = engine.RGB(255, 120, 110)
-	colStar   = engine.RGB(255, 208, 70)
+	"github.com/signal-k/haphazard-martians/engine"
 )
 
 // DrawFunc is a Component that draws via a closure; handy for HUD/backdrops.
@@ -32,7 +15,9 @@ func (d DrawFunc) Draw(_ *engine.GameObject, cam engine.Camera, r engine.Rendere
 type Button struct {
 	X, Y, W, H float64
 	Label      string
-	Fill       engine.Color
+	Icon       Icon
+	HideLabel  bool // icon-only look; Label stays as the accessible name
+	Primary    bool // the scene's main action: neon fill
 	Disabled   bool
 	OnClick    func()
 	// Custom replaces the default look.
@@ -66,22 +51,29 @@ func (b *Button) Draw(_ *engine.GameObject, _ engine.Camera, r engine.Renderer) 
 		b.Custom(b, r)
 		return
 	}
-	fill := b.Fill
-	if fill == (engine.Color{}) {
-		fill = colPanel2
-	}
-	if b.Disabled {
-		fill = colPanel
-	} else if b.Held {
-		fill = engine.Color{R: fill.R / 2, G: fill.G / 2, B: fill.B / 2, A: 255}
+	fill, line, ink := colTile.Alpha(235), colInk, colInk
+	switch {
+	case b.Disabled:
+		line, ink = colMuted.Alpha(90), colMuted.Alpha(120)
+	case b.Held:
+		fill, ink = colInk, colTile
+	case b.Primary:
+		fill, ink = colNeon, colTile
 	}
 	r.Rect(b.X, b.Y, b.W, b.H, fill, true)
-	r.Rect(b.X, b.Y, b.W, b.H, colDim.Alpha(120), false)
-	tc := colText
-	if b.Disabled {
-		tc = colDim.Alpha(110)
+	outline(r, b.X, b.Y, b.W, b.H, line)
+	cx, cy := b.X+b.W/2, b.Y+b.H/2
+	if b.Icon != IconNone {
+		is := b.H * 0.52
+		if b.HideLabel || b.Label == "" {
+			drawIcon(r, b.Icon, cx, cy, is*1.1, ink)
+			return
+		}
+		drawIcon(r, b.Icon, b.X+b.H*0.5, cy, is, ink)
+		r.Text(b.Label, (b.X+b.H+b.X+b.W)/2, cy-sizeBody/2-2, sizeBody+1, ink, engine.AlignCenter)
+		return
 	}
-	r.Text(b.Label, b.X+b.W/2, b.Y+b.H/2-9, 18, tc, engine.AlignCenter)
+	r.Text(b.Label, cx, cy-sizeBody/2-2, sizeBody+1, ink, engine.AlignCenter)
 }
 
 // AddButton spawns a Button object on layer 20.

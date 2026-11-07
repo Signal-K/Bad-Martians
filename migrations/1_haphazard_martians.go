@@ -1,4 +1,4 @@
-// Package migrations creates the Bad Martians collections. Auth is PocketBase's
+// Package migrations creates the Haphazard Martians collections. Auth is PocketBase's
 // built-in `users` collection for now (Clerk replaces it in staging/prod).
 package migrations
 
@@ -20,7 +20,7 @@ func init() {
 		createRule := types.Pointer("@request.auth.id != '' && @request.body.user = @request.auth.id")
 
 		// One row per attempt. Public read: it doubles as the leaderboard.
-		runs := core.NewBaseCollection("bm_runs")
+		runs := core.NewBaseCollection("hm_runs")
 		runs.Fields.Add(
 			owner(),
 			&core.NumberField{Name: "level", Required: true, OnlyInt: true, Min: types.Pointer(1.0)},
@@ -28,19 +28,20 @@ func init() {
 			&core.NumberField{Name: "stars", OnlyInt: true, Min: types.Pointer(0.0), Max: types.Pointer(3.0)},
 			&core.NumberField{Name: "time", Min: types.Pointer(0.0)},
 			&core.NumberField{Name: "samples", OnlyInt: true, Min: types.Pointer(0.0)},
+			&core.NumberField{Name: "score", OnlyInt: true, Min: types.Pointer(0.0)},
 			&core.NumberField{Name: "cost", OnlyInt: true, Min: types.Pointer(0.0)},
 			&core.JSONField{Name: "design", MaxSize: 64 << 10},
 			&core.AutodateField{Name: "created", OnCreate: true},
 		)
 		runs.ListRule, runs.ViewRule, runs.CreateRule = types.Pointer(""), types.Pointer(""), createRule
-		runs.AddIndex("idx_bm_runs_level", false, "level,won,time", "")
+		runs.AddIndex("idx_hm_runs_level", false, "level,won,score", "")
 		if err := app.Save(runs); err != nil {
 			return err
 		}
 
 		// AI4Mars-style terrain labels. Each player labels a segment once;
 		// private to the player, aggregated server-side for consensus.
-		labels := core.NewBaseCollection("bm_labels")
+		labels := core.NewBaseCollection("hm_labels")
 		labels.Fields.Add(
 			owner(),
 			&core.NumberField{Name: "level", Required: true, OnlyInt: true, Min: types.Pointer(1.0)},
@@ -55,10 +56,10 @@ func init() {
 		labels.ListRule = types.Pointer("user = @request.auth.id")
 		labels.ViewRule = labels.ListRule
 		labels.CreateRule = createRule
-		labels.AddIndex("idx_bm_labels_unique", true, "user,level,segment", "")
+		labels.AddIndex("idx_hm_labels_unique", true, "user,level,segment", "")
 		return app.Save(labels)
 	}, func(app core.App) error {
-		for _, n := range []string{"bm_labels", "bm_runs"} {
+		for _, n := range []string{"hm_labels", "hm_runs"} {
 			if c, err := app.FindCollectionByNameOrId(n); err == nil {
 				if err := app.Delete(c); err != nil {
 					return err

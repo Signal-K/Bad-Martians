@@ -1,4 +1,4 @@
-module github.com/signal-k/bad-martians
+module github.com/signal-k/haphazard-martians
 
 go 1.27
 

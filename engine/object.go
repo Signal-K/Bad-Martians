@@ -49,6 +49,7 @@ func Get[T any](g *GameObject) (T, bool) {
 // and Godot a SceneTree root.
 type Scene struct {
 	Name    string
+	Meta    SceneMeta
 	Game    *Game
 	Cam     Camera
 	Objects []*GameObject
