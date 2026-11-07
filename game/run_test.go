@@ -1,9 +1,12 @@
 package game
 
 import (
+	"encoding/binary"
+	"hash/fnv"
+	"math"
 	"testing"
 
-	"github.com/signal-k/bad-martians/engine"
+	"github.com/signal-k/haphazard-martians/engine"
 )
 
 func drive(l *Level, d Design, maxT float64) *Run {
@@ -90,4 +93,28 @@ func TestDesignRules(t *testing.T) {
 	if len(d.Validate(3)) == 0 {
 		t.Fatal("over-budget must be invalid")
 	}
+}
+
+// Levels must be bit-identical on every platform, or a run recorded on one
+// device could not be checked on another. Hash values were taken on amd64 and
+// must match under GOOS=js GOARCH=wasm too (see docs/PHYSICS.md).
+func TestLevelTerrainGolden(t *testing.T) {
+	for _, def := range LevelDefs {
+		l := BuildLevel(def)
+		h := fnv.New64a()
+		var b [8]byte
+		for _, v := range l.Terrain.H {
+			binary.LittleEndian.PutUint64(b[:], math.Float64bits(v))
+			h.Write(b[:])
+		}
+		t.Logf("level %d terrain %016x", def.ID, h.Sum64())
+		if want, ok := goldenTerrain[def.ID]; ok && want != h.Sum64() {
+			t.Errorf("level %d terrain changed: %016x, want %016x", def.ID, h.Sum64(), want)
+		}
+	}
+}
+
+var goldenTerrain = map[int]uint64{
+	1: 0xb67c4e8e94c2a439, 2: 0x7c9b5d5a920caeac, 3: 0xa15b7fe52f477289,
+	4: 0x8d6d0ebe36f97387, 5: 0x5e365f19704d38a6,
 }

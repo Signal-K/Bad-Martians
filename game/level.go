@@ -3,8 +3,8 @@ package game
 import (
 	"math"
 
-	"github.com/signal-k/bad-martians/engine"
-	"github.com/signal-k/bad-martians/physics"
+	"github.com/signal-k/haphazard-martians/engine"
+	"github.com/signal-k/haphazard-martians/physics"
 )
 
 // Segment is a stretch of terrain with one AI4Mars class. Gold segments have
@@ -49,6 +49,20 @@ const (
 	terrainDX  = 0.5
 	terrainPad = 12.0
 )
+
+// bump is a Gaussian-like hill (about exp(-d²)) built from multiplications
+// only. math.Exp has a different implementation on amd64 than on wasm, which
+// made the same level differ in its last bits between platforms; this does not.
+// The explicit float64 conversion stops fused multiply-add on arm64.
+func bump(d float64) float64 {
+	u := 1 - float64(d*d)/8
+	if u <= 0 {
+		return 0
+	}
+	u = float64(u * u)
+	u = float64(u * u)
+	return float64(u * u)
+}
 
 func smooth(t float64) float64 {
 	t = math.Max(0, math.Min(1, t))
@@ -126,7 +140,7 @@ func BuildLevel(def LevelDef) *Level {
 				for i := range h {
 					xx := -terrainPad + float64(i)*terrainDX
 					d := (xx - x) / pw
-					h[i] += ph * math.Exp(-d*d)
+					h[i] += ph * bump(d)
 				}
 			}
 		}

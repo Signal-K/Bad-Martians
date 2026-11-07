@@ -1,0 +1,261 @@
+[
+ {
+  "Name": "Settling on flat rock (12 s, no throttle)",
+  "Rows": {
+   "energy drift": {
+    "Box2D (rigid + welds)": "0.00 J / 3 s",
+    "Chipmunk (impulse lattice)": "0.00 J / 3 s",
+    "Ours (PBD lattice)": "0.00 J / 3 s",
+    "Ours, 4x iterations": "0.00 J / 3 s"
+   },
+   "rest jitter": {
+    "Box2D (rigid + welds)": "0.0 mm/s",
+    "Chipmunk (impulse lattice)": "0.0 mm/s",
+    "Ours (PBD lattice)": "0.0 mm/s",
+    "Ours, 4x iterations": "0.0 mm/s"
+   },
+   "settles": {
+    "Box2D (rigid + welds)": "0.3 s",
+    "Chipmunk (impulse lattice)": "0.2 s",
+    "Ours (PBD lattice)": "0.3 s",
+    "Ours, 4x iterations": "0.3 s"
+   },
+   "sink at rest": {
+    "Box2D (rigid + welds)": "0 mm",
+    "Chipmunk (impulse lattice)": "0 mm",
+    "Ours (PBD lattice)": "0 mm",
+    "Ours, 4x iterations": "0 mm"
+   }
+  },
+  "Keys": [
+   "energy drift",
+   "rest jitter",
+   "settles",
+   "sink at rest"
+  ]
+ },
+ {
+  "Name": "Soil slope climb (full throttle, 25 s)",
+  "Rows": {
+   "20° climb to 40 m": {
+    "Box2D (rigid + welds)": "10.3 s",
+    "Chipmunk (impulse lattice)": "9.6 s",
+    "Ours (PBD lattice)": "no",
+    "Ours, 4x iterations": "no"
+   },
+   "steepest climb": {
+    "Box2D (rigid + welds)": "25°",
+    "Chipmunk (impulse lattice)": "25°",
+    "Ours (PBD lattice)": "10°",
+    "Ours, 4x iterations": "10°"
+   }
+  },
+  "Keys": [
+   "20° climb to 40 m",
+   "steepest climb"
+  ]
+ },
+ {
+  "Name": "Drop from 30 m, launched at 14 m/s",
+  "Rows": {
+   "ends on surface": {
+    "Box2D (rigid + welds)": "yes",
+    "Chipmunk (impulse lattice)": "yes",
+    "Ours (PBD lattice)": "yes",
+    "Ours, 4x iterations": "yes"
+   },
+   "peak speed": {
+    "Box2D (rigid + welds)": "23 m/s",
+    "Chipmunk (impulse lattice)": "16 m/s",
+    "Ours (PBD lattice)": "16 m/s",
+    "Ours, 4x iterations": "16 m/s"
+   },
+   "tunnelled steps": {
+    "Box2D (rigid + welds)": "0",
+    "Chipmunk (impulse lattice)": "0",
+    "Ours (PBD lattice)": "0",
+    "Ours, 4x iterations": "0"
+   }
+  },
+  "Keys": [
+   "ends on surface",
+   "peak speed",
+   "tunnelled steps"
+  ]
+ },
+ {
+  "Name": "Drop from 150 m, launched at 14 m/s",
+  "Rows": {
+   "ends on surface": {
+    "Box2D (rigid + welds)": "yes",
+    "Chipmunk (impulse lattice)": "yes",
+    "Ours (PBD lattice)": "yes",
+    "Ours, 4x iterations": "yes"
+   },
+   "peak speed": {
+    "Box2D (rigid + welds)": "34 m/s",
+    "Chipmunk (impulse lattice)": "34 m/s",
+    "Ours (PBD lattice)": "36 m/s",
+    "Ours, 4x iterations": "29 m/s"
+   },
+   "tunnelled steps": {
+    "Box2D (rigid + welds)": "0",
+    "Chipmunk (impulse lattice)": "0",
+    "Ours (PBD lattice)": "0",
+    "Ours, 4x iterations": "0"
+   }
+  },
+  "Keys": [
+   "ends on surface",
+   "peak speed",
+   "tunnelled steps"
+  ]
+ },
+ {
+  "Name": "Drop from 1000 m (about 86 m/s on impact)",
+  "Rows": {
+   "ends on surface": {
+    "Box2D (rigid + welds)": "yes",
+    "Chipmunk (impulse lattice)": "yes",
+    "Ours (PBD lattice)": "yes",
+    "Ours, 4x iterations": "yes"
+   },
+   "peak speed": {
+    "Box2D (rigid + welds)": "74 m/s",
+    "Chipmunk (impulse lattice)": "72 m/s",
+    "Ours (PBD lattice)": "46 m/s",
+    "Ours, 4x iterations": "46 m/s"
+   },
+   "tunnelled steps": {
+    "Box2D (rigid + welds)": "0",
+    "Chipmunk (impulse lattice)": "0",
+    "Ours (PBD lattice)": "0",
+    "Ours, 4x iterations": "0"
+   }
+  },
+  "Keys": [
+   "ends on surface",
+   "peak speed",
+   "tunnelled steps"
+  ]
+ },
+ {
+  "Name": "Shipped levels (par is the 3-star time)",
+  "Rows": {
+   "L1 reference rover": {
+    "Box2D (rigid + welds)": "10.7 s (par 14)",
+    "Chipmunk (impulse lattice)": "10.6 s (par 14)",
+    "Ours (PBD lattice)": "12.4 s (par 14)",
+    "Ours, 4x iterations": "12.4 s (par 14)"
+   },
+   "L1 starter rover": {
+    "Box2D (rigid + welds)": "13.1 s (par 14)",
+    "Chipmunk (impulse lattice)": "12.4 s (par 14)",
+    "Ours (PBD lattice)": "24.5 s (par 14)",
+    "Ours, 4x iterations": "24.5 s (par 14)"
+   },
+   "L2 reference rover": {
+    "Box2D (rigid + welds)": "16.5 s (par 24)",
+    "Chipmunk (impulse lattice)": "16.7 s (par 24)",
+    "Ours (PBD lattice)": "21.5 s (par 24)",
+    "Ours, 4x iterations": "22.2 s (par 24)"
+   },
+   "L3 reference rover": {
+    "Box2D (rigid + welds)": "17.5 s (par 23)",
+    "Chipmunk (impulse lattice)": "18.9 s (par 23)",
+    "Ours (PBD lattice)": "21.6 s (par 23)",
+    "Ours, 4x iterations": "21.9 s (par 23)"
+   },
+   "L4 reference rover": {
+    "Box2D (rigid + welds)": "stuck at 19 m",
+    "Chipmunk (impulse lattice)": "24.0 s (par 28)",
+    "Ours (PBD lattice)": "31.3 s (par 28)",
+    "Ours, 4x iterations": "29.2 s (par 28)"
+   },
+   "L5 reference rover": {
+    "Box2D (rigid + welds)": "stuck at 61 m",
+    "Chipmunk (impulse lattice)": "stuck at 25 m",
+    "Ours (PBD lattice)": "32.3 s (par 34)",
+    "Ours, 4x iterations": "30.8 s (par 34)"
+   }
+  },
+  "Keys": [
+   "L1 reference rover",
+   "L1 starter rover",
+   "L2 reference rover",
+   "L3 reference rover",
+   "L4 reference rover",
+   "L5 reference rover"
+  ]
+ },
+ {
+  "Name": "Long beam rigidity (10 m, 12 s at rest)",
+  "Rows": {
+   "beam parts": {
+    "Box2D (rigid + welds)": "8",
+    "Chipmunk (impulse lattice)": "8",
+    "Ours (PBD lattice)": "8",
+    "Ours, 4x iterations": "8"
+   },
+   "beam sag": {
+    "Box2D (rigid + welds)": "33 mm",
+    "Chipmunk (impulse lattice)": "203 mm",
+    "Ours (PBD lattice)": "200 mm",
+    "Ours, 4x iterations": "200 mm"
+   }
+  },
+  "Keys": [
+   "beam parts",
+   "beam sag"
+  ]
+ },
+ {
+  "Name": "Cost per step (this machine)",
+  "Rows": {
+   "6-body step": {
+    "Box2D (rigid + welds)": "37 µs",
+    "Chipmunk (impulse lattice)": "9 µs",
+    "Ours (PBD lattice)": "15 µs",
+    "Ours, 4x iterations": "52 µs"
+   },
+   "84-body sane": {
+    "Box2D (rigid + welds)": "yes (moved 64 m)",
+    "Chipmunk (impulse lattice)": "yes (moved 67 m)",
+    "Ours (PBD lattice)": "yes (moved 46 m)",
+    "Ours, 4x iterations": "yes (moved 47 m)"
+   },
+   "84-body step": {
+    "Box2D (rigid + welds)": "302 µs",
+    "Chipmunk (impulse lattice)": "130 µs",
+    "Ours (PBD lattice)": "325 µs",
+    "Ours, 4x iterations": "1343 µs"
+   }
+  },
+  "Keys": [
+   "6-body step",
+   "84-body sane",
+   "84-body step"
+  ]
+ },
+ {
+  "Name": "Determinism (12° soil ramp, 20 s, 1200 steps)",
+  "Rows": {
+   "digest": {
+    "Box2D (rigid + welds)": "2fb05b8ceb6f6aa9",
+    "Chipmunk (impulse lattice)": "d53ad1d9b20d68a9",
+    "Ours (PBD lattice)": "3b57f9e108deb869",
+    "Ours, 4x iterations": "911f84a811eff810"
+   },
+   "repeatable": {
+    "Box2D (rigid + welds)": "bit-identical",
+    "Chipmunk (impulse lattice)": "bit-identical",
+    "Ours (PBD lattice)": "bit-identical",
+    "Ours, 4x iterations": "bit-identical"
+   }
+  },
+  "Keys": [
+   "digest",
+   "repeatable"
+  ]
+ }
+]
