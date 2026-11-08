@@ -1,0 +1,18 @@
+{
+  "id": 3,
+  "name": "Boulder Field",
+  "blurb": "Rocks everywhere. Ride the bumps.",
+  "biome": "boulders",
+  "length": 120,
+  "seed": 33,
+  "credits": 14,
+  "par": 23,
+  "hill": 1.5,
+  "traction": 1.0,
+  "mix": {
+    "soil": 2,
+    "bedrock": 1,
+    "sand": 1,
+    "big_rock": 4
+  }
+}

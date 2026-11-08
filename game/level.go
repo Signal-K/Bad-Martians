@@ -17,23 +17,17 @@ type Segment struct {
 }
 
 type LevelDef struct {
-	ID      int
-	Name    string
-	Blurb   string
-	Length  float64
-	Seed    uint64
-	Credits int     // base parts budget
-	Par     float64 // seconds for the time star
-	Hill    float64 // hill amplitude (m)
-	Mix     [NumClasses]float64
-}
-
-var LevelDefs = []LevelDef{
-	{1, "Gale Warm-up", "Gentle rolling plains near the landing site.", 80, 11, 12, 14, 1.2, [NumClasses]float64{4, 3, 1, 0}},
-	{2, "Sand Trap", "Wind-blown drifts. Grip matters.", 110, 22, 13, 24, 1.5, [NumClasses]float64{2, 2, 4, 1}},
-	{3, "Boulder Field", "Rocks everywhere. Ride the bumps.", 120, 33, 14, 23, 1.5, [NumClasses]float64{2, 1, 1, 4}},
-	{4, "Sharp Foothills", "Climb the lower slopes of Mount Sharp.", 150, 46, 15, 28, 3.0, [NumClasses]float64{3, 3, 2, 1}},
-	{5, "Rim Run", "Long, steep and mixed. The full survey.", 180, 55, 16, 34, 3.8, [NumClasses]float64{2, 2, 2, 2}},
+	ID       int
+	Name     string
+	Blurb    string
+	Biome    string
+	Length   float64
+	Seed     uint64
+	Credits  int     // base parts budget
+	Par      float64 // seconds for the time star
+	Hill     float64 // hill amplitude (m)
+	Traction float64 // multiplies every class's friction; 1 is as labelled
+	Mix      [NumClasses]float64
 }
 
 type Level struct {
@@ -158,6 +152,9 @@ func BuildLevel(def LevelDef) *Level {
 	mats := make([]physics.Material, NumClasses)
 	for i := range mats {
 		mats[i] = Classes[i].Mat
+		if def.Traction > 0 {
+			mats[i].Friction *= def.Traction
+		}
 	}
 	L.Terrain = &physics.Terrain{X0: -terrainPad, DX: terrainDX, H: h, Seg: seg, Materials: mats}
 
@@ -173,6 +170,11 @@ func GetLevel(id int) *Level {
 	for _, d := range LevelDefs {
 		if d.ID == id {
 			return BuildLevel(d)
+		}
+	}
+	for _, m := range Missions {
+		if m.Level.ID == id {
+			return BuildLevel(m.Level)
 		}
 	}
 	return nil

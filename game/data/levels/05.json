@@ -1,0 +1,18 @@
+{
+  "id": 5,
+  "name": "Rim Run",
+  "blurb": "Long, steep and mixed. The full survey.",
+  "biome": "crater",
+  "length": 180,
+  "seed": 55,
+  "credits": 16,
+  "par": 34,
+  "hill": 3.8,
+  "traction": 1.0,
+  "mix": {
+    "soil": 2,
+    "bedrock": 2,
+    "sand": 2,
+    "big_rock": 2
+  }
+}

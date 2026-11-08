@@ -128,3 +128,20 @@ scoring should move server-side before the data is trusted.
 - Clerk, Star Sailors integration.
 - Multi-touch (gas and steer at once); a single pointer is supported today.
 - Native iOS/Android shells.
+
+## Levels and missions as data
+
+Levels are JSON files in `game/data/levels/` and daily missions are JSON files in
+`game/data/missions/`. Both are embedded in the binary and validated at startup;
+a bad file fails `go test` with the file name and the reason, and unknown fields
+are errors so typos are caught.
+
+A level declares `biome`, `length`, `seed`, `credits` (parts budget), `par`,
+`hill`, `traction` (multiplies every terrain class's friction) and a `mix` of
+AI4Mars classes. `Obstacle()` and `Difficulty()` give the visible obstacle load
+and a weighted difficulty from those fields. Campaign ids run 1..n without gaps.
+
+A mission wraps a level (id 100 or more) with a `date`, `title`, `story` and a
+`reward` (`credits`, `free_retry`). `MissionFor("YYYY-MM-DD")` returns the day's
+mission. A test requires the reference rover to beat every shipped mission, so a
+hand-authored mission that is impossible fails before it ships.

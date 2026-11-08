@@ -1,0 +1,18 @@
+{
+  "id": 4,
+  "name": "Sharp Foothills",
+  "blurb": "Climb the lower slopes of Mount Sharp.",
+  "biome": "ridge",
+  "length": 150,
+  "seed": 46,
+  "credits": 15,
+  "par": 28,
+  "hill": 3.0,
+  "traction": 1.0,
+  "mix": {
+    "soil": 3,
+    "bedrock": 3,
+    "sand": 2,
+    "big_rock": 1
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "id": 2,
+  "name": "Sand Trap",
+  "blurb": "Wind-blown drifts. Grip matters.",
+  "biome": "dunes",
+  "length": 110,
+  "seed": 22,
+  "credits": 13,
+  "par": 24,
+  "hill": 1.5,
+  "traction": 1.0,
+  "mix": {
+    "soil": 2,
+    "bedrock": 2,
+    "sand": 4,
+    "big_rock": 1
+  }
+}

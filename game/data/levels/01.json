@@ -1,0 +1,18 @@
+{
+  "id": 1,
+  "name": "Gale Warm-up",
+  "blurb": "Gentle rolling plains near the landing site.",
+  "biome": "plains",
+  "length": 80,
+  "seed": 11,
+  "credits": 12,
+  "par": 14,
+  "hill": 1.2,
+  "traction": 1.0,
+  "mix": {
+    "soil": 4,
+    "bedrock": 3,
+    "sand": 1,
+    "big_rock": 0
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "date": "2026-11-09",
+  "title": "Stuck rover",
+  "story": "A rover has stalled on the dunes. Reach it before the dust storm.",
+  "reward": {
+    "credits": 4,
+    "free_retry": 1
+  },
+  "level": {
+    "id": 101,
+    "name": "Dune Rescue",
+    "blurb": "Soft drifts all the way. Mind your grip.",
+    "biome": "dunes",
+    "length": 100,
+    "seed": 707,
+    "credits": 13,
+    "par": 22,
+    "hill": 1.5,
+    "traction": 1.0,
+    "mix": {
+      "soil": 3,
+      "bedrock": 2,
+      "sand": 4,
+      "big_rock": 0
+    }
+  }
+}
