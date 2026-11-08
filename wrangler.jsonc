@@ -1,0 +1,6 @@
+{
+  // Static site only: the game is a WebAssembly PWA and needs no Worker code.
+  "name": "haphazard-martians",
+  "compatibility_date": "2026-11-01",
+  "assets": { "directory": "./dist" }
+}

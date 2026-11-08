@@ -2,7 +2,11 @@
 // and an offline-tolerant queue for run/label events. The game only ever calls
 // window.haphazard.{load,save,emit}.
 (() => {
-  const API = location.origin;
+  // config.js decides where the backend is. No config means the page's own origin
+  // (the bundled PocketBase server); an empty api means demo mode with no backend.
+  const cfg = window.HM_CONFIG;
+  const API = cfg ? cfg.api : location.origin;
+  const DEMO = !API;
   const LS = {
     get(k) { try { return localStorage.getItem(k); } catch { return null; } },
     set(k, v) { try { localStorage.setItem(k, v); } catch {} },
@@ -53,7 +57,7 @@
   // ---- account UI ----
   const $ = (id) => document.getElementById(id);
   const btn = $('acct'), dlg = $('dlg'), msg = $('msg');
-  function render() { btn.textContent = auth ? auth.record.email + ' · sign out' : 'Sign in'; }
+  function render() { if (DEMO) { btn.hidden = true; return; } btn.textContent = auth ? auth.record.email + ' · sign out' : 'Sign in'; }
   function signOut() { auth = null; LS.del('hm.auth'); render(); }
   async function setAuth(r) { auth = { token: r.token, record: r.record }; LS.set('hm.auth', JSON.stringify(auth)); render(); flush(); }
   async function login(email, password) {
@@ -74,7 +78,7 @@
     } catch (err) { msg.textContent = err.message; }
   });
   render();
-  if (auth) pb('/api/collections/users/auth-refresh', { method: 'POST' }).then(setAuth).catch((e) => { if (e.status === 401 || e.status === 403) signOut(); });
+  if (auth && !DEMO) pb('/api/collections/users/auth-refresh', { method: 'POST' }).then(setAuth).catch((e) => { if (e.status === 401 || e.status === 403) signOut(); });
   addEventListener('online', flush);
 
   window.haphazard = {
@@ -82,7 +86,8 @@
     save: (k, v) => LS.set('hm.' + k, v),
     emit: (ev, json) => {
       let p; try { p = JSON.parse(json); } catch { return; }
-      if (ev === 'scene') { btn.hidden = p.name !== 'menu'; return; } // keep the HTML chrome off the in-game HUD
+      if (ev === 'scene') { btn.hidden = DEMO || p.name !== 'menu'; return; } // keep the HTML chrome off the in-game HUD
+      if (DEMO) return; // nothing to send to: progress is already saved locally
       const rec = toRecord(ev, p);
       if (!rec) return;
       queue.push(rec); saveQueue(); flush();

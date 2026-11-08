@@ -1,6 +1,7 @@
 # Cloudflare deployment plan
 
-Status: plan, nothing deployed. Ticket KES-476.
+Status: phase 1 is built and tested locally but not deployed (it needs your Cloudflare
+secrets). Phases 2 and 3 are plans. Ticket KES-476.
 
 ## Summary
 
@@ -26,43 +27,53 @@ Status: plan, nothing deployed. Ticket KES-476.
 The wasm has about 5 MB of headroom under the per-file limit. If the game grows
 past it, split the wasm or move to a smaller build before anything else.
 
-## Phase 1: static PWA on Cloudflare (no backend)
+## Phase 1: static demo on Cloudflare (no backend) — built
 
-Goal: you can open a stable URL on the iPad, add it to the home screen and play
-with progress saved on the device.
+Goal: a stable URL where you can open the game on the iPad, add it to the home
+screen and play, with progress saved on the device. No backend is needed.
 
-1. **Build** (CI and local):
-   - `make wasm` produces `web/game.wasm` and `web/wasm_exec.js`.
-   - Copy `web/` to `dist/`. Name the wasm by content hash (`game.<hash>.wasm`)
-     and write that name into `index.html` and `sw.js`.
-2. **Service worker version.** `sw.js` has a fixed cache name
-   (`haphazard-martians-v1`). Stamp the build hash into it during the build,
-   otherwise returning players keep an old game.
-3. **`wrangler.jsonc`:**
-   - `assets.directory = "./dist"`, no `not_found_handling` (single page, no
-     client routing; `?scene=` is a query string).
-   - `name = "haphazard-martians"`, a `compatibility_date`, nothing else.
-4. **`dist/_headers`:**
-   - `game.*.wasm`: `Content-Type: application/wasm`,
-     `Cache-Control: public, max-age=31536000, immutable`.
-   - `sw.js` and `index.html`: `Cache-Control: no-cache`.
-   - `manifest.webmanifest`: `Content-Type: application/manifest+json`.
-5. **Domains.** Preview at `*.workers.dev` first; custom domain later (decision
-   below).
-6. **CI** (`.github/workflows/deploy.yml`, GitHub Actions):
-   - On every push and pull request: `go vet`, `go test ./...`, wasm build.
-   - Pull request or branch: `wrangler versions upload`, which gives a preview
-     URL to post on the PR.
-   - Push to `main`: `wrangler deploy`.
-   - Secrets: `CLOUDFLARE_API_TOKEN` (Workers edit only) and
-     `CLOUDFLARE_ACCOUNT_ID`.
-7. **Post-deploy smoke test** (Playwright, already used locally): load
-   `/?scene=menu`, `build`, `run`, `result`, `review`, `style`; fail on any page
-   error or console error; check the wasm response is compressed
-   (`content-encoding: br` or `gzip`).
+What is in the repo:
 
-Acceptance: preview URL plays a full mission on the iPad, installs to the home
-screen, and works offline after the first load.
+- `scripts/build-dist.sh` builds `dist/`: the wasm, the shell, a service worker
+  stamped with the build id (so returning players get the new game), `_headers`
+  and `config.js`. It fails the build if `game.wasm` passes 23 MiB.
+- `web/config.js` says where the backend is. The build writes `api: ""` by
+  default, which is **demo mode**: the Sign in button is hidden, nothing is sent
+  anywhere, progress stays in the browser. Set the `HM_API_URL` repository
+  variable (a public URL, not a secret) and the same build connects to that
+  backend instead. The committed default is `location.origin`, so the bundled
+  PocketBase server (`make run`) behaves as before.
+- `wrangler.jsonc` serves `dist/` as static assets, no Worker code.
+- `deploy/_headers` sets the wasm content type, revalidating cache for the game
+  files, `no-cache` for `index.html`, `sw.js` and `config.js`.
+- `.github/workflows/deploy.yml` runs vet, tests and the dist build on every
+  push. If `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are set, `main`
+  runs `wrangler deploy` and other branches run `wrangler versions upload` for a
+  preview. Without the secrets it builds, tests and skips the deploy. The first
+  deploy has to come from `main`, because a preview version needs the Worker to
+  exist.
+
+Checked here: the dist build, `wrangler deploy --dry-run` (reads the 11 asset
+files), and a browser run of `dist/` showing the Sign in button hidden, the
+service worker registered, no `/api` requests and no console errors.
+Not checked: a real deploy, the workflow on GitHub, and the iPad.
+
+To go live, you add the two secrets, merge or push to `main`, and open the
+`*.workers.dev` URL Wrangler prints.
+
+### Connecting to the Star Sailors backend
+
+Set `HM_API_URL` to its public URL and rebuild. The game then uses the same
+calls as today: `users` auth and the `hm_runs` and `hm_labels` collections. For
+that to work:
+
+- the backend needs those two collections (migration
+  `migrations/1_haphazard_martians.go`) and a CORS rule that allows the game's
+  origin;
+- sign-in uses PocketBase email and password for now. If the shared backend
+  authenticates differently, `web/host.js` is the only file that changes.
+
+I have not seen that backend, so I have not tested any of this against it.
 
 ## Phase 2: PocketBase backend
 
@@ -127,12 +138,10 @@ committing to a paid product.
 
 ## Risks
 
-- **Sign in in phase 1.** The menu shows a Sign in button that calls `/api`.
-  With no backend it fails, so phase 1 must hide it or show "offline" when
-  `/api/health` is unreachable. This is a small change in `web/host.js`.
 - **Per-file limit.** 20.5 MB raw against 25 MiB. Watch the size in CI and fail
   the build above 23 MB.
-- **Stale service worker.** The cache version must change on every release.
+- **Stale service worker.** The build stamps the cache version, but only if every
+  release goes through `scripts/build-dist.sh`.
 - **First load.** 4.7 MB compressed on mobile data takes a few seconds; the
   loading screen must show progress.
 - **arm64 untested.** The iPad runs the wasm in Safari, so arm64 Go rounding
@@ -140,19 +149,18 @@ committing to a paid product.
 - **Unverified Cloudflare facts** in the table above come from search results,
   not from reading the pages in full.
 
-## Decisions needed from Liam
+## Decisions
 
-1. **Domain.** Which hostname for the game and for the backend? Until then
-   everything lives on `*.workers.dev`.
-2. **Where PocketBase runs** (phase 2). Recommended: a small VM or volume
-   host behind Cloudflare.
-3. **A Cloudflare API token and account id** for CI, added as GitHub Actions
-   secrets in the repo. Claude cannot create these.
+1. **Domain.** Decided: `*.workers.dev` for now.
+2. **Backend.** Decided: the demo has none; it will connect to the Star Sailors
+   backend later. Phase 2 hosting is only needed if a separate PocketBase is
+   still wanted.
+3. **Secrets.** Liam adds `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as
+   GitHub Actions secrets himself.
 
 ## Work to do, in order
 
-1. Build script and `dist/` with hashed wasm and a versioned service worker.
-2. `wrangler.jsonc` and `_headers`.
-3. GitHub Actions workflow with preview deploys and the smoke test.
-4. First preview deploy and an iPad install check.
-5. Phase 2 once the three decisions above are made.
+1. Add the Cloudflare secrets, push to `main`, check the URL on the iPad.
+2. Add the post-deploy smoke test to the workflow.
+3. Connect to the Star Sailors backend (needs its URL and CORS rule).
+4. Phase 2 hosting only if a separate PocketBase is still wanted.

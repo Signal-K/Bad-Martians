@@ -1,0 +1,47 @@
+name: deploy
+# Builds and tests every push. Pull requests and branches get a preview version;
+# main deploys to production. Secrets are repository secrets that Liam adds:
+#   CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
+# Optional repository variable HM_API_URL points the build at a backend.
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version-file: go.mod }
+      - run: go vet ./engine ./physics ./game ./client
+      - run: go test ./engine ./physics ./game
+      - run: scripts/build-dist.sh
+        env:
+          HM_API_URL: ${{ vars.HM_API_URL }}
+      - uses: actions/upload-artifact@v4
+        with: { name: dist, path: dist }
+
+  deploy:
+    needs: build
+    if: ${{ github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    env:
+      CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - name: Skip until the Cloudflare secrets exist
+        if: ${{ env.CF_TOKEN == '' }}
+        run: echo "CLOUDFLARE_API_TOKEN is not set; build and tests passed, nothing deployed."
+      - uses: actions/checkout@v4
+        if: ${{ env.CF_TOKEN != '' }}
+      - uses: actions/download-artifact@v4
+        if: ${{ env.CF_TOKEN != '' }}
+        with: { name: dist, path: dist }
+      # The first ever deploy must come from main: `versions upload` needs the Worker to exist.
+      - name: Production (main) or preview version (other branches)
+        if: ${{ env.CF_TOKEN != '' }}
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: ${{ github.ref == 'refs/heads/main' && 'deploy' || 'versions upload' }}

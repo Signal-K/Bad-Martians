@@ -35,3 +35,9 @@ until you sign in.
 | `cmd/desktop` | Native dev build. |
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for design decisions and [docs/PHYSICS.md](docs/PHYSICS.md) for the physics solver comparison.
+
+## Static demo (no backend)
+
+`scripts/build-dist.sh` builds `dist/` for Cloudflare or any static host. By default it
+is a demo: progress stays in the browser and sign-in is hidden. Set `HM_API_URL` to
+connect it to a backend. See `docs/DEPLOY_CLOUDFLARE.md`.
