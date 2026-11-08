@@ -8,6 +8,9 @@ type Input struct {
 	Left    bool
 	Right   bool
 
+	// Editor commands, sent by the host as one-frame edges.
+	ToggleEdit, Pause, Step, Delete bool
+
 	// Derived by Game.Tick from successive snapshots.
 	Pressed  bool
 	Released bool

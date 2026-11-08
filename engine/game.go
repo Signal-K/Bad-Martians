@@ -21,6 +21,9 @@ type Game struct {
 	prevDown  bool
 	pressL    bool // latched edges, consumed by the next fixed step
 	releaseL  bool
+
+	// Ed is the in-game editor (see editor.go).
+	Ed Editor
 }
 
 type pendingLoad struct {
@@ -58,6 +61,7 @@ func (g *Game) applyPending() {
 		s.Cam.Zoom = 1
 	}
 	g.scene = s
+	g.Ed.Selected = nil
 	g.Host.Emit("scene", []byte(`{"name":"`+p.name+`","type":"`+string(s.Meta.Type)+`"}`)) // hosts may adapt their chrome
 }
 
@@ -68,6 +72,42 @@ func (g *Game) Tick(frameDt float64, in Input) {
 		frameDt = 0.1 // tab was backgrounded; don't spiral
 	}
 	g.applyPending()
+	pressed, released := in.Down && !g.prevDown, !in.Down && g.prevDown
+	if in.ToggleEdit {
+		g.SetEditor(!g.Ed.On)
+	}
+	if g.Ed.On && g.scene != nil {
+		if in.Pause {
+			g.Do("Pause")
+		}
+		if in.Step {
+			g.Do("Step")
+		}
+		if in.Delete {
+			g.Do("Delete")
+		}
+		g.editorPointer(in, pressed, released)
+		// The scene sees an idle pointer while editing, so taps select instead of firing buttons.
+		g.prevDown = in.Down
+		g.pressL, g.releaseL = false, false
+		g.In = Input{Pointer: in.Pointer}
+		steps := g.Ed.steps
+		g.Ed.steps = 0
+		if !g.Ed.Paused {
+			g.acc += frameDt
+			for g.acc >= FixedDT {
+				g.acc -= FixedDT
+				steps++
+			}
+		}
+		for ; steps > 0 && g.scene != nil; steps-- {
+			g.scene.update(FixedDT)
+			if g.pending != nil {
+				break
+			}
+		}
+		return
+	}
 	g.pressL = g.pressL || (in.Down && !g.prevDown)
 	g.releaseL = g.releaseL || (!in.Down && g.prevDown)
 	g.prevDown = in.Down
@@ -92,5 +132,8 @@ func (g *Game) Tick(frameDt float64, in Input) {
 func (g *Game) Draw(r Renderer) {
 	if g.scene != nil {
 		g.scene.draw(r)
+		if g.Ed.On {
+			g.drawEditor(r)
+		}
 	}
 }

@@ -145,3 +145,20 @@ A mission wraps a level (id 100 or more) with a `date`, `title`, `story` and a
 `reward` (`credits`, `free_retry`). `MissionFor("YYYY-MM-DD")` returns the day's
 mission. A test requires the reference rover to beat every shipped mission, so a
 hand-authored mission that is impossible fails before it ships.
+
+## The in-game editor
+
+Every scene runs inside an editor that is part of the engine (`engine/editor.go`).
+Open it with F1 or the backtick key, `?edit=1` in the URL, or `haphazard.edit()`
+in the browser console. It opens paused and the scene stops seeing the pointer,
+so taps select instead of pressing buttons.
+
+- Toolbar: Play/Pause (P), Step one fixed step (.), Hide, Delete (Del), Close.
+- Hierarchy lists every GameObject back to front; tap a row to select it.
+- Tap an object in the viewport to select it, drag to move it.
+- Inspector shows name, tag, position, rotation, layer, active and components.
+- A component opts in to viewport picking with `engine.Bounder` and to dragging
+  with `engine.Mover`. Buttons and the rover do; objects with only a world
+  position are picked at that point.
+
+Edits are live only: they are not saved to the level or scene data.

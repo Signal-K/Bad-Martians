@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	"github.com/signal-k/haphazard-martians/engine"
 	"github.com/signal-k/haphazard-martians/game"
@@ -17,6 +18,7 @@ type App struct {
 
 	mu      sync.Mutex
 	pending string // scene a host asked to open, applied on the next Update
+	edit    int    // editor request from the host: 1 on, 2 off, 3 toggle
 }
 
 // New builds the app. If scene names a registered scene it opens that scene on
@@ -37,6 +39,14 @@ func (a *App) Open(scene string) {
 	a.mu.Unlock()
 }
 
+// Edit switches the editor on or off (or toggles it) on the next frame. Safe
+// from any goroutine; the web page uses it for ?edit=1 and haphazard.edit().
+func (a *App) Edit(mode string) {
+	a.mu.Lock()
+	a.edit = map[string]int{"on": 1, "off": 2, "toggle": 3}[mode]
+	a.mu.Unlock()
+}
+
 // SceneList is the registered scenes as JSON, for tooling and the gallery.
 func (a *App) SceneList() string {
 	type row struct {
@@ -53,6 +63,10 @@ func (a *App) SceneList() string {
 
 func (a *App) readInput() engine.Input {
 	var in engine.Input
+	in.ToggleEdit = inpututil.IsKeyJustPressed(ebiten.KeyF1) || inpututil.IsKeyJustPressed(ebiten.KeyBackquote)
+	in.Pause = inpututil.IsKeyJustPressed(ebiten.KeyP)
+	in.Step = inpututil.IsKeyJustPressed(ebiten.KeyPeriod)
+	in.Delete = inpututil.IsKeyJustPressed(ebiten.KeyDelete) || inpututil.IsKeyJustPressed(ebiten.KeyBackspace)
 	in.Left = ebiten.IsKeyPressed(ebiten.KeyArrowLeft) || ebiten.IsKeyPressed(ebiten.KeyA)
 	in.Right = ebiten.IsKeyPressed(ebiten.KeyArrowRight) || ebiten.IsKeyPressed(ebiten.KeyD)
 	if ids := ebiten.AppendTouchIDs(nil); len(ids) > 0 {
@@ -70,11 +84,22 @@ func (a *App) Update() error {
 	a.mu.Lock()
 	p := a.pending
 	a.pending = ""
+	ed := a.edit
+	a.edit = 0
 	a.mu.Unlock()
 	if p != "" {
 		a.G.OpenStandalone(p)
 	}
-	a.G.Tick(1.0/float64(ebiten.TPS()), a.readInput())
+	in := a.readInput()
+	switch ed {
+	case 1:
+		a.G.SetEditor(true)
+	case 2:
+		a.G.SetEditor(false)
+	case 3:
+		in.ToggleEdit = true
+	}
+	a.G.Tick(1.0/float64(ebiten.TPS()), in)
 	return nil
 }
 

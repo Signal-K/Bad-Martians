@@ -77,6 +77,12 @@ func (b *Button) Draw(_ *engine.GameObject, _ engine.Camera, r engine.Renderer) 
 }
 
 // AddButton spawns a Button object on layer 20.
+// Bounds and MoveBy let the engine editor pick and drag a button.
+func (b *Button) Bounds(*engine.GameObject, engine.Camera) (x, y, w, h float64) {
+	return b.X, b.Y, b.W, b.H
+}
+func (b *Button) MoveBy(_ *engine.GameObject, _ engine.Camera, dx, dy float64) { b.X += dx; b.Y += dy }
+
 func AddButton(s *engine.Scene, x, y, w, h float64, label string, onClick func()) *Button {
 	b := &Button{X: x, Y: y, W: w, H: h, Label: label, OnClick: onClick}
 	o := s.Spawn("btn:" + label)

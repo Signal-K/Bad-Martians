@@ -34,6 +34,17 @@ func main() {
 		name = scene.String()
 	}
 	app := client.New(jsHost{bridge}, name)
+	if q := js.Global().Get("URLSearchParams").New(js.Global().Get("location").Get("search")).Call("get", "edit"); !q.IsNull() {
+		app.Edit("on")
+	}
+	bridge.Set("edit", js.FuncOf(func(_ js.Value, a []js.Value) any {
+		mode := "toggle"
+		if len(a) > 0 {
+			mode = a[0].String()
+		}
+		app.Edit(mode)
+		return nil
+	}))
 	bridge.Set("scenes", js.FuncOf(func(js.Value, []js.Value) any { return app.SceneList() }))
 	bridge.Set("open", js.FuncOf(func(_ js.Value, a []js.Value) any { app.Open(a[0].String()); return nil }))
 	if err := ebiten.RunGame(app); err != nil {

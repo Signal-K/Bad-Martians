@@ -245,6 +245,25 @@ func (r *Rover) Draw(g *engine.GameObject, cam engine.Camera, rd engine.Renderer
 	}
 }
 
+// Bounds and MoveBy let the engine editor pick and drag the rover.
+func (r *Rover) Bounds(_ *engine.GameObject, cam engine.Camera) (x, y, w, h float64) {
+	lo, hi := engine.V(1e18, 1e18), engine.V(-1e18, -1e18)
+	for _, b := range r.Bodies {
+		p := cam.ToScreen(b.Pos)
+		lo.X, lo.Y = min(lo.X, p.X), min(lo.Y, p.Y)
+		hi.X, hi.Y = max(hi.X, p.X), max(hi.Y, p.Y)
+	}
+	pad := 0.5 * cam.Zoom
+	return lo.X - pad, lo.Y - pad, hi.X - lo.X + 2*pad, hi.Y - lo.Y + 2*pad
+}
+
+func (r *Rover) MoveBy(_ *engine.GameObject, cam engine.Camera, dx, dy float64) {
+	for _, b := range r.Bodies {
+		d := physics.Vec{X: dx / cam.Zoom, Y: -dy / cam.Zoom}
+		b.Pos, b.Prev = b.Pos.Add(d), b.Prev.Add(d) // move Prev too: dragging must not add velocity
+	}
+}
+
 func drawBeam(rd engine.Renderer, a, b engine.Vec2, z float64) {
 	rd.Line(a, b, 0.16*z, engine.RGB(150, 156, 170))
 }

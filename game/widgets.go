@@ -1,6 +1,10 @@
 package game
 
-import "github.com/signal-k/haphazard-martians/engine"
+import (
+	"math"
+
+	"github.com/signal-k/haphazard-martians/engine"
+)
 
 // textW estimates the pixel width of s at the given size (the UI font is wide).
 func textW(s string, size float64) float64 { return float64(len([]rune(s))) * size * 0.6 }
@@ -102,6 +106,29 @@ func drawMeter(r engine.Renderer, x, y, w float64, segs, filled int, col engine.
 // drawBackdrop paints the dark nebula behind menu-style scenes.
 func drawBackdrop(r engine.Renderer) {
 	r.Rect(0, 0, ScreenW, ScreenH, colSpace, true)
+	// Nebulae are clusters of soft, overlapping puffs of different sizes, so no
+	// cloud reads as a perfect circle.
+	blobs := []struct {
+		x, y, rad float64
+		c         engine.Color
+	}{
+		{190, 150, 250, engine.RGB(170, 36, 40)},
+		{720, 120, 200, engine.RGB(36, 160, 100)},
+		{780, 430, 270, engine.RGB(220, 116, 44)},
+		{70, 470, 230, engine.RGB(46, 76, 190)},
+	}
+	nr := newRng(31)
+	for _, b := range blobs {
+		for i := 0; i < 14; i++ {
+			a := nr.float() * 2 * math.Pi
+			d := b.rad * (0.1 + 0.55*nr.float())
+			rad := b.rad * (0.22 + 0.45*nr.float())
+			c := engine.V(b.x+math.Cos(a)*d*1.25, b.y+math.Sin(a)*d*0.8) // wider than tall
+			for k := 0; k < 3; k++ {
+				r.Circle(c, rad*(1-0.28*float64(k)), b.c.Alpha(10), true)
+			}
+		}
+	}
 	rg := newRng(7)
 	for i := 0; i < 90; i++ {
 		a := uint8(70 + rg.intn(185))
