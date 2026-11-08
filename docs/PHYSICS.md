@@ -86,8 +86,17 @@ question, so it is yours):
   the Box2D port (maintained, smaller to ship, smaller API), but we would
   retune every level.
 
-Follow-up: a ticket for the bend constraint once the design choice is made, and
-an arm64 determinism run.
+**Decision (Liam, 2026-11-08): truss builder.** Structure stays as it is: players
+triangulate their designs, and no bend constraint is added. Consequences:
+
+- A single row of parts folds, so the build screen should teach triangulation
+  (a hint when a design has an unbraced span; tracked on KES-474 with the parts).
+- Part count is the economy. A crash loses every part used in that attempt
+  (KES-471), so cost per part and the parts budget are the main balance levers.
+- Chipmunk and the bend constraint are not pursued. Revisit only if players
+  find trusses frustrating.
+
+Follow-up: an arm64 determinism run.
 
 ## Regression suite
 
