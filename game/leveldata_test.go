@@ -22,7 +22,7 @@ func TestShippedDataLoads(t *testing.T) {
 	if LevelDefs[4].Difficulty() <= LevelDefs[0].Difficulty() {
 		t.Error("final level should be harder than the first")
 	}
-	m, ok := MissionFor("2026-11-09")
+	m, ok := MissionFor("2026-11-08")
 	if !ok || m.Level.ID < 100 || m.Reward.FreeRetry != 1 {
 		t.Fatalf("sample mission: %+v ok=%v", m, ok)
 	}
@@ -32,7 +32,7 @@ func TestShippedDataLoads(t *testing.T) {
 }
 
 func TestSampleMissionBeatable(t *testing.T) {
-	m, _ := MissionFor("2026-11-09")
+	m, _ := MissionFor("2026-11-08")
 	d := referenceDesign()
 	if d.Cost() > m.Level.Credits+8 {
 		t.Fatal("reference design unaffordable")
@@ -89,10 +89,10 @@ func TestLoadMissionsValidation(t *testing.T) {
 		want  string
 	}{
 		"bad date":       {map[string]string{"a": mission("11/09/2026", 101)}, "YYYY-MM-DD"},
-		"campaign id":    {map[string]string{"a": mission("2026-11-09", 5)}, "100 or more"},
-		"duplicate date": {map[string]string{"a": mission("2026-11-09", 101), "b": mission("2026-11-09", 102)}, "date"},
-		"duplicate id":   {map[string]string{"a": mission("2026-11-09", 101), "b": mission("2026-11-10", 101)}, "level id"},
-		"big reward":     {map[string]string{"a": strings.Replace(mission("2026-11-09", 101), `"credits":2`, `"credits":99`, 1)}, "reward"},
+		"campaign id":    {map[string]string{"a": mission("2026-11-08", 5)}, "100 or more"},
+		"duplicate date": {map[string]string{"a": mission("2026-11-08", 101), "b": mission("2026-11-08", 102)}, "date"},
+		"duplicate id":   {map[string]string{"a": mission("2026-11-08", 101), "b": mission("2026-11-10", 101)}, "level id"},
+		"big reward":     {map[string]string{"a": strings.Replace(mission("2026-11-08", 101), `"credits":2`, `"credits":99`, 1)}, "reward"},
 	}
 	for name, c := range cases {
 		fsys := fstest.MapFS{}

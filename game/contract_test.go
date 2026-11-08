@@ -116,3 +116,5 @@ func TestEveryIconDraws(t *testing.T) {
 		}
 	}
 }
+
+func init() { Today = func() string { return "2026-11-08" } }

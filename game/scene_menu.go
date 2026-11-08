@@ -20,7 +20,7 @@ func menuScene(g *engine.Game, _ any) *engine.Scene {
 			total += lp.Score
 		}
 		drawChip(r, 56, 468, IconStarIco, fmt.Sprintf("%d total score", total), colChip)
-		r.Text("Finish a mission to unlock the next.", ScreenW-100, 474, sizeSmall, colMuted, engine.AlignRight)
+		r.Text("Finish a mission to unlock the next.", 904, 446, sizeSmall, colMuted, engine.AlignRight)
 	})
 	// Tiles share the panel's width, so the row fits however many missions ship.
 	const th, gap, pad = 232.0, 10.0, 16.0
@@ -66,6 +66,37 @@ func menuScene(g *engine.Game, _ any) *engine.Scene {
 				r.Text(fmt.Sprintf("best %d", lp.Score), cx, b.Y+190, sizeSmall, sub, engine.AlignCenter)
 			} else {
 				r.Text("not yet run", cx, b.Y+190, sizeSmall, sub, engine.AlignCenter)
+			}
+		}
+	}
+	if m, ok, next := CurrentMission(); ok || next != nil {
+		label := "Daily mission"
+		if !ok {
+			m, label = *next, "Coming "+next.Date
+		}
+		b := AddButton(s, 500, 462, 340, 64, label, func() {
+			g.Load(SceneBuild, NewSessionFor(g.Host, BuildLevel(m.Level)))
+		})
+		b.Disabled = !ok
+		b.Custom = func(b *Button, r engine.Renderer) {
+			fill, ink, sub, line := colTile, colInk, colMuted, colInk
+			switch {
+			case b.Disabled:
+				line, ink, sub = colMuted.Alpha(90), colMuted.Alpha(120), colMuted.Alpha(100)
+			case b.Held:
+				fill, ink, sub = colInk, colTile, colTile
+			}
+			r.Rect(b.X, b.Y, b.W, b.H, fill, true)
+			outline(r, b.X, b.Y, b.W, b.H, line)
+			r.Text(label, b.X+14, b.Y+8, sizeSmall, colNeon, engine.AlignLeft)
+			r.Text(m.Title, b.X+14, b.Y+26, 18, ink, engine.AlignLeft)
+			rw := fmt.Sprintf("+%d parts", m.Reward.Credits)
+			if m.Reward.FreeRetry > 0 {
+				rw += fmt.Sprintf("  +%d free retry", m.Reward.FreeRetry)
+			}
+			r.Text(rw, b.X+b.W-14, b.Y+8, sizeSmall, sub, engine.AlignRight)
+			if lp := prog.Levels[m.Level.ID]; lp.Score > 0 {
+				r.Text(fmt.Sprintf("best %d", lp.Score), b.X+b.W-14, b.Y+34, sizeSmall, sub, engine.AlignRight)
 			}
 		}
 	}

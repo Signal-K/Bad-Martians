@@ -205,6 +205,27 @@ func LoadMissions(fsys fs.FS) ([]Mission, error) {
 	return ms, nil
 }
 
+// Today is the date (YYYY-MM-DD, UTC) used to pick the daily mission. Tests
+// replace it so scenes stay deterministic.
+var Today = func() string { return time.Now().UTC().Format("2006-01-02") }
+
+// CurrentMission is today's mission, or the most recent earlier one. When none
+// has started yet, ok is false and next is the first upcoming mission, if any.
+func CurrentMission() (m Mission, ok bool, next *Mission) {
+	today := Today()
+	for i, c := range Missions {
+		if c.Date <= today {
+			m, ok = c, true
+		} else if next == nil {
+			next = &Missions[i]
+		}
+	}
+	if ok {
+		next = nil
+	}
+	return
+}
+
 // MissionFor returns the mission for a date (YYYY-MM-DD), if one is authored.
 func MissionFor(date string) (Mission, bool) {
 	for _, m := range Missions {

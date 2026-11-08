@@ -12,6 +12,7 @@ type Session struct {
 	Labels  map[int]Class // segment index -> player's review label
 	Design  Design
 	emitted map[int]Class // labels already sent to the host
+	Reward  int           // extra parts credits from a mission's reward
 }
 
 func NewSession(l *Level) *Session {
@@ -22,6 +23,11 @@ func NewSession(l *Level) *Session {
 // this level, so credits earned by reviewing carry into new builds.
 func NewSessionFor(h engine.Host, l *Level) *Session {
 	s := NewSession(l)
+	for _, m := range Missions {
+		if m.Level.ID == l.ID {
+			s.Reward = m.Reward.Credits
+		}
+	}
 	for seg, c := range LoadProgress(h).Labels[l.ID] {
 		s.Labels[seg], s.emitted[seg] = Class(c), Class(c)
 	}
@@ -41,7 +47,7 @@ func (s *Session) Bonus() int {
 	return b
 }
 
-func (s *Session) Budget() int { return s.Level.Credits + s.Bonus() }
+func (s *Session) Budget() int { return s.Level.Credits + s.Reward + s.Bonus() }
 
 // SubmitLabels sends each new or changed label to the host and remembers the
 // labels in the player's progress.

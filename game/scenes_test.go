@@ -214,3 +214,31 @@ func TestLabelBonus(t *testing.T) {
 		t.Fatalf("wrong gold label = +1, got %d", s.Bonus())
 	}
 }
+
+func TestDailyMissionOpensWithReward(t *testing.T) {
+	h := newHarness(t)
+	h.g.Load(SceneMenu, nil)
+	h.frames(2, engine.Input{})
+	h.clickButton("Daily mission") // not locked behind the campaign
+	if h.g.Scene().Name != SceneBuild {
+		t.Fatalf("expected build, got %s", h.g.Scene().Name)
+	}
+	m, _, _ := CurrentMission()
+	ses := NewSessionFor(h.g.Host, BuildLevel(m.Level))
+	if want := m.Level.Credits + m.Reward.Credits; ses.Budget() != want {
+		t.Fatalf("budget %d, want %d", ses.Budget(), want)
+	}
+}
+
+func TestCurrentMissionByDate(t *testing.T) {
+	old := Today
+	defer func() { Today = old }()
+	Today = func() string { return "2026-01-01" }
+	if _, ok, next := CurrentMission(); ok || next == nil {
+		t.Fatalf("before the first mission: ok=%v next=%v", ok, next)
+	}
+	Today = func() string { return "2030-01-01" }
+	if m, ok, _ := CurrentMission(); !ok || m.Date != "2026-11-08" {
+		t.Fatalf("later date should show the latest mission, got %v %v", m.Date, ok)
+	}
+}
