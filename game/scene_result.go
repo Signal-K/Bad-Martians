@@ -50,7 +50,15 @@ func resultScene(g *engine.Game, arg any) *engine.Scene {
 			"cost": ses.Design.Cost(), "design": design,
 		})
 		g.Host.Emit("run", payload)
+		if ses.Exp != nil {
+			ses.Exp.Finish(ra.Outcome == Won, ses.Design.Cost(), ra.Score.Total())
+			if ses.Exp.Over() && ses.Exp.Score > prog.BestExpedition {
+				prog.BestExpedition = ses.Exp.Score
+				prog.Save(g.Host)
+			}
+		}
 	}
+	exp := ses.Exp
 	best := prog.Levels[lvl.ID].Score
 	reviewed := len(ses.Labels)
 
@@ -59,6 +67,11 @@ func resultScene(g *engine.Game, arg any) *engine.Scene {
 		head, col := "Mission complete", colGood
 		if ra.Outcome != Won {
 			head, col = "Mission failed", colWarn
+		}
+		if exp != nil && exp.Done {
+			head = "Expedition complete"
+		} else if exp != nil && exp.Failed {
+			head = "Expedition lost"
 		}
 		r.Text(head, 28, 16, sizeTitle, col, engine.AlignLeft)
 		r.Text(ra.Outcome.Message(), 28, 54, sizeBody, colMuted, engine.AlignLeft)
@@ -85,6 +98,13 @@ func resultScene(g *engine.Game, arg any) *engine.Scene {
 		for i, ln := range []string{"Review the accuracy of the navcam's", "terrain read for this mission. Every", "review earns credits for your next", "rover build."} {
 			r.Text(ln, 596, 184+float64(i)*22, sizeSmall, colMuted, engine.AlignLeft)
 		}
+		if exp != nil {
+			msg := fmt.Sprintf("Expedition: %d parts left · score %d", exp.Parts, exp.Score)
+			if exp.Lost > 0 {
+				msg = fmt.Sprintf("Crash: %d parts lost · %d left", exp.Lost, exp.Parts)
+			}
+			r.Text(msg, 56, 408, sizeSmall, colNeon, engine.AlignLeft)
+		}
 		drawChip(r, 596, 380, IconReview, fmt.Sprintf("%d/%d reviewed", reviewed, len(lvl.Segments)), colChipLt)
 	})
 	addBack(s, func() { g.Load(SceneMenu, nil) })
@@ -92,6 +112,26 @@ func resultScene(g *engine.Game, arg any) *engine.Scene {
 		g.Load(SceneReview, &ReviewArg{Session: ses, Return: SceneResult, ReturnArg: ra})
 	})
 	rv.Icon = IconReview
+	if exp != nil {
+		// In an expedition a win moves on; a crash retries with what is left.
+		again := AddButton(s, 100, 470, 220, 60, "Retry", func() { g.Load(SceneBuild, ses) })
+		again.Icon = IconRover
+		again.Disabled = ra.Outcome == Won || exp.Over()
+		label := "Next mission"
+		if exp.Over() {
+			label = "Finish"
+		}
+		next := AddButton(s, 730, 470, 206, 60, label, func() {
+			if exp.Over() {
+				g.Load(SceneMenu, nil)
+				return
+			}
+			g.Load(SceneBuild, ExpeditionSession(g.Host, exp))
+		})
+		next.Primary, next.Icon = true, IconRight
+		next.Disabled = ra.Outcome != Won && !exp.Over()
+		return s
+	}
 	AddButton(s, 100, 470, 220, 60, "Retry", func() { g.Load(SceneBuild, ses) }).Icon = IconRover
 	next := AddButton(s, 730, 470, 206, 60, "Next mission", func() {
 		g.Load(SceneBuild, NewSessionFor(g.Host, GetLevel(lvl.ID+1)))

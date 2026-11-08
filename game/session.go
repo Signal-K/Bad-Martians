@@ -13,6 +13,7 @@ type Session struct {
 	Design  Design
 	emitted map[int]Class // labels already sent to the host
 	Reward  int           // extra parts credits from a mission's reward
+	Exp     *Expedition   // set when this attempt is part of an expedition
 }
 
 func NewSession(l *Level) *Session {
@@ -47,7 +48,12 @@ func (s *Session) Bonus() int {
 	return b
 }
 
-func (s *Session) Budget() int { return s.Level.Credits + s.Reward + s.Bonus() }
+func (s *Session) Budget() int {
+	if s.Exp != nil {
+		return s.Exp.Parts + s.Bonus()
+	}
+	return s.Level.Credits + s.Reward + s.Bonus()
+}
 
 // SubmitLabels sends each new or changed label to the host and remembers the
 // labels in the player's progress.
@@ -87,6 +93,8 @@ type LevelProgress struct {
 type Progress struct {
 	Levels map[int]LevelProgress `json:"levels"`
 	Labels map[int]map[int]int   `json:"labels"` // level -> segment -> class
+
+	BestExpedition int `json:"best_expedition"`
 }
 
 const progressKey = "hm.progress"

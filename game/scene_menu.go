@@ -19,7 +19,7 @@ func menuScene(g *engine.Game, _ any) *engine.Scene {
 		for _, lp := range prog.Levels {
 			total += lp.Score
 		}
-		drawChip(r, 56, 468, IconStarIco, fmt.Sprintf("%d total score", total), colChip)
+		r.Text(fmt.Sprintf("%d total score · expedition best %d", total, prog.BestExpedition), 60, 446, sizeSmall, colMuted, engine.AlignLeft)
 		r.Text("Finish a mission to unlock the next.", 904, 446, sizeSmall, colMuted, engine.AlignRight)
 	})
 	// Tiles share the panel's width, so the row fits however many missions ship.
@@ -100,6 +100,11 @@ func menuScene(g *engine.Game, _ any) *engine.Scene {
 			}
 		}
 	}
+	ex := AddButton(s, 56, 462, 420, 64, fmt.Sprintf("Expedition · %d missions", len(ExpeditionLevels)), func() {
+		g.Load(SceneBuild, ExpeditionSession(g.Host, NewExpedition()))
+	})
+	ex.Icon = IconRover
+	ex.Primary = true
 	st := AddButton(s, ScreenW-84, 470, 60, 60, "Style sheet", func() { g.Load(SceneStyle, nil) })
 	st.Icon, st.HideLabel = IconGear, true
 	return s
