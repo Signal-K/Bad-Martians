@@ -10,9 +10,9 @@ import (
 // Build grid geometry (screen pixels). Cargo layout: the board panel holds the
 // grid, the rail holds parts and specs.
 const (
-	bCell = 44.0
-	bGX   = 65.0
-	bGY   = 115.0
+	bCell = 48.0
+	bGX   = 41.0
+	bGY   = 132.0
 )
 
 // Specs summarises a design for the Specs panel; each is 0..10 segments.
@@ -73,10 +73,13 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 			for cx := 0; cx < GridW; cx++ {
 				x, y := cellXY(cx, cy)
 				r.Rect(x+2, y+2, bCell-4, bCell-4, colPanel.Alpha(150), true)
+				r.Rect(x+2, y+2, bCell-4, 2, colInk.Alpha(28), true)          // lit top edge
+				r.Rect(x+2, y+bCell-5, bCell-4, 3, colSpace.Alpha(200), true) // shaded bottom edge
 				r.Rect(x+2, y+2, bCell-4, bCell-4, colMuted.Alpha(60), false)
 			}
 		}
 		r.Rect(bGX, bGY+bCell*GridH+4, bCell*GridW, 6, Classes[Soil].Color, true)
+		r.Text("Tip: braces in triangles keep a rover stiff. Long flat spans bend.", bGX, bGY+bCell*GridH+22, sizeSmall, colMuted, engine.AlignLeft)
 		for _, c := range ses.Design.Cells { // links first, tiles on top
 			for _, o := range [][2]int{{1, 0}, {0, 1}, {1, 1}, {-1, 1}} {
 				if _, ok := ses.Design.At(c.X+o[0], c.Y+o[1]); ok {
@@ -88,6 +91,7 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 		}
 		for _, c := range ses.Design.Cells {
 			x, y := cellXY(c.X, c.Y)
+			r.Rect(x+6, y+6, bCell-6, bCell-6, colSpace.Alpha(190), true) // drop shadow
 			r.Rect(x+3, y+3, bCell-6, bCell-6, colTile, true)
 			outline(r, x+3, y+3, bCell-6, bCell-6, colInk)
 			drawIcon(r, partIcon(c.K), x+bCell/2, y+bCell/2, bCell*0.62, colInk)
@@ -96,12 +100,12 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 		// rail: parts description and specs
 		drawPanel(r, 650, 88, 286, 200, "Parts")
 		if tool == "" {
-			r.Text("Erase", 666, 256, sizeBody, colInk, engine.AlignLeft)
-			r.Text("Tap a part to remove it.", 666, 278-2, sizeSmall, colMuted, engine.AlignLeft)
+			r.Text("Erase", 666, 260, sizeBody, colInk, engine.AlignLeft)
+			r.Text("Tap a part to remove it.", 666, 282, sizeSmall, colMuted, engine.AlignLeft)
 		} else {
 			p, _ := PartOf(tool)
-			r.Text(p.Name, 666, 252, sizeBody, colInk, engine.AlignLeft)
-			r.Text(fmt.Sprintf("%d cr", p.Cost), 920, 252, sizeBody, colMuted, engine.AlignRight)
+			r.Text(p.Name, 666, 260, sizeBody, colInk, engine.AlignLeft)
+			r.Text(fmt.Sprintf("%d cr", p.Cost), 920, 260, sizeBody, colMuted, engine.AlignRight)
 		}
 		drawPanel(r, 650, 306, 286, 144, "Specs")
 		sp := SpecsOf(ses.Design)
@@ -111,7 +115,8 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 		}{{"Power", sp.Power}, {"Traction", sp.Traction}, {"Mass", sp.Mass}} {
 			y := 326 + float64(i)*38
 			r.Text(row.n, 666, y, sizeSmall, colInk, engine.AlignLeft)
-			drawMeter(r, 750, y+1, 170, 10, row.v, colNeon)
+			drawMeter(r, 750, y+1, 138, 10, row.v, colNeon)
+			r.Text(fmt.Sprint(row.v), 920, y, sizeSmall, colInk, engine.AlignRight)
 		}
 
 		// footer: the course, coloured by the player's own review
@@ -147,7 +152,7 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 
 	// parts palette: a 3-wide grid of tiles
 	tools := []Kind{KFrame, KWheel, KMotor, KMast, ""}
-	const ts, tg = 60.0, 12.0
+	const ts, th, tg = 80.0, 72.0, 8.0
 	tx0 := 650 + (286-(3*ts+2*tg))/2
 	for i, k := range tools {
 		k := k
@@ -156,7 +161,7 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 			p, _ := PartOf(k)
 			name = p.Name
 		}
-		b := AddButton(s, tx0+float64(i%3)*(ts+tg), 108+float64(i/3)*(ts+tg), ts, ts, name, func() { tool = k })
+		b := AddButton(s, tx0+float64(i%3)*(ts+tg), 104+float64(i/3)*(th+6), ts, th, name, func() { tool = k })
 		b.Custom = func(b *Button, r engine.Renderer) {
 			st := TileNormal
 			if tool == k {
@@ -165,7 +170,27 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 			if b.Held {
 				st = TileHeld
 			}
-			drawTile(r, b.X, b.Y, b.W, partIcon(k), st)
+			fill, line, ink := colTile, colInk, colInk
+			switch st {
+			case TileSelected:
+				line = colNeon
+			case TileHeld:
+				fill, ink = colInk, colTile
+			}
+			r.Rect(b.X, b.Y, b.W, b.H, fill, true)
+			outline(r, b.X, b.Y, b.W, b.H, line)
+			if st == TileSelected {
+				outline(r, b.X-3, b.Y-3, b.W+6, b.H+6, colNeon.Alpha(120))
+			}
+			// Glyph, then short name and cost, so the tiles read without the caption.
+			drawIcon(r, partIcon(k), b.X+b.W/2, b.Y+24, 32, ink)
+			label, cost := "Erase", "free"
+			if k != "" {
+				p, _ := PartOf(k)
+				label, cost = p.Name, fmt.Sprintf("%d cr", p.Cost)
+			}
+			r.Text(label, b.X+b.W/2, b.Y+43, 11.5, ink, engine.AlignCenter)
+			r.Text(cost, b.X+b.W/2, b.Y+57, 11, colMuted, engine.AlignCenter)
 		}
 	}
 	addBack(s, func() { g.Load(SceneMenu, nil) })

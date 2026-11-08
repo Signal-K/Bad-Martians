@@ -102,21 +102,6 @@ func drawMeter(r engine.Renderer, x, y, w float64, segs, filled int, col engine.
 // drawBackdrop paints the dark nebula behind menu-style scenes.
 func drawBackdrop(r engine.Renderer) {
 	r.Rect(0, 0, ScreenW, ScreenH, colSpace, true)
-	blobs := []struct {
-		x, y, rad float64
-		c         engine.Color
-	}{
-		{190, 150, 270, engine.RGB(170, 36, 40)},
-		{720, 120, 210, engine.RGB(36, 160, 100)},
-		{780, 430, 290, engine.RGB(220, 116, 44)},
-		{70, 470, 250, engine.RGB(46, 76, 190)},
-	}
-	for _, b := range blobs {
-		for i := 0; i < 5; i++ {
-			f := 1 - float64(i)*0.2
-			r.Circle(engine.V(b.x, b.y), b.rad*f, b.c.Alpha(14), true)
-		}
-	}
 	rg := newRng(7)
 	for i := 0; i < 90; i++ {
 		a := uint8(70 + rg.intn(185))

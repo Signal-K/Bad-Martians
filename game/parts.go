@@ -46,7 +46,7 @@ func PartOf(k Kind) (PartDef, bool) {
 
 const (
 	GridW = 12
-	GridH = 7
+	GridH = 5
 )
 
 type Cell struct {
