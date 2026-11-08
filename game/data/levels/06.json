@@ -1,0 +1,13 @@
+{
+  "id": 6,
+  "name": "Featherweight",
+  "blurb": "The lander can only spare a few parts. Travel light.",
+  "biome": "plains",
+  "length": 90,
+  "seed": 66,
+  "credits": 11,
+  "par": 16,
+  "hill": 1.0,
+  "traction": 1.0,
+  "mix": { "soil": 4, "bedrock": 3, "sand": 1, "big_rock": 0 }
+}

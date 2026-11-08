@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/signal-k/haphazard-martians/engine"
 )
@@ -21,8 +22,11 @@ func menuScene(g *engine.Game, _ any) *engine.Scene {
 		drawChip(r, 56, 468, IconStarIco, fmt.Sprintf("%d total score", total), colChip)
 		r.Text("Finish a mission to unlock the next.", ScreenW-100, 474, sizeSmall, colMuted, engine.AlignRight)
 	})
-	const tw, th, gap = 150.0, 232.0, 14.0
-	x0 := 56 + (848-(tw*5+gap*4))/2
+	// Tiles share the panel's width, so the row fits however many missions ship.
+	const th, gap, pad = 232.0, 10.0, 16.0
+	n := float64(len(LevelDefs))
+	tw := math.Floor((848 - 2*pad - gap*(n-1)) / n)
+	x0 := 56 + (848-(tw*n+gap*(n-1)))/2
 	for i, def := range LevelDefs {
 		def := def
 		x, y := x0+float64(i)*(tw+gap), 184.0
