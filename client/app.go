@@ -27,6 +27,7 @@ type App struct {
 
 	touch    engine.Vec2 // last touch point, used for the release frame
 	touching bool
+	touchID  int // the finger the pointer follows
 
 	fbW, fbH int // framebuffer size from the last Layout, in device pixels
 }
@@ -92,7 +93,21 @@ func (a *App) readInput() engine.Input {
 	in.Up = ebiten.IsKeyPressed(ebiten.KeyArrowUp) || ebiten.IsKeyPressed(ebiten.KeyW)
 	in.DownKey = ebiten.IsKeyPressed(ebiten.KeyArrowDown) || ebiten.IsKeyPressed(ebiten.KeyS)
 	if ids := ebiten.AppendTouchIDs(nil); len(ids) > 0 {
-		in.Pointer, in.Down = a.toVirtual(ebiten.TouchPosition(ids[0])), true
+		// The pointer follows one finger until it lifts: the order of ids is
+		// not stable, so ids[0] could jump to another finger mid-drag.
+		primary := -1
+		for _, id := range ids {
+			p := a.toVirtual(ebiten.TouchPosition(id))
+			in.Touches = append(in.Touches, engine.Touch{ID: int(id), Pos: p})
+			if a.touching && int(id) == a.touchID {
+				primary = int(id)
+				in.Pointer = p
+			}
+		}
+		if primary < 0 {
+			a.touchID, in.Pointer = int(ids[0]), in.Touches[0].Pos
+		}
+		in.Down = true
 		a.touch, a.touching = in.Pointer, true
 		return in
 	}
@@ -105,6 +120,9 @@ func (a *App) readInput() engine.Input {
 	}
 	in.Pointer = a.toVirtual(ebiten.CursorPosition())
 	in.Down = ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
+	if in.Down {
+		in.Touches = []engine.Touch{{ID: engine.MouseTouch, Pos: in.Pointer}}
+	}
 	return in
 }
 

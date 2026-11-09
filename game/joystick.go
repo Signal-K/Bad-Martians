@@ -6,40 +6,52 @@ import (
 	"github.com/signal-k/haphazard-martians/engine"
 )
 
-// Stick is a floating on-screen joystick. Press anywhere in Zone and the stick
-// centres under the finger; dragging sets X (drive) and Y (lean, up is +), each
-// in [-1,1]. It rests at Home when nothing holds it.
+// Stick is an on-screen joystick fixed at Home. A finger that lands within
+// Grab px of Home takes it, and the stick follows that one finger until it
+// lifts, whatever other fingers do: a second tap on a button neither moves nor
+// drops it. Dragging sets X (drive) and Y (lean, up is +), each in [-1,1].
 type Stick struct {
 	Home  engine.Vec2
-	R     float64     // how far the knob travels, px
-	Zone  engine.Rect // where a press grabs the stick
+	R     float64 // how far the knob travels, px
+	Grab  float64 // how far from Home a press still takes the stick, px
 	Block func(p engine.Vec2) bool
 
 	X, Y   float64
 	active bool
-	base   engine.Vec2
-	knob   engine.Vec2 // offset from base
+	id     int          // the finger holding the stick
+	seen   map[int]bool // fingers down on the last update, to spot new presses
+	knob   engine.Vec2  // offset from Home
 }
 
 const stickDead = 0.12
 
 func (s *Stick) Update(o *engine.GameObject, _ float64) {
 	in := o.Scene.Game.In
-	if in.Pressed && s.Zone.Contains(engine.Rect{X: in.Pointer.X, Y: in.Pointer.Y}) && (s.Block == nil || !s.Block(in.Pointer)) {
-		s.active, s.base = true, in.Pointer
+	touches := in.Touches
+	if len(touches) == 0 && in.Down { // hosts and tests that only send the pointer
+		touches = []engine.Touch{{ID: engine.MouseTouch, Pos: in.Pointer}}
 	}
-	if !in.Down {
-		s.active = false
+	now := make(map[int]bool, len(touches))
+	for _, t := range touches {
+		now[t.ID] = true
+		if !s.active && !s.seen[t.ID] && t.Pos.Sub(s.Home).Len() <= s.Grab && (s.Block == nil || !s.Block(t.Pos)) {
+			s.active, s.id = true, t.ID
+		}
+	}
+	s.seen = now
+	var p engine.Vec2
+	if s.active {
+		var ok bool
+		p, ok = (engine.Input{Touches: touches}).TouchByID(s.id)
+		s.active = ok
 	}
 	if !s.active {
 		s.X, s.Y, s.knob = 0, 0, engine.Vec2{}
 		return
 	}
-	d := in.Pointer.Sub(s.base)
+	d := p.Sub(s.Home)
 	if l := d.Len(); l > s.R {
-		// past the rim the base follows the finger, so the stick never sticks
-		s.base = s.base.Add(d.Mul((l - s.R) / l))
-		d = d.Mul(s.R / l)
+		d = d.Mul(s.R / l) // the base stays put; the knob stops at the rim
 	}
 	s.knob = d
 	ax := func(v float64) float64 {
@@ -58,9 +70,6 @@ func (s *Stick) Held() bool { return s.active }
 // Box is where the stick is drawn now, for the tutorial pointer.
 func (s *Stick) Box() engine.Rect {
 	c := s.Home
-	if s.active {
-		c = s.base
-	}
 	return engine.Rect{X: c.X - s.R - 14, Y: c.Y - s.R - 14, W: 2*s.R + 28, H: 2*s.R + 28}
 }
 
@@ -68,7 +77,7 @@ func (s *Stick) Draw(_ *engine.GameObject, _ engine.Camera, r engine.Renderer) {
 	c := s.Home
 	a := uint8(150)
 	if s.active {
-		c, a = s.base, 230
+		a = 230
 	}
 	rr := s.R + 14
 	r.Circle(c, rr, colTile.Alpha(a-40), true)

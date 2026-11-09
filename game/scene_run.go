@@ -132,8 +132,8 @@ func runScene(g *engine.Game, arg any) *engine.Scene {
 		}
 	})
 	// The stick: right drives, left reverses, up and down lean the rover.
-	stick := &Stick{Home: engine.V(ScreenW-120, ScreenH-112), R: 62,
-		Zone: engine.Rect{X: 0, Y: 70, W: ScreenW, H: ScreenH - 70}}
+	// It sits bottom-left, under the left thumb.
+	stick := &Stick{Home: engine.V(120, ScreenH-112), R: 62, Grab: 150}
 	stick.Block = func(p engine.Vec2) bool { // the Restart button takes its own taps
 		return !restart.Hidden && p.X >= restart.X && p.X <= restart.X+restart.W && p.Y >= restart.Y && p.Y <= restart.Y+restart.H
 	}
