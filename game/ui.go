@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/signal-k/haphazard-martians/engine"
+	"github.com/signal-k/haphazard-martians/physics"
 )
 
 // DrawFunc is a Component that draws via a closure; handy for HUD/backdrops.
@@ -153,3 +154,28 @@ func drawStars(r engine.Renderer, cx, cy, size float64, n int) {
 }
 
 func fmtTime(t float64) string { return fmt.Sprintf("%.1fs", t) }
+
+// drawTerrain paints the visible stretch of a heightfield, coloured by terrain
+// class, down to the bottom of the screen. The run and the rover bay share it,
+// so the ground a player builds on is the ground they drive on.
+func drawTerrain(r engine.Renderer, cam engine.Camera, t *physics.Terrain) {
+	half := cam.Screen.X/2/cam.Zoom + 1
+	i0 := int((cam.Pos.X-half-t.X0)/t.DX) - 1
+	i1 := int((cam.Pos.X+half-t.X0)/t.DX) + 1
+	if i0 < 0 {
+		i0 = 0
+	}
+	if i1 > t.Len()-2 {
+		i1 = t.Len() - 2
+	}
+	for i := i0; i <= i1; i++ {
+		a := cam.ToScreen(engine.V(t.X0+float64(i)*t.DX, t.H[i]))
+		b := cam.ToScreen(engine.V(t.X0+float64(i+1)*t.DX, t.H[i+1]))
+		col := Classes[t.Seg[i]].Color
+		if i%2 == 0 {
+			col = lerpColor(col, engine.RGB(0, 0, 0), 0.06)
+		}
+		r.Poly([]engine.Vec2{a, b, engine.V(b.X+0.5, ScreenH+4), engine.V(a.X-0.5, ScreenH+4)}, col)
+		r.Line(a, b, 3, lerpColor(col, engine.RGB(255, 235, 210), 0.35))
+	}
+}

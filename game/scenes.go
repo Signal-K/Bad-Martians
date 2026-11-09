@@ -22,7 +22,7 @@ func Setup(g *engine.Game) {
 		Fixture: func(*engine.Game) any { return nil },
 	}, menuScene)
 	g.RegisterScene(engine.SceneMeta{
-		Name: SceneBuild, Title: "Rover bay", Type: engine.TypeBuild, Layout: LayoutCargo,
+		Name: SceneBuild, Title: "Rover bay", Type: engine.TypeBuild, Layout: LayoutBay,
 		Fixture: func(g *engine.Game) any { return NewSessionFor(g.Host, GetLevel(1)) },
 	}, buildScene)
 	g.RegisterScene(engine.SceneMeta{

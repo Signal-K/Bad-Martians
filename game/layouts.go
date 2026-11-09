@@ -10,13 +10,12 @@ var (
 		"title": {X: 0, Y: 0, W: ScreenW, H: 100},
 		"main":  {X: 0, Y: 100, W: ScreenW, H: 440},
 	}}
-	// LayoutCargo: the Out There inventory look. A board on the left, a rail
-	// of panels on the right, a footer for navigation and the primary action.
-	LayoutCargo = engine.Layout{Name: "cargo", Regions: map[string]engine.Rect{
-		"title":  {X: 0, Y: 0, W: ScreenW, H: 64},
-		"board":  {X: 24, Y: 72, W: 610, H: 380},
-		"rail":   {X: 650, Y: 72, W: 286, H: 380},
-		"footer": {X: 0, Y: 460, W: ScreenW, H: 80},
+	// LayoutBay: the rover bay. A slim top bar, the build grid standing in the
+	// world over the mission's real terrain, and a parts tray along the bottom.
+	LayoutBay = engine.Layout{Name: "bay", Regions: map[string]engine.Rect{
+		"title": {X: 0, Y: 0, W: ScreenW, H: 64},
+		"bay":   {X: 0, Y: 64, W: ScreenW, H: 356},
+		"tray":  {X: 0, Y: 420, W: ScreenW, H: 120},
 	}}
 	// LayoutHUD: the world fills the screen; a slim top bar and a control strip.
 	LayoutHUD = engine.Layout{Name: "hud", Regions: map[string]engine.Rect{

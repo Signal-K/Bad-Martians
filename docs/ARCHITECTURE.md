@@ -46,7 +46,7 @@ Every scene registers with `Game.RegisterScene(SceneMeta, factory)`. It panics
 unless the scene has:
 
 - a **type**: menu, build, play, activity, results, sandbox or debug;
-- a **layout**: named screen regions (`game/layouts.go`: `center`, `cargo`,
+- a **layout**: named screen regions (`game/layouts.go`: `center`, `bay`,
   `hud`). Scenes with the same layout share the same bones;
 - a **fixture**: the argument it needs to boot on its own.
 
@@ -83,10 +83,17 @@ The assets are our own, in that style; nothing is copied from the game.
   segments flagged `Gold` have known truth and score the labeller (+2 credits
   for a correct calibration label); the rest are collected for consensus. The
   procedural "Navcam" panels are a stand-in until real AI4Mars imagery is wired in.
-- **Build scene** is a 12×7 cargo-style grid; parts cost credits; validation
-  (one mast, a motor, connected, within budget) gates the GO button. The course
-  preview is coloured by the *player's* review, so a bad label misleads their
-  build. The Specs panel summarises power, traction and mass.
+- **Build scene** (the rover bay) is a 12×5 grid that stands in the world: the
+  Mars sky and the mission's real start terrain sit behind and under it, and
+  parts and beams use the same art as the drive (one cell = 1 m). A parts tray
+  along the bottom shows each part, its cost and how many more fit the budget;
+  tap, swipe sideways or drag a part onto the grid. Beams snap in as parts are
+  placed, and hovering a cell previews its links. **Test drop** spawns the
+  design on the start terrain with live physics and reports its tilt and
+  whether the frame bends (`PoseOf`, a best-fit rotation from blueprint to
+  bodies). Validation (one mast, a motor, connected, within budget) gates GO.
+  The terrain map under the grid is coloured by the *player's* review, so a
+  bad label misleads their build.
 - **Run** (`game/run.go`) holds win/lose rules headless so tests exercise them.
   Tests assert every level is beatable by a reference rover and that the
   starter rover is not enough for level 4.
