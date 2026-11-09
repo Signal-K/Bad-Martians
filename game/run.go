@@ -66,7 +66,7 @@ const physH = engine.FixedDT / 10
 
 const (
 	leanAccel = 10.0 // rad/s² of lean at full stick
-	leanSpin  = 2.6 // rad/s: leaning stops adding spin past this
+	leanSpin  = 2.6  // rad/s: leaning stops adding spin past this
 )
 
 func NewRun(l *Level, d Design) *Run {

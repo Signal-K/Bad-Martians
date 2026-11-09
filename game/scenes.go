@@ -38,7 +38,7 @@ func Setup(g *engine.Game) {
 		},
 	}, runScene)
 	g.RegisterScene(engine.SceneMeta{
-		Name: SceneResult, Title: "Mission report", Type: engine.TypeResults, Layout: LayoutCenter,
+		Name: SceneResult, Title: "Mission debrief", Type: engine.TypeResults, Layout: LayoutCenter,
 		Fixture: func(g *engine.Game) any { return sampleResult(g) },
 	}, resultScene)
 	g.RegisterScene(engine.SceneMeta{

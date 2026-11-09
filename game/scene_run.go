@@ -165,7 +165,8 @@ func runScene(g *engine.Game, arg any) *engine.Scene {
 			endTimer += dt
 			if endTimer > 1.6+map[bool]float64{true: 0.8}[run.Outcome == Scrapped] {
 				g.Load(SceneResult, &ResultArg{Session: ses, Outcome: run.Outcome, Stars: run.Stars(),
-					Time: run.Time, Samples: run.SamplesGot(), Total: len(run.Got), Score: run.Score()})
+					Time: run.Time, Samples: run.SamplesGot(), Total: len(run.Got), Score: run.Score(),
+					Distance: run.Progress() * (lvl.GoalX - lvl.StartX), TopSpeed: run.TopSpeed, MaxAir: run.MaxAir})
 			}
 		}
 	}
