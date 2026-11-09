@@ -12,6 +12,8 @@ const (
 	SceneResult = "result"
 	SceneReview = "review"
 	SceneStyle  = "style"
+	// SceneBriefing hands out an expedition's kit before its first mission.
+	SceneBriefing = "briefing"
 )
 
 // Setup registers every scene. Opening the menu is left to the host so any
@@ -39,6 +41,10 @@ func Setup(g *engine.Game) {
 			return &ReviewArg{Session: NewSessionFor(g.Host, GetLevel(2)), Return: SceneMenu}
 		},
 	}, reviewScene)
+	g.RegisterScene(engine.SceneMeta{
+		Name: SceneBriefing, Title: "Expedition briefing", Type: engine.TypeMenu, Layout: LayoutCenter,
+		Fixture: func(*engine.Game) any { return NewExpedition() },
+	}, briefingScene)
 	g.RegisterScene(engine.SceneMeta{
 		Name: SceneStyle, Title: "Style sheet", Type: engine.TypeDebug, Layout: LayoutCenter,
 		Fixture: func(*engine.Game) any { return nil },

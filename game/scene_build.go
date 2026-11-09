@@ -124,7 +124,7 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 	lvl := ses.Level
 	s := newScene()
 	// Keep the starter rover only if it fits this mission's budget.
-	if len(ses.Design.Cells) > 0 && ses.Design.Cost() > ses.Budget() {
+	if len(ses.Design.Cells) > 0 && !ses.Fits() {
 		ses.Design = Design{}
 	}
 	tool := KWheel
@@ -358,11 +358,17 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 			r.Text("Ready. Test to see how it sits, or GO to drive.", 92, 38, sizeSmall, colGood, engine.AlignLeft)
 		}
 		used, budget := ses.Design.Cost(), ses.Budget()
+		if ses.Exp != nil { // expeditions count parts, not credits
+			used, budget = len(ses.Design.Cells), ses.Exp.Inv.Total()+ses.Bonus()
+		}
 		col := colChip
 		if used > budget {
 			col = colWarn
 		}
 		txt := fmt.Sprintf("%d / %d", used, budget)
+		if ses.Exp != nil {
+			txt = fmt.Sprintf("Kit %d / %d", used, budget)
+		}
 		w := textW(txt, sizeBody) + 46
 		drawChip(r, testBtn.X-14-w, 14, IconCredit, txt, col)
 
@@ -449,7 +455,7 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 		})
 		b.Custom = func(b *Button, r engine.Renderer) {
 			sel := tool == k && blk < 0
-			n := CanAdd(ses.Design, k, ses.Budget())
+			n := ses.CanAdd(k)
 			fill, line := colPanel, colInk.Alpha(150)
 			if sel {
 				fill, line = colPanel2, colNeon
@@ -474,6 +480,9 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 					drawPart(r, k, engine.V(cx, b.Y+38), 46, 0)
 				}
 				label, cost = p.Name, fmt.Sprintf("%d cr", p.Cost)
+				if ses.Exp != nil {
+					cost = fmt.Sprintf("%d in kit", ses.Have(k))
+				}
 			}
 			ink := colInk
 			if k != "" && n == 0 && k != KMast {
@@ -517,7 +526,11 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 			outline(r, b.X, b.Y, b.W, b.H, line)
 			drawBlockMini(r, bl, engine.V(b.X+b.W/2, b.Y+28), 16)
 			r.Text(bl.Name, b.X+b.W/2, b.Y+50, sizeSmall, colInk, engine.AlignCenter)
-			r.Text(fmt.Sprintf("%d cr", bl.Cost()), b.X+b.W/2, b.Y+66, 12, colMuted, engine.AlignCenter)
+			cost := fmt.Sprintf("%d cr", bl.Cost())
+			if ses.Exp != nil {
+				cost = fmt.Sprintf("%d parts", len(bl.Cells))
+			}
+			r.Text(cost, b.X+b.W/2, b.Y+66, 12, colMuted, engine.AlignCenter)
 		}
 	}
 
@@ -609,7 +622,7 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 
 	s.OnUpdate = func(dt float64) {
 		clock += dt
-		errs = ses.Design.Validate(ses.Budget())
+		errs = ses.Problems()
 		launch.Disabled = len(errs) > 0
 		testBtn.Disabled = len(ses.Design.Cells) == 0
 		if testing {

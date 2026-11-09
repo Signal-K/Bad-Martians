@@ -80,6 +80,7 @@ func TestSceneTypesAndLayoutsAreDistinctAndUsed(t *testing.T) {
 	want := map[string]engine.SceneType{
 		SceneMenu: engine.TypeMenu, SceneBuild: engine.TypeBuild, SceneRun: engine.TypePlay,
 		SceneResult: engine.TypeResults, SceneReview: engine.TypeActivity, SceneStyle: engine.TypeDebug,
+		SceneBriefing: engine.TypeMenu,
 	}
 	for _, m := range g.Scenes() {
 		if want[m.Name] != m.Type {

@@ -51,7 +51,7 @@ func resultScene(g *engine.Game, arg any) *engine.Scene {
 		})
 		g.Host.Emit("run", payload)
 		if ses.Exp != nil {
-			ses.Exp.Finish(ra.Outcome == Won, ses.Design.Cost(), ra.Score.Total())
+			ses.Exp.Finish(ra.Outcome == Won, ses.Design, ra.Score.Total())
 			if ses.Exp.Over() && ses.Exp.Score > prog.BestExpedition {
 				prog.BestExpedition = ses.Exp.Score
 				prog.Save(g.Host)
@@ -99,9 +99,9 @@ func resultScene(g *engine.Game, arg any) *engine.Scene {
 			r.Text(ln, 596, 184+float64(i)*22, sizeSmall, colMuted, engine.AlignLeft)
 		}
 		if exp != nil {
-			msg := fmt.Sprintf("Expedition: %d parts left · score %d", exp.Parts, exp.Score)
-			if exp.Lost > 0 {
-				msg = fmt.Sprintf("Crash: %d parts lost · %d left", exp.Lost, exp.Parts)
+			msg := fmt.Sprintf("Kit: %d parts left · expedition score %d", exp.Inv.Total(), exp.Score)
+			if exp.Lost.Total() > 0 {
+				msg = fmt.Sprintf("Lost %s · %d parts left", kitText(exp.Lost), exp.Inv.Total())
 			}
 			r.Text(msg, 56, 408, sizeSmall, colNeon, engine.AlignLeft)
 		}

@@ -2,6 +2,7 @@ package game
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/signal-k/haphazard-martians/engine"
 )
@@ -53,11 +54,68 @@ func (s *Session) Bonus() int {
 	return b
 }
 
+// Budget is the credits a rover may cost. Expeditions count parts instead
+// (see Have), so their credit budget is unlimited.
 func (s *Session) Budget() int {
 	if s.Exp != nil {
-		return s.Exp.Parts + s.Bonus()
+		return 1 << 20
 	}
 	return s.Level.Credits + s.Reward + s.Bonus()
+}
+
+// Have is how many of part k this build may use in an expedition: what is
+// left in the kit, plus a spare frame for every review credit. -1 outside an
+// expedition, where credits are the limit.
+func (s *Session) Have(k Kind) int {
+	if s.Exp == nil {
+		return -1
+	}
+	n := s.Exp.Inv[k]
+	if k == KFrame {
+		n += s.Bonus()
+	}
+	return n
+}
+
+// CanAdd is how many more of part k this rover can take: the tray's number.
+func (s *Session) CanAdd(k Kind) int {
+	if s.Exp == nil {
+		return CanAdd(s.Design, k, s.Budget())
+	}
+	n := max(0, s.Have(k)-KitOf(s.Design)[k])
+	if k == KMast {
+		n = min(n, CanAdd(s.Design, k, s.Budget()))
+	}
+	return n
+}
+
+// Fits reports whether the rover is within the credits or the kit.
+func (s *Session) Fits() bool {
+	if s.Design.Cost() > s.Budget() {
+		return false
+	}
+	if s.Exp != nil {
+		for k, n := range KitOf(s.Design) {
+			if n > s.Have(k) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// Problems is what stops this rover launching, for the player.
+func (s *Session) Problems() []string {
+	errs := s.Design.Validate(s.Budget())
+	if s.Exp != nil {
+		used := KitOf(s.Design)
+		for _, k := range []Kind{KFrame, KWheel, KMotor, KMast} {
+			if have := s.Have(k); used[k] > have {
+				errs = append(errs, fmt.Sprintf("Only %d %s left in the kit", have, partNoun(k, have)))
+			}
+		}
+	}
+	return errs
 }
 
 // SubmitLabels sends each new or changed label to the host and remembers the
