@@ -2,6 +2,8 @@ package client
 
 import (
 	"encoding/json"
+	"image/color"
+	"math"
 	"sync"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -22,6 +24,8 @@ type App struct {
 
 	touch    engine.Vec2 // last touch point, used for the release frame
 	touching bool
+
+	fbW, fbH int // framebuffer size from the last Layout, in device pixels
 }
 
 // New builds the app. If scene names a registered scene it opens that scene on
@@ -64,6 +68,16 @@ func (a *App) SceneList() string {
 	return string(b)
 }
 
+// toVirtual maps a framebuffer pixel to the game's virtual screen, undoing the
+// letterbox the renderer applies.
+func (a *App) toVirtual(x, y int) engine.Vec2 {
+	s, ox, oy := fit(float64(a.fbW), float64(a.fbH), game.ScreenW, game.ScreenH)
+	if s <= 0 {
+		return engine.V(float64(x), float64(y))
+	}
+	return engine.V((float64(x)-ox)/s, (float64(y)-oy)/s)
+}
+
 func (a *App) readInput() engine.Input {
 	var in engine.Input
 	in.ToggleEdit = inpututil.IsKeyJustPressed(ebiten.KeyF1) || inpututil.IsKeyJustPressed(ebiten.KeyBackquote)
@@ -73,8 +87,7 @@ func (a *App) readInput() engine.Input {
 	in.Left = ebiten.IsKeyPressed(ebiten.KeyArrowLeft) || ebiten.IsKeyPressed(ebiten.KeyA)
 	in.Right = ebiten.IsKeyPressed(ebiten.KeyArrowRight) || ebiten.IsKeyPressed(ebiten.KeyD)
 	if ids := ebiten.AppendTouchIDs(nil); len(ids) > 0 {
-		x, y := ebiten.TouchPosition(ids[0])
-		in.Pointer, in.Down = engine.V(float64(x), float64(y)), true
+		in.Pointer, in.Down = a.toVirtual(ebiten.TouchPosition(ids[0])), true
 		a.touch, a.touching = in.Pointer, true
 		return in
 	}
@@ -85,8 +98,7 @@ func (a *App) readInput() engine.Input {
 		in.Pointer = a.touch
 		return in
 	}
-	x, y := ebiten.CursorPosition()
-	in.Pointer = engine.V(float64(x), float64(y))
+	in.Pointer = a.toVirtual(ebiten.CursorPosition())
 	in.Down = ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
 	return in
 }
@@ -115,8 +127,24 @@ func (a *App) Update() error {
 }
 
 func (a *App) Draw(screen *ebiten.Image) {
-	a.r.dst = screen
+	screen.Fill(color.NRGBA{20, 12, 14, 255}) // letterbox bars
+	a.r.begin(screen, game.ScreenW, game.ScreenH)
 	a.G.Draw(a.r)
+	a.r.end()
 }
 
-func (a *App) Layout(int, int) (int, int) { return int(game.ScreenW), int(game.ScreenH) }
+// maxFB caps the framebuffer's long side: past this the extra pixels cost fill
+// rate on phones without looking any sharper.
+const maxFB = 2400
+
+// Layout draws at the display's real pixel density so shapes, drawn without
+// anti-aliasing, stay crisp; the renderer letterboxes the virtual screen.
+func (a *App) Layout(w, h int) (int, int) {
+	d := ebiten.Monitor().DeviceScaleFactor()
+	fw, fh := float64(w)*d, float64(h)*d
+	if m := math.Max(fw, fh); m > maxFB {
+		fw, fh = fw*maxFB/m, fh*maxFB/m
+	}
+	a.fbW, a.fbH = max(1, int(fw)), max(1, int(fh))
+	return a.fbW, a.fbH
+}
