@@ -263,30 +263,3 @@ func (r *Rover) MoveBy(_ *engine.GameObject, cam engine.Camera, dx, dy float64) 
 		b.Pos, b.Prev = b.Pos.Add(d), b.Prev.Add(d) // move Prev too: dragging must not add velocity
 	}
 }
-
-func drawBeam(rd engine.Renderer, a, b engine.Vec2, z float64) {
-	rd.Line(a, b, 0.16*z, engine.RGB(150, 156, 170))
-}
-
-// drawPart draws one part centred at c with z pixels per metre.
-func drawPart(rd engine.Renderer, k Kind, c engine.Vec2, z, angle float64) {
-	p, _ := PartOf(k)
-	switch {
-	case p.Wheel:
-		rd.Circle(c, p.Radius*z, engine.RGB(36, 36, 44), true)
-		rd.Circle(c, p.Radius*z*0.62, p.Color, true)
-		for i := 0; i < 3; i++ {
-			a := angle + float64(i)*2.0944
-			d := engine.V(cosf(a), -sinf(a)).Mul(p.Radius * z * 0.9)
-			rd.Line(c, c.Add(d), 0.07*z, engine.RGB(20, 20, 26))
-		}
-	case p.Kind == KMast:
-		rd.Circle(c, p.Radius*z, p.Color, true)
-		top := c.Add(engine.V(0, -0.5*z))
-		rd.Line(c, top, 0.1*z, engine.RGB(190, 195, 205))
-		rd.Rect(top.X-0.18*z, top.Y-0.22*z, 0.36*z, 0.22*z, engine.RGB(40, 44, 54), true)
-		rd.Circle(top.Add(engine.V(0.06*z, -0.11*z)), 0.07*z, engine.RGB(120, 220, 255), true)
-	default:
-		rd.Circle(c, p.Radius*z*1.15, p.Color, true)
-	}
-}

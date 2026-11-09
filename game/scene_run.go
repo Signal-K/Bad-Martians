@@ -24,6 +24,7 @@ func runScene(g *engine.Game, arg any) *engine.Scene {
 		drawSky(r, cam.Pos.X)
 		t := lvl.Terrain
 		drawTerrain(r, cam, t)
+		roverShadows(r, cam, t, run.Rover)
 		gb := cam.ToScreen(engine.V(lvl.GoalX, t.HeightAt(lvl.GoalX)))
 		r.Line(gb, gb.Add(engine.V(0, -4*cam.Zoom)), 4, colInk)
 		r.Poly([]engine.Vec2{gb.Add(engine.V(2, -4*cam.Zoom)), gb.Add(engine.V(2+1.6*cam.Zoom, -3.5*cam.Zoom)), gb.Add(engine.V(2, -3*cam.Zoom))}, colMars)

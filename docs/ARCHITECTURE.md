@@ -68,6 +68,13 @@ widgets (`drawPanel`, `drawTile`, `drawChip`, `drawMeter`, `Button`) in
 there are no image assets to keep consistent. The `style` scene shows all of it.
 The assets are our own, in that style; nothing is copied from the game.
 
+World art lives in `art.go`, also drawn from primitives: the layered sky
+(sun, Phobos, parallax mesas and dunes in dust haze), the ground (strata in the
+class colour, a lit crust, and pebbles, ripples, cracks or boulders seeded by
+segment index so they hold still), rover parts (hex frame nodes, truss beams,
+knobbly wheels whose treads turn, a hub-motor wheel, the stereo Navcam mast),
+and contact shadows. The drive and the rover bay share every one of these.
+
 ## Game (`game/`)
 
 - **Terrain classes** follow AI4Mars (soil, bedrock, sand, big rock); each maps

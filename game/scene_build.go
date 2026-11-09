@@ -196,12 +196,23 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 	AddDraw(s, 0, func(_ engine.Camera, r engine.Renderer) {
 		drawSky(r, 0)
 		drawTerrain(r, cam, lvl.Terrain)
+		drawGantry(r, cam, lvl.Terrain, testing)
+		if !testing { // shadows of the parts on the grid
+			var pos []engine.Vec2
+			var rad []float64
+			for _, c := range ses.Design.Cells {
+				p, _ := PartOf(c.K)
+				pos = append(pos, cam.ToWorld(centre(c.X, c.Y)))
+				rad = append(rad, p.Radius)
+			}
+			drawShadows(r, cam, lvl.Terrain, pos, rad)
+		}
 	})
 
 	// the grid, the parts, and the test drop
 	AddDraw(s, 2, func(_ engine.Camera, r engine.Renderer) {
 		if testing {
-			drawTestDrop(r, cam, testRover, testT)
+			drawTestDrop(r, cam, lvl.Terrain, testRover, testT)
 			return
 		}
 		for cy := 0; cy < GridH; cy++ { // sockets
@@ -378,7 +389,11 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 				drawIcon(r, IconErase, cx, b.Y+36, 36, colWarn)
 			} else {
 				p, _ := PartOf(k)
-				drawPart(r, k, engine.V(cx, b.Y+38), 46, 0)
+				if k == KMast { // the camera head stands tall: sit it lower and smaller
+					drawPart(r, k, engine.V(cx, b.Y+50), 34, 0)
+				} else {
+					drawPart(r, k, engine.V(cx, b.Y+38), 46, 0)
+				}
 				label, cost = p.Name, fmt.Sprintf("%d cr", p.Cost)
 			}
 			ink := colInk
@@ -494,7 +509,8 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 
 // drawTestDrop draws the dropped rover with its tilt against a level line, and
 // says whether it sits level and holds its shape.
-func drawTestDrop(r engine.Renderer, cam engine.Camera, rv *Rover, t float64) {
+func drawTestDrop(r engine.Renderer, cam engine.Camera, ter *physics.Terrain, rv *Rover, t float64) {
+	roverShadows(r, cam, ter, rv)
 	rv.Draw(nil, cam, r)
 	pose := PoseOf(rv)
 	c := cam.ToScreen(rv.Center())
@@ -521,5 +537,63 @@ func drawTestDrop(r engine.Renderer, cam engine.Camera, rv *Rover, t float64) {
 		r.Text("Frame bends: add a diagonal brace.", 40, 122, sizeSmall, colWarn, engine.AlignLeft)
 	default:
 		r.Text("Frame holds its shape.", 40, 122, sizeSmall, colGood, engine.AlignLeft)
+	}
+}
+
+var colBlueprint = engine.RGB(150, 226, 255)
+
+// drawGantry frames the build grid with two lattice towers on the real ground,
+// a crossbeam of floodlights, and a landing pad under the grid. While a test
+// drop runs the lamps dim so the rover stands out.
+func drawGantry(r engine.Renderer, cam engine.Camera, t *physics.Terrain, dim bool) {
+	const tw = 22.0 // tower width
+	top := float64(bGY) - 26
+	lx, rx := float64(bGX)-tw-10, float64(bGX+bCell*GridW)+10
+	ground := func(x float64) float64 { return cam.ToScreen(engine.V(cam.ToWorld(engine.V(x, 0)).X, t.HeightAt(cam.ToWorld(engine.V(x, 0)).X))).Y }
+	// light cones first, so everything else sits in front of them
+	lamps := []float64{float64(bGX) + 90, ScreenW / 2, float64(bGX+bCell*GridW) - 90}
+	glow := uint8(22)
+	if dim {
+		glow = 8
+	}
+	for _, lx := range lamps {
+		g := ground(lx)
+		r.Poly([]engine.Vec2{engine.V(lx-10, top+18), engine.V(lx+10, top+18), engine.V(lx+130, g), engine.V(lx-130, g)}, colFloodWarm.Alpha(glow))
+		r.Poly([]engine.Vec2{engine.V(lx-6, top+18), engine.V(lx+6, top+18), engine.V(lx+60, g), engine.V(lx-60, g)}, colFloodWarm.Alpha(glow))
+	}
+	// landing pad: deck plates with hazard edges, following the ground
+	x0, x1 := lx, rx+tw
+	for x := x0; x < x1; x += 24 {
+		xa, xb := x, math.Min(x+24, x1)
+		ya, yb := ground(xa), ground(xb)
+		r.Poly([]engine.Vec2{engine.V(xa, ya-3), engine.V(xb, yb-3), engine.V(xb, yb+9), engine.V(xa, ya+9)}, engine.RGB(64, 66, 76))
+		r.Line(engine.V(xa, ya-3), engine.V(xb, yb-3), 2, engine.RGB(140, 146, 160))
+		r.Line(engine.V(xa, ya+9), engine.V(xa, ya-3), 1, colIron)
+	}
+	for _, x := range []float64{x0, x1 - 30} {
+		for k := 0.0; k < 30; k += 10 {
+			ya, yb := ground(x+k), ground(x+k+10)
+			col := colStar
+			if int(k/10)%2 == 1 {
+				col = colIron
+			}
+			r.Poly([]engine.Vec2{engine.V(x+k, ya+2), engine.V(x+k+10, yb+2), engine.V(x+k+10, yb+8), engine.V(x+k, ya+8)}, col)
+		}
+	}
+	// towers and crossbeam
+	for _, x := range []float64{lx, rx} {
+		g := ground(x + tw/2)
+		r.Rect(x-6, g-6, tw+12, 8, colIron, true)
+		truss(r, engine.V(x+tw/2, g-4), engine.V(x+tw/2, top), tw)
+	}
+	truss(r, engine.V(lx, top+6), engine.V(rx+tw, top+6), 18)
+	for _, x := range lamps {
+		r.Rect(x-14, top+12, 28, 10, colIron, true)
+		r.Rect(x-11, top+18, 22, 4, colFloodWarm, true)
+	}
+	// beacons on the tower tops
+	for _, x := range []float64{lx + tw/2, rx + tw/2} {
+		r.Circle(engine.V(x, top-8), 4, colBeacon, true)
+		r.Circle(engine.V(x, top-8), 8, colBeacon.Alpha(50), true)
 	}
 }

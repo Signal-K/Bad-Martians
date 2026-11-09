@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/signal-k/haphazard-martians/engine"
-	"github.com/signal-k/haphazard-martians/physics"
 )
 
 // DrawFunc is a Component that draws via a closure; handy for HUD/backdrops.
@@ -103,33 +102,6 @@ func lerpColor(a, b engine.Color, t float64) engine.Color {
 	return engine.Color{R: l(a.R, b.R), G: l(a.G, b.G), B: l(a.B, b.B), A: 255}
 }
 
-// drawSky paints a dusty Martian sky with two parallax dune layers.
-func drawSky(r engine.Renderer, camX float64) {
-	top, hor := engine.RGB(120, 76, 78), engine.RGB(236, 184, 140)
-	const bands = 14
-	for i := 0; i < bands; i++ {
-		t := float64(i) / (bands - 1)
-		r.Rect(0, ScreenH*float64(i)/bands, ScreenW, ScreenH/bands+1, lerpColor(top, hor, t*t), true)
-	}
-	layers := []struct {
-		par, amp, base, freq float64
-		col                  engine.Color
-	}{
-		{0.15, 26, 330, 0.011, engine.RGB(190, 128, 100)},
-		{0.35, 20, 380, 0.017, engine.RGB(160, 100, 84)},
-	}
-	for _, L := range layers {
-		var pts []engine.Vec2
-		pts = append(pts, engine.V(0, ScreenH))
-		for x := 0.0; x <= ScreenW+16; x += 16 {
-			wx := x + camX*L.par*40
-			pts = append(pts, engine.V(x, L.base+L.amp*sinf(wx*L.freq)+L.amp*0.5*sinf(wx*L.freq*2.3+1)))
-		}
-		pts = append(pts, engine.V(ScreenW+16, ScreenH))
-		r.Poly(pts, L.col)
-	}
-}
-
 func drawStar(r engine.Renderer, cx, cy, rad float64, c engine.Color) {
 	pts := make([]engine.Vec2, 0, 10)
 	for i := 0; i < 10; i++ {
@@ -154,28 +126,3 @@ func drawStars(r engine.Renderer, cx, cy, size float64, n int) {
 }
 
 func fmtTime(t float64) string { return fmt.Sprintf("%.1fs", t) }
-
-// drawTerrain paints the visible stretch of a heightfield, coloured by terrain
-// class, down to the bottom of the screen. The run and the rover bay share it,
-// so the ground a player builds on is the ground they drive on.
-func drawTerrain(r engine.Renderer, cam engine.Camera, t *physics.Terrain) {
-	half := cam.Screen.X/2/cam.Zoom + 1
-	i0 := int((cam.Pos.X-half-t.X0)/t.DX) - 1
-	i1 := int((cam.Pos.X+half-t.X0)/t.DX) + 1
-	if i0 < 0 {
-		i0 = 0
-	}
-	if i1 > t.Len()-2 {
-		i1 = t.Len() - 2
-	}
-	for i := i0; i <= i1; i++ {
-		a := cam.ToScreen(engine.V(t.X0+float64(i)*t.DX, t.H[i]))
-		b := cam.ToScreen(engine.V(t.X0+float64(i+1)*t.DX, t.H[i+1]))
-		col := Classes[t.Seg[i]].Color
-		if i%2 == 0 {
-			col = lerpColor(col, engine.RGB(0, 0, 0), 0.06)
-		}
-		r.Poly([]engine.Vec2{a, b, engine.V(b.X+0.5, ScreenH+4), engine.V(a.X-0.5, ScreenH+4)}, col)
-		r.Line(a, b, 3, lerpColor(col, engine.RGB(255, 235, 210), 0.35))
-	}
-}
