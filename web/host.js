@@ -81,7 +81,24 @@
   if (auth && !DEMO) pb('/api/collections/users/auth-refresh', { method: 'POST' }).then(setAuth).catch((e) => { if (e.status === 401 || e.status === 403) signOut(); });
   addEventListener('online', flush);
 
+  // A rover photo from the game: the share sheet where there is one (phones),
+  // otherwise a download.
+  async function photo(name, bytes) {
+    const file = new File([bytes], name, { type: 'image/png' });
+    try {
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: 'Haphazard Martians' });
+        return;
+      }
+    } catch (e) { if (e && e.name === 'AbortError') return; }
+    const url = URL.createObjectURL(file);
+    const a = document.createElement('a');
+    a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  }
+
   window.haphazard = {
+    photo: (name, bytes) => { photo(name, bytes); },
     load: (k) => LS.get('hm.' + k),
     save: (k, v) => LS.set('hm.' + k, v),
     emit: (ev, json) => {

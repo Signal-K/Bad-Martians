@@ -24,6 +24,13 @@ func (h jsHost) Load(key string) []byte {
 func (h jsHost) Save(key string, b []byte)   { h.bridge.Call("save", key, string(b)) }
 func (h jsHost) Emit(event string, p []byte) { h.bridge.Call("emit", event, string(p)) }
 
+// Photo hands a PNG to the page, which shares or downloads it.
+func (h jsHost) Photo(name string, png []byte) {
+	u8 := js.Global().Get("Uint8Array").New(len(png))
+	js.CopyBytesToJS(u8, png)
+	h.bridge.Call("photo", name, u8)
+}
+
 func main() {
 	bridge := js.Global().Get("haphazard")
 	ebiten.SetWindowTitle("Haphazard Martians")

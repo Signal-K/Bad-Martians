@@ -24,6 +24,26 @@ type Game struct {
 
 	// Ed is the in-game editor (see editor.go).
 	Ed Editor
+
+	// Snapping is set by the client while it draws a frame for a photo: UI
+	// layers are left out and the scene's OnPhoto caption is drawn instead.
+	Snapping  bool
+	photoName string
+}
+
+// RequestPhoto asks the client to snap the next frame as a photo called name.
+func (g *Game) RequestPhoto(name string) { g.photoName = name }
+
+// TakePhotoRequest returns and clears a pending photo request ("" for none).
+func (g *Game) TakePhotoRequest() string {
+	n := g.photoName
+	g.photoName = ""
+	return n
+}
+
+// PhotoHost is a Host that can keep or share a photo (PNG bytes).
+type PhotoHost interface {
+	Photo(name string, png []byte)
 }
 
 type pendingLoad struct {

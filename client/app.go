@@ -1,8 +1,11 @@
 package client
 
 import (
+	"bytes"
 	"encoding/json"
+	"image"
 	"image/color"
+	"image/png"
 	"math"
 	"sync"
 
@@ -129,10 +132,54 @@ func (a *App) Update() error {
 }
 
 func (a *App) Draw(screen *ebiten.Image) {
+	if name := a.G.TakePhotoRequest(); name != "" {
+		// draw once without the HUD, keep that, then draw the frame as usual
+		a.G.Snapping = true
+		a.frame(screen)
+		a.G.Snapping = false
+		if ph, ok := a.G.Host.(engine.PhotoHost); ok {
+			if b, err := a.photo(screen); err == nil {
+				ph.Photo(name, b)
+			}
+		}
+	}
+	a.frame(screen)
+}
+
+func (a *App) frame(screen *ebiten.Image) {
 	screen.Fill(color.NRGBA{20, 12, 14, 255}) // letterbox bars
 	a.r.begin(screen, game.ScreenW, game.ScreenH)
 	a.G.Draw(a.r)
 	a.r.end()
+}
+
+// photoMaxW caps a photo's width: plenty for sharing, quick to encode.
+const photoMaxW = 1920
+
+// photo encodes the game area of the screen (without letterbox bars) as PNG.
+func (a *App) photo(screen *ebiten.Image) ([]byte, error) {
+	b := screen.Bounds()
+	pix := make([]byte, 4*b.Dx()*b.Dy())
+	screen.ReadPixels(pix)
+	full := &image.RGBA{Pix: pix, Stride: 4 * b.Dx(), Rect: image.Rect(0, 0, b.Dx(), b.Dy())}
+	s, ox, oy := fit(float64(b.Dx()), float64(b.Dy()), game.ScreenW, game.ScreenH)
+	area := image.Rect(int(ox+0.5), int(oy+0.5), int(ox+game.ScreenW*s), int(oy+game.ScreenH*s))
+	src := full.SubImage(area).(*image.RGBA)
+	out := image.Image(src)
+	if w := area.Dx(); w > photoMaxW { // nearest-neighbour downscale
+		k := float64(w) / photoMaxW
+		h := int(float64(area.Dy()) / k)
+		dst := image.NewRGBA(image.Rect(0, 0, photoMaxW, h))
+		for y := 0; y < h; y++ {
+			for x := 0; x < photoMaxW; x++ {
+				dst.Set(x, y, src.At(area.Min.X+int(float64(x)*k), area.Min.Y+int(float64(y)*k)))
+			}
+		}
+		out = dst
+	}
+	var buf bytes.Buffer
+	err := (&png.Encoder{CompressionLevel: png.BestSpeed}).Encode(&buf, out)
+	return buf.Bytes(), err
 }
 
 // maxFB caps the framebuffer's long side: past this the extra pixels cost fill

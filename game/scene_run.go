@@ -67,6 +67,35 @@ func runScene(g *engine.Game, arg any) *engine.Scene {
 	ab := AddButton(s, 24, 10, 90, 44, "Abort", func() { g.Load(SceneBuild, ses) })
 	ab.Icon = IconBack
 	ab.Label, ab.HideLabel = "Abort", true
+	// Photo: snap the world without the HUD, with a caption, to share.
+	flash := 0.0
+	shots := 0
+	cam := AddButton(s, ScreenW-114, 10, 90, 44, "Photo", func() {
+		shots++
+		g.RequestPhoto(fmt.Sprintf("haphazard-martians-mission-%d-%d.png", lvl.ID, shots))
+		flash = 1
+	})
+	cam.Icon, cam.HideLabel = IconCamera, true
+	s.OnPhoto = func(r engine.Renderer) {
+		line := fmt.Sprintf("Mission %d · %s · %.0f m", lvl.ID, lvl.Name, run.Progress()*(lvl.GoalX-lvl.StartX))
+		w := textW(line, sizeSmall) + 206
+		r.Rect(16, ScreenH-46, w, 32, colTile.Alpha(200), true)
+		r.Text("HAPHAZARD MARTIANS", 28, ScreenH-40, 13, colNeon, engine.AlignLeft)
+		r.Text(line, 198, ScreenH-41, sizeSmall, colInk, engine.AlignLeft)
+	}
+	AddDraw(s, 40, func(_ engine.Camera, r engine.Renderer) {
+		if flash <= 0 {
+			return
+		}
+		r.Rect(0, 0, ScreenW, ScreenH, engine.Color{R: 255, G: 255, B: 255, A: uint8(200 * flash * flash)}, true)
+		if flash < 0.85 {
+			msg := "Photo saved"
+			w := textW(msg, sizeBody) + 32
+			r.Rect(ScreenW-24-w, 64, w, 36, colPanel.Alpha(uint8(240*min(1, flash*3))), true)
+			r.Text(msg, ScreenW-24-w/2, 72, sizeBody, colInk.Alpha(uint8(255*min(1, flash*3))), engine.AlignCenter)
+		}
+	})
+
 	// Stuck: offer to scrap the rover and start again, at the cost of its parts.
 	boom := -1.0 // seconds since the rover was scrapped; <0 before
 	restart := AddButton(s, ScreenW/2-130, ScreenH-104, 260, 74, "Restart", func() {
@@ -151,6 +180,7 @@ func runScene(g *engine.Game, arg any) *engine.Scene {
 				FinishTutorial(g.Host, tut)
 			}
 		}
+		flash = max(0, flash-dt/1.6)
 		run.Lean = lean
 		run.Step(dt, th)
 		run.Debris(dt)
