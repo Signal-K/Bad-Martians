@@ -19,6 +19,9 @@ type App struct {
 	mu      sync.Mutex
 	pending string // scene a host asked to open, applied on the next Update
 	edit    int    // editor request from the host: 1 on, 2 off, 3 toggle
+
+	touch    engine.Vec2 // last touch point, used for the release frame
+	touching bool
 }
 
 // New builds the app. If scene names a registered scene it opens that scene on
@@ -72,6 +75,14 @@ func (a *App) readInput() engine.Input {
 	if ids := ebiten.AppendTouchIDs(nil); len(ids) > 0 {
 		x, y := ebiten.TouchPosition(ids[0])
 		in.Pointer, in.Down = engine.V(float64(x), float64(y)), true
+		a.touch, a.touching = in.Pointer, true
+		return in
+	}
+	if a.touching {
+		// The finger just lifted: release where it was, not at the (stale) mouse
+		// cursor, or buttons that need press-and-release inside never fire on touch.
+		a.touching = false
+		in.Pointer = a.touch
 		return in
 	}
 	x, y := ebiten.CursorPosition()
