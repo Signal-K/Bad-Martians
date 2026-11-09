@@ -19,6 +19,7 @@ type Button struct {
 	HideLabel  bool // icon-only look; Label stays as the accessible name
 	Primary    bool // the scene's main action: neon fill
 	Disabled   bool
+	Hidden     bool // not drawn and ignores the pointer
 	OnClick    func()
 	// Custom replaces the default look.
 	Custom func(b *Button, r engine.Renderer)
@@ -33,6 +34,10 @@ func (b *Button) inside(p engine.Vec2) bool {
 
 func (b *Button) Update(o *engine.GameObject, _ float64) {
 	in := o.Scene.Game.In
+	if b.Hidden {
+		b.Held, b.armed = false, false
+		return
+	}
 	in_ := b.inside(in.Pointer)
 	b.Held = in.Down && in_ && !b.Disabled
 	if in.Pressed && in_ {
@@ -47,6 +52,9 @@ func (b *Button) Update(o *engine.GameObject, _ float64) {
 }
 
 func (b *Button) Draw(_ *engine.GameObject, _ engine.Camera, r engine.Renderer) {
+	if b.Hidden {
+		return
+	}
 	if b.Custom != nil {
 		b.Custom(b, r)
 		return

@@ -118,3 +118,47 @@ var goldenTerrain = map[int]uint64{
 	1: 0xb67c4e8e94c2a439, 2: 0x7c9b5d5a920caeac, 3: 0xa15b7fe52f477289,
 	4: 0x8d6d0ebe36f97387, 5: 0x5e365f19704d38a6,
 }
+
+// A rover whose motor wheel never touches the ground goes nowhere: after a few
+// seconds of trying the Restart offer appears, and scrapping it fails the run
+// and costs an expedition the parts.
+func TestStuckRoverOffersRestartAndScrapCostsParts(t *testing.T) {
+	d := Design{Cells: []Cell{{0, 0, KFrame}, {1, 0, KFrame}, {2, 0, KFrame}, {1, 1, KMotor}, {2, 1, KMast}}}
+	if errs := d.Validate(99); len(errs) > 0 {
+		t.Fatal(errs)
+	}
+	r := NewRun(GetLevel(1), d)
+	for i := 0; i < 60*3 && !r.IsStuck(); i++ {
+		r.Step(1.0/60, 1)
+	}
+	if r.IsStuck() {
+		t.Fatal("stuck offered too early")
+	}
+	for i := 0; i < 60*3 && !r.IsStuck(); i++ {
+		r.Step(1.0/60, 1)
+	}
+	if !r.IsStuck() || r.Outcome != Running {
+		t.Fatalf("want the Restart offer with the run still going, stuck=%v outcome=%v", r.IsStuck(), r.Outcome)
+	}
+	c0 := r.Rover.Center()
+	r.Scrap()
+	for i := 0; i < 30; i++ {
+		r.Debris(1.0 / 60)
+	}
+	if r.Outcome != Scrapped || len(r.World.Cons) != 0 {
+		t.Fatalf("scrap: outcome %v, %d joints left", r.Outcome, len(r.World.Cons))
+	}
+	spread := 0.0
+	for _, b := range r.Rover.Bodies {
+		spread = max(spread, b.Pos.Sub(c0).Len())
+	}
+	if spread < 2 {
+		t.Fatalf("parts did not fly apart: max %.2f m", spread)
+	}
+	e := NewExpedition()
+	before := e.Parts
+	e.Finish(false, d.Cost(), 0)
+	if e.Parts != before-d.Cost() {
+		t.Fatalf("expedition kept the scrapped parts: %d -> %d", before, e.Parts)
+	}
+}

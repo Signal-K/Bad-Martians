@@ -3,6 +3,7 @@ package game
 import (
 	"math"
 
+	"github.com/signal-k/haphazard-martians/engine"
 	"github.com/signal-k/haphazard-martians/physics"
 )
 
@@ -14,15 +15,19 @@ const (
 	Fell
 	Stuck
 	TimedOut
+	Scrapped
 )
 
 func (o Outcome) Message() string {
-	return [...]string{"", "Navcam reached the finish!", "Rover lost in a crevasse.", "Rover is stuck.", "Out of time."}[o]
+	return [...]string{"", "Navcam reached the finish!", "Rover lost in a crevasse.", "Rover is stuck.", "Out of time.", "Rover scrapped. Its parts are gone."}[o]
 }
 
 const (
 	sampleRadius = 0.9
-	stuckSeconds = 7.0
+	// StuckSeconds without progress, while trying to drive, before the player is
+	// offered the Restart button. Nothing ends the run for being stuck: the
+	// player decides, and may still wriggle free.
+	StuckSeconds = 4.0
 	maxSeconds   = 120.0
 )
 
@@ -36,6 +41,7 @@ type Run struct {
 	Got      []bool
 	BestX    float64
 	stuckFor float64
+	lastC    engine.Vec2 // rover centre on the previous step
 	Outcome  Outcome
 }
 
@@ -45,8 +51,47 @@ func NewRun(l *Level, d Design) *Run {
 	x := l.StartX + 2
 	r := &Run{Level: l, World: w, Got: make([]bool, len(l.Samples))}
 	r.Rover = SpawnRover(w, d, x, l.Terrain.HeightAt(x))
-	r.BestX = r.Rover.Center().X
+	r.lastC = r.Rover.Center()
+	r.BestX = r.lastC.X
 	return r
+}
+
+// IsStuck reports whether the rover has made no progress for StuckSeconds of
+// trying, which is when the Restart button appears.
+func (r *Run) IsStuck() bool { return r.Outcome == Running && r.stuckFor >= StuckSeconds }
+
+// Scrap blows the rover up: every joint breaks and the parts fly apart. The
+// attempt fails, so an expedition loses the parts the rover was built from.
+func (r *Run) Scrap() {
+	if r.Outcome != Running {
+		return
+	}
+	r.Outcome = Scrapped
+	c := r.Rover.Center()
+	r.World.Cons = r.World.Cons[:0]
+	r.Rover.Links = nil
+	rg := newRng(uint64(len(r.Rover.Bodies))*977 + uint64(r.Time*60))
+	h := 1.0 / 60 / float64(max(1, r.World.Substeps))
+	for _, b := range r.Rover.Bodies {
+		d := b.Pos.Sub(c)
+		if l := d.Len(); l > 1e-6 {
+			d = d.Mul(1 / l)
+		} else {
+			d = physics.V(0, 1)
+		}
+		v := d.Mul(rg.rangef(5, 9)).Add(physics.V(rg.rangef(-1.5, 1.5), rg.rangef(4, 7)))
+		b.Prev = b.Pos.Sub(v.Mul(h))
+		if b.Wheel {
+			b.Omega = rg.rangef(-20, 20)
+		}
+	}
+}
+
+// Debris keeps the wreck flying after the rover is scrapped.
+func (r *Run) Debris(dt float64) {
+	if r.Outcome == Scrapped {
+		r.World.Step(dt)
+	}
 }
 
 func (r *Run) SamplesGot() int {
@@ -91,13 +136,10 @@ func (r *Run) Step(dt, throttle float64) {
 	}
 	if c.X > r.BestX+0.5 {
 		r.BestX, r.stuckFor = c.X, 0
-	} else if throttle != 0 { // only count time the player is trying
+	} else if throttle != 0 && c.Sub(r.lastC).Len() < 1.5*dt { // trying, but barely moving
 		r.stuckFor += dt
-		if r.stuckFor > stuckSeconds {
-			r.Outcome = Stuck
-			return
-		}
 	}
+	r.lastC = c
 	if r.Time > maxSeconds {
 		r.Outcome = TimedOut
 	}
