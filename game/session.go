@@ -19,7 +19,7 @@ type Session struct {
 }
 
 func NewSession(l *Level) *Session {
-	return &Session{Level: l, Labels: map[int]Class{}, Design: StarterDesign(), emitted: map[int]Class{}}
+	return &Session{Level: l, Labels: map[int]Class{}, emitted: map[int]Class{}}
 }
 
 // NewSessionFor starts a session that remembers the player's earlier reviews of
@@ -34,9 +34,10 @@ func NewSessionFor(h engine.Host, l *Level) *Session {
 	for seg, c := range LoadProgress(h).Labels[l.ID] {
 		s.Labels[seg], s.emitted[seg] = Class(c), Class(c)
 	}
-	// A first-time player builds their first rover by hand, step by step.
+	// Every mission's bay starts empty: the player builds the rover. A
+	// first-time player is walked through it step by step.
 	if l.ID == LevelDefs[0].ID && !TutorialDone(h) {
-		s.Tut, s.Design = &Tutorial{}, Design{}
+		s.Tut = &Tutorial{}
 	}
 	return s
 }

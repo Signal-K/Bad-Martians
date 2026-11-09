@@ -123,7 +123,7 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 	ses := arg.(*Session)
 	lvl := ses.Level
 	s := newScene()
-	// Keep the starter rover only if it fits this mission's budget.
+	// A rover carried over (Retry) is kept only if it fits this mission's budget.
 	if len(ses.Design.Cells) > 0 && !ses.Fits() {
 		ses.Design = Design{}
 	}

@@ -118,8 +118,5 @@ func partNoun(k Kind, n int) string {
 func ExpeditionSession(h engine.Host, e *Expedition) *Session {
 	s := NewSessionFor(h, e.Level())
 	s.Exp, s.Tut = e, nil
-	if len(s.Design.Cells) == 0 { // the tutorial cleared it; expeditions skip it
-		s.Design = StarterDesign()
-	}
 	return s
 }

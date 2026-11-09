@@ -91,7 +91,9 @@ func TestEditorHostFlag(t *testing.T) {
 
 func TestEditorDragsRoverWithoutVelocity(t *testing.T) {
 	h := newHarness(t)
-	h.g.Load(SceneRun, NewSessionFor(h.g.Host, GetLevel(1)))
+	ses := NewSessionFor(h.g.Host, GetLevel(1))
+	ses.Design = StarterDesign()
+	h.g.Load(SceneRun, ses)
 	h.frames(30, engine.Input{})
 	h.g.SetEditor(true)
 	ro := h.g.Scene().Find("rover")

@@ -31,7 +31,7 @@ func Setup(g *engine.Game) {
 		Name: SceneRun, Title: "Drive", Type: engine.TypePlay, Layout: LayoutHUD,
 		Fixture: func(g *engine.Game) any {
 			s := NewSessionFor(g.Host, GetLevel(1))
-			if len(s.Design.Cells) == 0 { // a first-time player's tutorial bay starts empty
+			if len(s.Design.Cells) == 0 { // bays start empty; the standalone drive needs a rover
 				s.Design = StarterDesign()
 			}
 			return s

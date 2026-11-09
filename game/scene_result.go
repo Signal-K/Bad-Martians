@@ -26,7 +26,7 @@ type ResultArg struct {
 func sampleResult(g *engine.Game) *ResultArg {
 	l := GetLevel(1)
 	ses := NewSessionFor(g.Host, l)
-	if len(ses.Design.Cells) == 0 { // the tutorial empties a first-timer's bay
+	if len(ses.Design.Cells) == 0 { // bays start empty; the fixture needs a rover
 		ses.Design = StarterDesign()
 	}
 	return &ResultArg{Session: ses, Outcome: Won, Stars: 2, Time: l.Par * 1.2, Samples: 2, Total: len(l.Samples),
