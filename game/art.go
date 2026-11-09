@@ -297,20 +297,24 @@ func ridge(r engine.Renderer, camX, par float64, y func(float64) float64, col en
 	}
 }
 
-// strata are the ground's layers below the surface, in metres, with how much
-// each darkens the class colour.
-var strata = []struct{ top, bot, tone float64 }{
-	{0, 0.22, 0.14},
-	{0.22, 1.4, 0},
-	{1.4, 3.2, -0.14},
-	{3.2, 7, -0.3},
-	{7, 60, -0.45},
+// depthShade darkens the ground with depth: translucent black bands over
+// whatever layer lies there, so rock 10 m down reads darker than rock at 2 m.
+var depthShade = []struct {
+	top, bot float64
+	alpha    uint8
+}{
+	{1.4, 3.2, 36},
+	{3.2, 7, 77},
+	{7, 60, 115},
 }
 
-// drawTerrain paints the visible stretch of a heightfield: layered ground in
-// the class colour, a lit crust, and pebbles, ripples, cracks or boulders by
-// class. Decoration is seeded by segment index, so it holds still as you drive.
+// drawTerrain paints the visible stretch of a heightfield as a cross-section:
+// a crust in the surface class colour that fades between stretches, then the
+// pebble bed, packed soil and rock (see Ground), a lit rim, and pebbles,
+// ripples, cracks or boulders by class. Decoration is seeded by sample index,
+// so it holds still as you drive.
 func drawTerrain(r engine.Renderer, cam engine.Camera, t *physics.Terrain) {
+	g := GroundOf(t)
 	half := cam.Screen.X/2/cam.Zoom + 1
 	i0 := int((cam.Pos.X-half-t.X0)/t.DX) - 1
 	i1 := int((cam.Pos.X+half-t.X0)/t.DX) + 1
@@ -318,44 +322,75 @@ func drawTerrain(r engine.Renderer, cam engine.Camera, t *physics.Terrain) {
 	i1 = min(i1, t.Len()-2)
 	z := cam.Zoom
 	down := func(p engine.Vec2, m float64) engine.Vec2 { return engine.V(p.X, p.Y+m*z) }
+	band := func(a, b engine.Vec2, ta, tb, ba, bb float64, c engine.Color) {
+		a0, b0 := down(a, ta), down(b, tb)
+		if a0.Y > ScreenH && b0.Y > ScreenH {
+			return
+		}
+		a1, b1 := down(a, ba), down(b, bb)
+		r.Poly([]engine.Vec2{engine.V(a0.X-0.5, a0.Y), engine.V(b0.X+0.5, b0.Y), engine.V(b1.X+0.5, b1.Y), engine.V(a1.X-0.5, a1.Y)}, c)
+	}
 	for i := i0; i <= i1; i++ {
 		a := cam.ToScreen(engine.V(t.X0+float64(i)*t.DX, t.H[i]))
 		b := cam.ToScreen(engine.V(t.X0+float64(i+1)*t.DX, t.H[i+1]))
-		base := Classes[t.Seg[i]].Color
-		for _, s := range strata {
-			a0, b0 := down(a, s.top), down(b, s.top)
-			if a0.Y > ScreenH && b0.Y > ScreenH {
-				break
-			}
-			a1, b1 := down(a, s.bot), down(b, s.bot)
-			r.Poly([]engine.Vec2{engine.V(a0.X-0.5, a0.Y), engine.V(b0.X+0.5, b0.Y), engine.V(b1.X+0.5, b1.Y), engine.V(a1.X-0.5, a1.Y)}, shade(base, s.tone))
+		ca, cb := g.Crust[i], g.Crust[i+1]
+		crust := lerpColor(ca, cb, 0.5)
+		band(a, b, 0, 0, g.CrustD[i], g.CrustD[i+1], crust)
+		band(a, b, g.CrustD[i], g.CrustD[i+1], g.PebD[i], g.PebD[i+1], lerpColor(colPebbleBed, crust, 0.2))
+		band(a, b, g.PebD[i], g.PebD[i+1], g.RockD[i], g.RockD[i+1], lerpColor(colPacked, crust, 0.12))
+		band(a, b, g.RockD[i], g.RockD[i+1], 60, 60, colRock)
+		band(a, b, 0, 0, 0.22, 0.22, shade(crust, 0.14))
+		for _, s := range depthShade {
+			band(a, b, s.top, s.top, s.bot, s.bot, engine.RGB(16, 10, 14).Alpha(s.alpha))
 		}
 	}
 	for i := i0; i <= i1; i++ {
 		a := cam.ToScreen(engine.V(t.X0+float64(i)*t.DX, t.H[i]))
 		b := cam.ToScreen(engine.V(t.X0+float64(i+1)*t.DX, t.H[i+1]))
 		cls := Class(t.Seg[i])
-		base := Classes[cls].Color
+		base := lerpColor(g.Crust[i], g.Crust[i+1], 0.5)
 		rg := newRng(uint64(i)*2654435761 + 17)
 		at := func(f, depth float64) engine.Vec2 { return down(a.Add(b.Sub(a).Mul(f)), depth) }
-		// buried grit through the upper layers
+		lerpD := func(d []float64, f float64) float64 { return d[i] + (d[i+1]-d[i])*f }
+		// the pebble bed: rounded stones of mixed tone
 		for k := 0; k < 3; k++ {
-			p := at(rg.float(), rg.rangef(0.35, 2.8))
-			r.Circle(p, rg.rangef(0.03, 0.08)*z, shade(base, -0.22).Alpha(170), true)
+			f := rg.float()
+			top, bot := lerpD(g.CrustD, f), lerpD(g.PebD, f)
+			if bot-top < 0.08 {
+				continue
+			}
+			p := at(f, rg.rangef(top+0.04, bot-0.04))
+			rad := rg.rangef(0.04, 0.1) * z
+			c := lerpColor(colPebbleBed, engine.RGB(200, 170, 150), rg.rangef(0, 0.5))
+			r.Circle(p.Add(engine.V(rad*0.2, rad*0.25)), rad, shade(colPebbleBed, -0.35), true)
+			r.Circle(p, rad, c, true)
+		}
+		// grit in the packed soil, cracks in the rock
+		{
+			f := rg.float()
+			top, bot := lerpD(g.PebD, f), lerpD(g.RockD, f)
+			if bot-top > 0.1 {
+				r.Circle(at(f, rg.rangef(top, bot)), rg.rangef(0.03, 0.07)*z, shade(colPacked, -0.25).Alpha(170), true)
+			}
+			if rg.float() < 0.35 {
+				d := lerpD(g.RockD, f) + rg.rangef(0.3, 2.5)
+				p := at(f, d)
+				r.Line(p, p.Add(engine.V(rg.rangef(-0.2, 0.2)*z, rg.rangef(0.3, 0.8)*z)), 1.4, shade(colRock, -0.3))
+			}
 		}
 		switch cls {
 		case Sand:
-			for k := 0; k < 2; k++ {
-				p := at(0.1, rg.rangef(0.3, 1.2))
-				r.Line(p, p.Add(engine.V(0.4*z, rg.rangef(-0.03, 0.03)*z)), 1.4, shade(base, 0.22))
+			// cross-bedding in the sand crust
+			f := rg.float()
+			if d := lerpD(g.CrustD, f); d > 0.4 {
+				p := at(f*0.6, rg.rangef(0.3, d-0.1))
+				r.Line(p, p.Add(engine.V(0.4*z, rg.rangef(-0.05, 0.05)*z)), 1.4, shade(base, 0.22))
 			}
 		case Bedrock:
 			if rg.float() < 0.5 {
-				p := at(rg.float(), 0.25)
-				r.Line(p, p.Add(engine.V(rg.rangef(-0.15, 0.15)*z, rg.rangef(0.4, 1.0)*z)), 2, shade(base, -0.32))
+				p := at(rg.float(), 0.06)
+				r.Line(p, p.Add(engine.V(rg.rangef(-0.1, 0.1)*z, rg.rangef(0.2, 0.6)*z)), 2, shade(colRock, -0.32))
 			}
-			p := at(0, rg.rangef(0.6, 1.6))
-			r.Line(p, at(1, rg.rangef(0.6, 1.6)), 1.2, shade(base, -0.2))
 		case BigRock:
 			if rg.float() < 0.55 {
 				drawRock(r, at(rg.float(), 0.1), rg.rangef(0.16, 0.34)*z, base, rg)
@@ -370,6 +405,30 @@ func drawTerrain(r engine.Renderer, cam engine.Camera, t *physics.Terrain) {
 		}
 		r.Line(a, b, math.Max(2, 0.07*z), shade(base, 0.32))
 	}
+	for _, f := range g.Finds {
+		c := cam.ToScreen(engine.V(f.X, t.HeightAt(f.X)+0))
+		if c.X < -60 || c.X > cam.Screen.X+60 {
+			continue
+		}
+		drawFind(r, down(c, f.Depth), f.Size*z, f.Vein)
+	}
+}
+
+// drawFind is an interesting rock: a dark stone crossed by a bright mineral
+// vein, with a faint glow so it reads as worth a closer look.
+func drawFind(r engine.Renderer, c engine.Vec2, rad float64, vein engine.Color) {
+	r.Circle(c, rad*2.2, vein.Alpha(34), true)
+	r.Circle(c, rad*1.5, vein.Alpha(52), true)
+	pts := make([]engine.Vec2, 7)
+	for i := range pts {
+		a := float64(i) * 2 * math.Pi / 7
+		k := rad * (0.85 + 0.2*math.Sin(float64(i)*2.3))
+		pts[i] = engine.V(c.X+k*1.2*math.Cos(a), c.Y-k*0.9*math.Sin(a))
+	}
+	r.Poly(pts, engine.RGB(58, 48, 54))
+	r.Line(c.Add(engine.V(-rad*0.9, rad*0.25)), c.Add(engine.V(-rad*0.1, -rad*0.15)), math.Max(1.5, rad*0.22), vein)
+	r.Line(c.Add(engine.V(-rad*0.1, -rad*0.15)), c.Add(engine.V(rad*0.85, -rad*0.4)), math.Max(1.5, rad*0.22), vein)
+	r.Circle(c.Add(engine.V(-rad*0.4, -rad*0.45)), rad*0.18, engine.RGB(150, 140, 150), true)
 }
 
 // drawRock is an irregular stone lit from the upper left, half sunk at c.
