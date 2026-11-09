@@ -51,12 +51,12 @@ func (t *Tutorial) BuildStep(d Design) int {
 }
 
 var tutBuildText = [...]string{
-	tutBeam:  "Start with a frame. Drag the Beam from Shapes onto the glowing cells.",
-	tutWheel: "Wheels lift the frame off the rocks. Drag a Wheel under the front end.",
-	tutMotor: "A Motor wheel drives the rover. Put one under the back end.",
-	tutMast:  "Every rover carries one Navcam mast. Stand it on top of the frame.",
-	tutTest:  "Looks like a rover! Tap Test drop to see how it sits.",
-	tutGo:    "Steady on its wheels? Press GO to drive it.",
+	tutBeam:  "Drag the Beam onto the glowing cells.",
+	tutWheel: "Put a Wheel under the front end.",
+	tutMotor: "Put a Motor wheel under the back end.",
+	tutMast:  "Stand the Navcam mast on top.",
+	tutTest:  "Tap Test drop to see how it sits.",
+	tutGo:    "Press GO to drive.",
 }
 
 // hintCells are the empty cells where the next part of the tutorial should go.
@@ -127,66 +127,33 @@ func (t *Tutorial) hintCells(d Design, step int) [][2]int {
 	return out
 }
 
-// drawCoach draws the tutorial bubble with its text, and a pulsing frame and
-// arrow on the thing to touch next (when target.W > 0).
-func drawCoach(r engine.Renderer, clock float64, box engine.Rect, msg string, target engine.Rect) {
-	pulse := 0.5 + 0.5*math.Sin(clock*5)
-	if target.W > 0 {
-		g := 3 + 3*pulse
-		outline(r, target.X-g, target.Y-g, target.W+2*g, target.H+2*g, colNeon.Alpha(uint8(150+100*pulse)))
-		bob := 6 * pulse
-		if target.X+target.W < 160 { // left edge: arrow on the right, pointing left
-			ax, ay := target.X+target.W+14+bob, target.Y+target.H/2
-			r.Poly([]engine.Vec2{engine.V(ax, ay), engine.V(ax+18, ay-12), engine.V(ax+18, ay+12)}, colNeon)
-		} else { // arrow above, pointing down
-			ax, ay := target.X+target.W/2, target.Y-12-bob
-			r.Poly([]engine.Vec2{engine.V(ax, ay), engine.V(ax-12, ay-18), engine.V(ax+12, ay-18)}, colNeon)
-		}
-	}
-	drawPanel(r, box.X, box.Y, box.W, box.H, "Tutorial")
-	if msg == "" {
+// drawPointer draws a pulsing frame and arrow on the thing to touch next.
+func drawPointer(r engine.Renderer, clock float64, target engine.Rect) {
+	if target.W <= 0 {
 		return
 	}
-	lines := wrap(msg, sizeBody, box.W-36)
-	y := box.Y + box.H/2 - float64(len(lines))*11 - 2
-	for _, l := range lines {
-		r.Text(l, box.X+18, y, sizeBody, colInk, engine.AlignLeft)
-		y += 22
+	pulse := 0.5 + 0.5*math.Sin(clock*5)
+	g := 3 + 3*pulse
+	outline(r, target.X-g, target.Y-g, target.W+2*g, target.H+2*g, colNeon.Alpha(uint8(150+100*pulse)))
+	bob := 6 * pulse
+	switch {
+	case target.X+target.W < 160: // left edge: arrow on the right, pointing left
+		ax, ay := target.X+target.W+14+bob, target.Y+target.H/2
+		r.Poly([]engine.Vec2{engine.V(ax, ay), engine.V(ax+18, ay-12), engine.V(ax+18, ay+12)}, colNeon)
+	case target.Y < 80: // top bar: arrow below, pointing up
+		ax, ay := target.X+target.W/2, target.Y+target.H+12+bob
+		r.Poly([]engine.Vec2{engine.V(ax, ay), engine.V(ax-12, ay+18), engine.V(ax+12, ay+18)}, colNeon)
+	default: // arrow above, pointing down
+		ax, ay := target.X+target.W/2, target.Y-12-bob
+		r.Poly([]engine.Vec2{engine.V(ax, ay), engine.V(ax-12, ay-18), engine.V(ax+12, ay-18)}, colNeon)
 	}
 }
 
-// wrap breaks s into lines no wider than w at the given text size.
-func wrap(s string, size, w float64) []string {
-	var lines []string
-	line := ""
-	word := ""
-	flush := func() {
-		if word == "" {
-			return
-		}
-		switch {
-		case line == "":
-			line = word
-		case textW(line+" "+word, size) <= w:
-			line += " " + word
-		default:
-			lines = append(lines, line)
-			line = word
-		}
-		word = ""
-	}
-	for _, ch := range s {
-		if ch == ' ' {
-			flush()
-			continue
-		}
-		word += string(ch)
-	}
-	flush()
-	if line != "" {
-		lines = append(lines, line)
-	}
-	return lines
+// drawCoach draws a one-line tip panel and points at target.
+func drawCoach(r engine.Renderer, clock float64, box engine.Rect, msg string, target engine.Rect) {
+	drawPointer(r, clock, target)
+	drawPanel(r, box.X, box.Y, box.W, box.H, "")
+	r.Text(msg, box.X+box.W/2, box.Y+box.H/2-11, sizeBody, colInk, engine.AlignCenter)
 }
 
 const tutorialDoneKey = "hm.tutorial"

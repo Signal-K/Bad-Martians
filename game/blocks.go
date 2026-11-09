@@ -13,8 +13,6 @@ var Blocks = []Block{
 	{"Starter rover", "Starter rover: wheels at both ends, a motor wheel to drive, the mast on top.", StarterDesign().Cells},
 	{"Triangle", "Triangle: its diagonal beam locks the shape, so it will not fold on bumps.",
 		[]Cell{{0, 0, KFrame}, {1, 0, KFrame}, {0, 1, KFrame}}},
-	{"Box", "Box: braced both ways, the stiffest frame. Good under a heavy mast.",
-		[]Cell{{0, 0, KFrame}, {1, 0, KFrame}, {0, 1, KFrame}, {1, 1, KFrame}}},
 	{"Beam", "Beam: a long base spreads the wheels out, so the rover tips less.",
 		[]Cell{{0, 0, KFrame}, {1, 0, KFrame}, {2, 0, KFrame}}},
 }

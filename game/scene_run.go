@@ -82,8 +82,8 @@ func runScene(g *engine.Game, arg any) *engine.Scene {
 				return
 			}
 			clock += 1.0 / 60
-			drawCoach(r, clock, engine.Rect{X: ScreenW/2 - 270, Y: 84, W: 540, H: 66},
-				"Hold GAS to drive. Grab the stars on the way and reach the flag.",
+			drawCoach(r, clock, engine.Rect{X: ScreenW/2 - 140, Y: 76, W: 280, H: 48},
+				"Hold GAS to drive.",
 				engine.Rect{X: gas.X, Y: gas.Y, W: gas.W, H: gas.H})
 		}))
 	}

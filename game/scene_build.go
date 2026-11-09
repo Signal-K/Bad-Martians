@@ -26,15 +26,15 @@ const (
 	bSideX = 8.0
 	bSideW = 124.0
 	bSideY = 100.0 // top of the first card
-	bCardH = 62.0
-	bCardG = 4.0
+	bCardH = 80.0
+	bCardG = 6.0
 )
 
 // cardY is the top of shapes card i.
 func cardY(i int) float64 { return bSideY + float64(i)*(bCardH+bCardG) }
 
-// coachBox is where the tutorial bubble sits: over the top of the grid.
-var coachBox = engine.Rect{X: bGX + 16, Y: 84, W: bCell*GridW - 32, H: 66}
+// skipBox is the tutorial's Skip button, in the top bar.
+var skipBox = engine.Rect{X: 560, Y: 10, W: 84, H: 44}
 
 // bayTools is the order of the parts tray; "" is the eraser.
 var bayTools = []Kind{KFrame, KWheel, KMotor, KMast, ""}
@@ -138,7 +138,7 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 	var press engine.Vec2
 	trayDown, swiped, dragging := false, false, false
 	var dragKind Kind = "-"
-	blk, dragBlock := -1, -1 // selected / dragged shapes block, -1 for none
+	blk, dragBlock := -1, -1   // selected / dragged shapes block, -1 for none
 	idea, ideaUntil := -1, 0.0 // block whose idea the status line shows, and until when
 	tut := ses.Tut
 	var skip *engine.Rect // the tutorial's skip button, to keep taps off the grid
@@ -247,7 +247,7 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 	// the grid, the parts, and the test drop
 	AddDraw(s, 2, func(_ engine.Camera, r engine.Renderer) {
 		if testing {
-			drawTestDrop(r, cam, lvl.Terrain, testRover, testT)
+			drawTestDrop(r, cam, lvl.Terrain, testRover)
 			return
 		}
 		for cy := 0; cy < GridH; cy++ { // sockets
@@ -340,7 +340,14 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 		r.Text(fmt.Sprintf("Rover bay · Mission %d", lvl.ID), 92, 8, 22, colInk, engine.AlignLeft)
 		switch {
 		case testing:
-			r.Text("Test drop: this is how it sits on the start line.", 92, 38, sizeSmall, colChipLt, engine.AlignLeft)
+			msg, col := testVerdict(testRover, testT)
+			r.Text(msg, 92, 38, sizeSmall+1, col, engine.AlignLeft)
+		case tut != nil && !tut.Done: // the tutorial speaks in the status line
+			msg := tutBuildText[tut.BuildStep(ses.Design)]
+			if tut.BuildStep(ses.Design) >= tutTest && len(errs) > 0 {
+				msg = "Almost: " + errs[0] + "."
+			}
+			r.Text(msg, 92, 38, sizeSmall+1, colNeon, engine.AlignLeft)
 		case idea >= 0 && clock < ideaUntil:
 			r.Text(Blocks[idea].Idea, 92, 38, sizeSmall, colChipLt, engine.AlignLeft)
 		case len(ses.Design.Cells) == 0:
@@ -363,7 +370,6 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 		const sx, sy, sw, sh = bGX, 376.0, bCell * GridW, 34.0
 		r.Rect(sx-8, sy-6, sw+16, sh+12, colTile.Alpha(200), true)
 		outline(r, sx-8, sy-6, sw+16, sh+12, colInk.Alpha(120))
-		r.Text("Course", sx-18, sy+8, sizeSmall, colInk, engine.AlignRight)
 		x0, x1 := lvl.Terrain.X0, lvl.Terrain.X0+lvl.Terrain.DX*float64(lvl.Terrain.Len()-1)
 		lo, hi := math.Inf(1), math.Inf(-1)
 		for _, h := range lvl.Terrain.H {
@@ -509,9 +515,9 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 			}
 			r.Rect(b.X, b.Y, b.W, b.H, fill, true)
 			outline(r, b.X, b.Y, b.W, b.H, line)
-			drawBlockMini(r, bl, engine.V(b.X+b.W/2, b.Y+21), 12)
-			r.Text(bl.Name, b.X+b.W/2, b.Y+34, sizeSmall-1, colInk, engine.AlignCenter)
-			r.Text(fmt.Sprintf("%d cr", bl.Cost()), b.X+b.W/2, b.Y+48, 12, colMuted, engine.AlignCenter)
+			drawBlockMini(r, bl, engine.V(b.X+b.W/2, b.Y+28), 16)
+			r.Text(bl.Name, b.X+b.W/2, b.Y+50, sizeSmall, colInk, engine.AlignCenter)
+			r.Text(fmt.Sprintf("%d cr", bl.Cost()), b.X+b.W/2, b.Y+66, 12, colMuted, engine.AlignCenter)
 		}
 	}
 
@@ -543,18 +549,35 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 	launch := AddButton(s, ScreenW-20-170, bTrayY+22, 170, 72, "GO", func() { g.Load(SceneRun, ses) })
 	launch.Primary, launch.Icon = true, IconRight
 
-	// tutorial: a bubble over the grid says what to do next and points at it
+	// tutorial: the status line says what to do next; here it only points at it
 	if tut != nil {
-		sk := engine.Rect{X: coachBox.X + coachBox.W - 86, Y: coachBox.Y + (coachBox.H-44)/2, W: 72, H: 44}
+		sk := skipBox
 		skip = &sk
 		sb := AddButton(s, sk.X, sk.Y, sk.W, sk.H, "Skip", func() {
 			if !tut.Done {
 				FinishTutorial(g.Host, tut)
 			}
 		})
-		sb.Custom = func(b *Button, r engine.Renderer) {} // drawn with the bubble
+		sb.Custom = func(b *Button, r engine.Renderer) {
+			if tut.Done {
+				return
+			}
+			fill := colTile
+			if b.Held {
+				fill = colInk.Alpha(60)
+			}
+			r.Rect(b.X, b.Y, b.W, b.H, fill, true)
+			outline(r, b.X, b.Y, b.W, b.H, colInk.Alpha(120))
+			r.Text("Skip", b.X+b.W/2, b.Y+13, sizeSmall, colMuted, engine.AlignCenter)
+		}
 		tray := func(k Kind) engine.Rect {
 			return engine.Rect{X: tileX(toolIndex(k)), Y: bTrayY + 8, W: bTileW, H: bTileH}
+		}
+		beamCard := 0
+		for i, bl := range Blocks {
+			if bl.Name == "Beam" {
+				beamCard = i
+			}
 		}
 		o := s.Spawn("tutorial")
 		o.Layer = 30
@@ -562,11 +585,10 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 			if tut.Done || dragging {
 				return
 			}
-			step := tut.BuildStep(ses.Design)
-			msg, target := tutBuildText[step], engine.Rect{}
-			switch step {
+			var target engine.Rect
+			switch tut.BuildStep(ses.Design) {
 			case tutBeam:
-				target = engine.Rect{X: bSideX, Y: cardY(3), W: bSideW, H: bCardH}
+				target = engine.Rect{X: bSideX, Y: cardY(beamCard), W: bSideW, H: bCardH}
 			case tutWheel:
 				target = tray(KWheel)
 			case tutMotor:
@@ -578,28 +600,10 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 			case tutGo:
 				target = engine.Rect{X: launch.X, Y: launch.Y, W: launch.W, H: launch.H}
 			}
-			if step >= tutTest && len(errs) > 0 { // something to fix before testing
-				msg, target = "Almost: "+errs[0]+".", engine.Rect{}
-			}
-			if testing {
+			if len(errs) > 0 && tut.BuildStep(ses.Design) >= tutTest {
 				target = engine.Rect{}
 			}
-			box := coachBox
-			box.W -= 90 // room for Skip
-			drawCoach(r, clock, coachBox, "", target)
-			lines := wrap(msg, sizeBody, box.W-36)
-			y := box.Y + box.H/2 - float64(len(lines))*11 - 2
-			for _, l := range lines {
-				r.Text(l, box.X+18, y, sizeBody, colInk, engine.AlignLeft)
-				y += 22
-			}
-			fill := colTile
-			if sb.Held {
-				fill = colInk.Alpha(60)
-			}
-			r.Rect(sk.X, sk.Y, sk.W, sk.H, fill, true)
-			outline(r, sk.X, sk.Y, sk.W, sk.H, colInk.Alpha(160))
-			r.Text("Skip", sk.X+sk.W/2, sk.Y+13, sizeSmall, colMuted, engine.AlignCenter)
+			drawPointer(r, clock, target)
 		}))
 	}
 
@@ -688,41 +692,39 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 	return s
 }
 
-// drawTestDrop draws the dropped rover with its tilt against a level line, and
-// says whether it sits level and holds its shape.
-func drawTestDrop(r engine.Renderer, cam engine.Camera, ter *physics.Terrain, rv *Rover, t float64) {
+// drawTestDrop draws the dropped rover, with its chassis axis against a level
+// line only when it tilts.
+func drawTestDrop(r engine.Renderer, cam engine.Camera, ter *physics.Terrain, rv *Rover) {
 	roverShadows(r, cam, ter, rv)
 	rv.Draw(nil, cam, r)
 	pose := PoseOf(rv)
+	if math.Abs(pose.Tilt*180/math.Pi) < 2 {
+		return
+	}
 	c := cam.ToScreen(rv.Center())
-	// level reference and the chassis axis through the centre
 	const L = 150.0
 	r.Line(engine.V(c.X-L, c.Y), engine.V(c.X+L, c.Y), 2, colInk.Alpha(120))
 	d := engine.V(math.Cos(pose.Tilt), -math.Sin(pose.Tilt)).Mul(L)
-	r.Line(c.Sub(d), c.Add(d), 3, colNeon)
-	deg := pose.Tilt * 180 / math.Pi
-	tilt := "Sits level"
-	if math.Abs(deg) >= 2 {
+	r.Line(c.Sub(d), c.Add(d), 3, colWarn)
+}
+
+// testVerdict is the one-line result of a test drop for the status line.
+func testVerdict(rv *Rover, t float64) (string, engine.Color) {
+	if t < 1.2 {
+		return "Test drop: settling…", colChipLt
+	}
+	pose := PoseOf(rv)
+	if pose.Bend > bendLimit {
+		return "Test drop: the frame bends. Add a diagonal brace.", colWarn
+	}
+	if deg := pose.Tilt * 180 / math.Pi; math.Abs(deg) >= 2 {
 		dir := "nose up"
 		if deg < 0 {
 			dir = "nose down"
 		}
-		tilt = fmt.Sprintf("Tilts %.0f° %s", math.Abs(deg), dir)
+		return fmt.Sprintf("Test drop: tilts %.0f° %s.", math.Abs(deg), dir), colWarn
 	}
-	// top right of the grid, below the tutorial bubble: clear of the sidebar and
-	// of most rovers, which start from the left
-	const pw = 300.0
-	const px, py = bGX + bCell*GridW - 16 - pw, 164.0
-	drawPanel(r, px, py, pw, 78, "")
-	r.Text(tilt, px+16, py+12, sizeBody, colInk, engine.AlignLeft)
-	switch {
-	case t < 1.2:
-		r.Text("Settling…", px+16, py+42, sizeSmall, colMuted, engine.AlignLeft)
-	case pose.Bend > bendLimit:
-		r.Text("Frame bends: add a diagonal brace.", px+16, py+42, sizeSmall, colWarn, engine.AlignLeft)
-	default:
-		r.Text("Frame holds its shape.", px+16, py+42, sizeSmall, colGood, engine.AlignLeft)
-	}
+	return "Test drop: sits level and holds its shape.", colGood
 }
 
 var colBlueprint = engine.RGB(150, 226, 255)
