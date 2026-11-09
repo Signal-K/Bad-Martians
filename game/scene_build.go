@@ -21,7 +21,20 @@ const (
 	bTileH   = 100.0
 	bTileGap = 10.0
 	bSwipe   = 40.0 // horizontal travel on the tray that counts as a swipe
+
+	// Shapes sidebar: ready-made frame blocks, left of the gantry
+	bSideX = 8.0
+	bSideW = 124.0
+	bSideY = 100.0 // top of the first card
+	bCardH = 62.0
+	bCardG = 4.0
 )
+
+// cardY is the top of shapes card i.
+func cardY(i int) float64 { return bSideY + float64(i)*(bCardH+bCardG) }
+
+// coachBox is where the tutorial bubble sits: over the top of the grid.
+var coachBox = engine.Rect{X: bGX + 16, Y: 84, W: bCell*GridW - 32, H: 66}
 
 // bayTools is the order of the parts tray; "" is the eraser.
 var bayTools = []Kind{KFrame, KWheel, KMotor, KMast, ""}
@@ -125,6 +138,10 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 	var press engine.Vec2
 	trayDown, swiped, dragging := false, false, false
 	var dragKind Kind = "-"
+	blk, dragBlock := -1, -1 // selected / dragged shapes block, -1 for none
+	idea, ideaUntil := -1, 0.0 // block whose idea the status line shows, and until when
+	tut := ses.Tut
+	var skip *engine.Rect // the tutorial's skip button, to keep taps off the grid
 
 	// test drop: live physics on the real start terrain
 	testing := false
@@ -180,6 +197,21 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 			placedAt[[2]int{cx, cy}] = clock
 		}
 	}
+	cardAt := func(p engine.Vec2) int {
+		for i := range Blocks {
+			if p.X >= bSideX && p.X <= bSideX+bSideW && p.Y >= cardY(i) && p.Y <= cardY(i)+bCardH {
+				return i
+			}
+		}
+		return -1
+	}
+	stamp := func(i, cx, cy int) {
+		x, y := Blocks[i].Anchor(cx, cy)
+		for _, c := range Blocks[i].Stamp(&ses.Design, x, y) {
+			placedAt[c] = clock
+		}
+	}
+	showIdea := func(i int) { idea, ideaUntil = i, clock+5 }
 	stopTest := func() { testing, testWorld, testRover = false, nil, nil }
 	var testBtn *Button
 	startTest := func() {
@@ -190,6 +222,9 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 		testWorld.Terrain = lvl.Terrain
 		testRover = SpawnRover(testWorld, ses.Design, originX, h0)
 		testing, testT = true, 0
+		if tut != nil {
+			tut.Tested = true
+		}
 	}
 
 	// sky and ground: the same art as the drive
@@ -229,6 +264,25 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 		if dragging {
 			hk = dragKind
 		}
+		hb := blk // a block takes the place of the part tool
+		if dragBlock >= 0 {
+			hb = dragBlock
+		} else if dragging {
+			hb = -1
+		}
+		if cx, cy, ok := cellAt(g.In.Pointer); ok && hb >= 0 && (dragBlock >= 0 || !trayDown) {
+			x0, y0 := Blocks[hb].Anchor(cx, cy)
+			for _, c := range Blocks[hb].Cells {
+				x, y := cellXY(x0+c.X, y0+c.Y)
+				outline(r, x+1, y+1, bCell-2, bCell-2, colNeon.Alpha(200))
+				ctr := centre(x0+c.X, y0+c.Y)
+				r.Circle(ctr, bCell*0.36, colInk.Alpha(60), true)
+				drawIcon(r, partIcon(c.K), ctr.X, ctr.Y, bCell*0.5, colInk.Alpha(170))
+			}
+			hk = "-"
+		} else if hb >= 0 {
+			hk = "-"
+		}
 		if cx, cy, ok := cellAt(g.In.Pointer); ok && (dragging || !trayDown) && hk != "-" {
 			hover = [2]int{cx, cy}
 			x, y := cellXY(cx, cy)
@@ -243,6 +297,14 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 						r.Line(centre(cx, cy), centre(cx+o[0], cy+o[1]), 4, colNeon.Alpha(170))
 					}
 				}
+			}
+		}
+		if tut != nil && !tut.Done { // where the tutorial wants the next part
+			a := uint8(120 + 135*(0.5+0.5*math.Sin(clock*5)))
+			for _, c := range tut.hintCells(ses.Design, tut.BuildStep(ses.Design)) {
+				x, y := cellXY(c[0], c[1])
+				r.Rect(x+3, y+3, bCell-6, bCell-6, colNeon.Alpha(a/3), true)
+				outline(r, x+3, y+3, bCell-6, bCell-6, colNeon.Alpha(a))
 			}
 		}
 		for _, c := range ses.Design.Cells { // beams first, parts on top
@@ -279,10 +341,12 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 		switch {
 		case testing:
 			r.Text("Test drop: this is how it sits on the start line.", 92, 38, sizeSmall, colChipLt, engine.AlignLeft)
+		case idea >= 0 && clock < ideaUntil:
+			r.Text(Blocks[idea].Idea, 92, 38, sizeSmall, colChipLt, engine.AlignLeft)
+		case len(ses.Design.Cells) == 0:
+			r.Text("Drag a shape or a part onto the grid.", 92, 38, sizeSmall, colChipLt, engine.AlignLeft)
 		case len(errs) > 0:
 			r.Text(errs[0], 92, 38, sizeSmall, colWarn, engine.AlignLeft)
-		case len(ses.Design.Cells) == 0:
-			r.Text("Tap, swipe or drag a part from the tray onto the grid.", 92, 38, sizeSmall, colChipLt, engine.AlignLeft)
 		default:
 			r.Text("Ready. Test to see how it sits, or GO to drive.", 92, 38, sizeSmall, colGood, engine.AlignLeft)
 		}
@@ -342,6 +406,15 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 			r.Text(row.n, 20, y, sizeSmall, colInk, engine.AlignLeft)
 			drawMeter(r, 82, y+2, 82, 10, row.v, colNeon)
 		}
+		// shapes sidebar backing
+		sideB := cardY(len(Blocks)) + 2 // stop above the course map's label
+		r.Rect(0, 64, bSideX+bSideW+8, sideB-64, colTile.Alpha(205), true)
+		r.Rect(bSideX+bSideW+7, 64, 2, sideB-64, colInk.Alpha(60), true)
+		r.Text("Shapes", bSideX+bSideW/2, 74, sizeSmall+1, colNeon, engine.AlignCenter)
+		// a block being dragged from the sidebar follows the pointer
+		if dragBlock >= 0 && dragging {
+			drawBlockMini(r, Blocks[dragBlock], g.In.Pointer, bCell*0.6)
+		}
 		// a part being dragged from the tray follows the pointer
 		if dragging && dragKind != "-" {
 			p := g.In.Pointer
@@ -364,12 +437,12 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 		}
 		b := AddButton(s, tileX(i), bTrayY+8, bTileW, bTileH, name, func() {
 			if !swiped {
-				tool = k
+				tool, blk = k, -1
 				stopTest()
 			}
 		})
 		b.Custom = func(b *Button, r engine.Renderer) {
-			sel := tool == k
+			sel := tool == k && blk < 0
 			n := CanAdd(ses.Design, k, ses.Budget())
 			fill, line := colPanel, colInk.Alpha(150)
 			if sel {
@@ -415,6 +488,33 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 		}
 	}
 
+	// shapes cards: ready-made frame blocks with the idea each one teaches
+	for i, bl := range Blocks {
+		i, bl := i, bl
+		b := AddButton(s, bSideX, cardY(i), bSideW, bCardH, bl.Name, func() {
+			if !swiped {
+				blk = i // tap: the block becomes the tool, stamped by tapping the grid
+				showIdea(i)
+				stopTest()
+			}
+		})
+		b.Custom = func(b *Button, r engine.Renderer) {
+			sel := blk == i
+			fill, line := colPanel, colInk.Alpha(150)
+			if sel {
+				fill, line = colPanel2, colNeon
+			}
+			if b.Held {
+				fill = colInk.Alpha(40)
+			}
+			r.Rect(b.X, b.Y, b.W, b.H, fill, true)
+			outline(r, b.X, b.Y, b.W, b.H, line)
+			drawBlockMini(r, bl, engine.V(b.X+b.W/2, b.Y+21), 12)
+			r.Text(bl.Name, b.X+b.W/2, b.Y+34, sizeSmall-1, colInk, engine.AlignCenter)
+			r.Text(fmt.Sprintf("%d cr", bl.Cost()), b.X+b.W/2, b.Y+48, 12, colMuted, engine.AlignCenter)
+		}
+	}
+
 	back := AddButton(s, 16, 10, 60, 44, "Back", func() { g.Load(SceneMenu, nil) })
 	back.Icon, back.HideLabel = IconBack, true
 	testBtn = AddButton(s, ScreenW-16-132, 10, 132, 44, "Test", func() {
@@ -443,6 +543,66 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 	launch := AddButton(s, ScreenW-20-170, bTrayY+22, 170, 72, "GO", func() { g.Load(SceneRun, ses) })
 	launch.Primary, launch.Icon = true, IconRight
 
+	// tutorial: a bubble over the grid says what to do next and points at it
+	if tut != nil {
+		sk := engine.Rect{X: coachBox.X + coachBox.W - 86, Y: coachBox.Y + (coachBox.H-44)/2, W: 72, H: 44}
+		skip = &sk
+		sb := AddButton(s, sk.X, sk.Y, sk.W, sk.H, "Skip", func() {
+			if !tut.Done {
+				FinishTutorial(g.Host, tut)
+			}
+		})
+		sb.Custom = func(b *Button, r engine.Renderer) {} // drawn with the bubble
+		tray := func(k Kind) engine.Rect {
+			return engine.Rect{X: tileX(toolIndex(k)), Y: bTrayY + 8, W: bTileW, H: bTileH}
+		}
+		o := s.Spawn("tutorial")
+		o.Layer = 30
+		o.Add(DrawFunc(func(_ engine.Camera, r engine.Renderer) {
+			if tut.Done || dragging {
+				return
+			}
+			step := tut.BuildStep(ses.Design)
+			msg, target := tutBuildText[step], engine.Rect{}
+			switch step {
+			case tutBeam:
+				target = engine.Rect{X: bSideX, Y: cardY(3), W: bSideW, H: bCardH}
+			case tutWheel:
+				target = tray(KWheel)
+			case tutMotor:
+				target = tray(KMotor)
+			case tutMast:
+				target = tray(KMast)
+			case tutTest:
+				target = engine.Rect{X: testBtn.X, Y: testBtn.Y, W: testBtn.W, H: testBtn.H}
+			case tutGo:
+				target = engine.Rect{X: launch.X, Y: launch.Y, W: launch.W, H: launch.H}
+			}
+			if step >= tutTest && len(errs) > 0 { // something to fix before testing
+				msg, target = "Almost: "+errs[0]+".", engine.Rect{}
+			}
+			if testing {
+				target = engine.Rect{}
+			}
+			box := coachBox
+			box.W -= 90 // room for Skip
+			drawCoach(r, clock, coachBox, "", target)
+			lines := wrap(msg, sizeBody, box.W-36)
+			y := box.Y + box.H/2 - float64(len(lines))*11 - 2
+			for _, l := range lines {
+				r.Text(l, box.X+18, y, sizeBody, colInk, engine.AlignLeft)
+				y += 22
+			}
+			fill := colTile
+			if sb.Held {
+				fill = colInk.Alpha(60)
+			}
+			r.Rect(sk.X, sk.Y, sk.W, sk.H, fill, true)
+			outline(r, sk.X, sk.Y, sk.W, sk.H, colInk.Alpha(160))
+			r.Text("Skip", sk.X+sk.W/2, sk.Y+13, sizeSmall, colMuted, engine.AlignCenter)
+		}))
+	}
+
 	s.OnUpdate = func(dt float64) {
 		clock += dt
 		errs = ses.Design.Validate(ses.Budget())
@@ -461,20 +621,36 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 			swiped, dragging = false, false
 			trayDown = p.Y >= bTrayY
 			press = p
-			dragKind = "-"
+			dragKind, dragBlock = "-", -1
 			if k, ok := tileAt(p); ok && trayDown {
 				dragKind = k
+			}
+			if i := cardAt(p); i >= 0 {
+				dragBlock = i
 			}
 		}
 		if trayDown && in.Down && dragKind != "-" && p.Y < bTrayY-6 {
 			dragging = true
+		}
+		if dragBlock >= 0 && in.Down && p.X > bSideX+bSideW+10 {
+			dragging = true
+		}
+		if in.Released && dragBlock >= 0 {
+			if dragging {
+				if cx, cy, ok := cellAt(p); ok {
+					stopTest()
+					stamp(dragBlock, cx, cy) // the part tool stays as it was
+					showIdea(dragBlock)
+				}
+				swiped = true
+			}
 		}
 		if in.Released && trayDown {
 			if dragging {
 				if cx, cy, ok := cellAt(p); ok {
 					stopTest()
 					place(cx, cy, dragKind)
-					tool = dragKind
+					tool, blk = dragKind, -1
 				}
 				swiped = true
 			} else if dx := p.X - press.X; math.Abs(dx) > bSwipe && math.Abs(p.Y-press.Y) < 70 {
@@ -482,18 +658,23 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 				if dx > 0 {
 					step = -1
 				}
-				tool = bayTools[(toolIndex(tool)+step+len(bayTools))%len(bayTools)]
+				tool, blk = bayTools[(toolIndex(tool)+step+len(bayTools))%len(bayTools)], -1
 				stopTest()
 				swiped = true
 			}
 		}
 		if !in.Down {
-			trayDown, dragging = false, false
+			trayDown, dragging, dragBlock = false, false, -1
 		}
 
-		// painting on the grid with the selected part
+		// painting on the grid with the selected part; a block stamps once
 		cx, cy, inGrid := cellAt(p)
-		if in.Pressed && inGrid && !testing {
+		onSkip := skip != nil && !tut.Done && p.X >= skip.X && p.X <= skip.X+skip.W && p.Y >= skip.Y && p.Y <= skip.Y+skip.H
+		if in.Pressed && inGrid && !testing && !onSkip {
+			if blk >= 0 {
+				stamp(blk, cx, cy)
+				return
+			}
 			painting, lastCell = true, [2]int{-1, -1}
 		}
 		if !in.Down {
@@ -528,15 +709,19 @@ func drawTestDrop(r engine.Renderer, cam engine.Camera, ter *physics.Terrain, rv
 		}
 		tilt = fmt.Sprintf("Tilts %.0f° %s", math.Abs(deg), dir)
 	}
-	drawPanel(r, 24, 80, 320, 78, "")
-	r.Text(tilt, 40, 92, sizeBody, colInk, engine.AlignLeft)
+	// top right of the grid, below the tutorial bubble: clear of the sidebar and
+	// of most rovers, which start from the left
+	const pw = 300.0
+	const px, py = bGX + bCell*GridW - 16 - pw, 164.0
+	drawPanel(r, px, py, pw, 78, "")
+	r.Text(tilt, px+16, py+12, sizeBody, colInk, engine.AlignLeft)
 	switch {
 	case t < 1.2:
-		r.Text("Settling…", 40, 122, sizeSmall, colMuted, engine.AlignLeft)
+		r.Text("Settling…", px+16, py+42, sizeSmall, colMuted, engine.AlignLeft)
 	case pose.Bend > bendLimit:
-		r.Text("Frame bends: add a diagonal brace.", 40, 122, sizeSmall, colWarn, engine.AlignLeft)
+		r.Text("Frame bends: add a diagonal brace.", px+16, py+42, sizeSmall, colWarn, engine.AlignLeft)
 	default:
-		r.Text("Frame holds its shape.", 40, 122, sizeSmall, colGood, engine.AlignLeft)
+		r.Text("Frame holds its shape.", px+16, py+42, sizeSmall, colGood, engine.AlignLeft)
 	}
 }
 
@@ -549,7 +734,9 @@ func drawGantry(r engine.Renderer, cam engine.Camera, t *physics.Terrain, dim bo
 	const tw = 22.0 // tower width
 	top := float64(bGY) - 26
 	lx, rx := float64(bGX)-tw-10, float64(bGX+bCell*GridW)+10
-	ground := func(x float64) float64 { return cam.ToScreen(engine.V(cam.ToWorld(engine.V(x, 0)).X, t.HeightAt(cam.ToWorld(engine.V(x, 0)).X))).Y }
+	ground := func(x float64) float64 {
+		return cam.ToScreen(engine.V(cam.ToWorld(engine.V(x, 0)).X, t.HeightAt(cam.ToWorld(engine.V(x, 0)).X))).Y
+	}
 	// light cones first, so everything else sits in front of them
 	lamps := []float64{float64(bGX) + 90, ScreenW / 2, float64(bGX+bCell*GridW) - 90}
 	glow := uint8(22)
@@ -595,5 +782,24 @@ func drawGantry(r engine.Renderer, cam engine.Camera, t *physics.Terrain, dim bo
 	for _, x := range []float64{lx + tw/2, rx + tw/2} {
 		r.Circle(engine.V(x, top-8), 4, colBeacon, true)
 		r.Circle(engine.V(x, top-8), 8, colBeacon.Alpha(50), true)
+	}
+}
+
+// drawBlockMini draws a shapes block centred on c at z pixels per cell.
+func drawBlockMini(r engine.Renderer, b Block, c engine.Vec2, z float64) {
+	w, h := b.Size()
+	at := func(cl Cell) engine.Vec2 {
+		return engine.V(c.X+(float64(cl.X)-float64(w-1)/2)*z, c.Y-(float64(cl.Y)-float64(h-1)/2)*z)
+	}
+	d := Design{Cells: b.Cells}
+	for _, cl := range b.Cells {
+		for _, o := range [][2]int{{1, 0}, {0, 1}, {1, 1}, {-1, 1}} {
+			if k, ok := d.At(cl.X+o[0], cl.Y+o[1]); ok {
+				drawBeam(r, at(cl), at(Cell{cl.X + o[0], cl.Y + o[1], k}), z)
+			}
+		}
+	}
+	for _, cl := range b.Cells {
+		drawPart(r, cl.K, at(cl), z, 0)
 	}
 }

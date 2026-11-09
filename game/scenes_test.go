@@ -26,6 +26,7 @@ type harness struct {
 
 func newHarness(t *testing.T) *harness {
 	h := engine.NewMemHost()
+	FinishTutorial(h, nil) // these tests drive the returning player's flow
 	g := engine.NewGame(ScreenW, ScreenH, h)
 	Setup(g)
 	hs := &harness{t, g, h}

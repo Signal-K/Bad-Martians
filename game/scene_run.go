@@ -72,7 +72,28 @@ func runScene(g *engine.Game, arg any) *engine.Scene {
 	rev = AddButton(s, 24, ScreenH-110, 210, 86, "REVERSE", nil)
 	rev.Icon = IconLeft
 
+	// tutorial: the last step is learning to drive
+	if tut := ses.Tut; tut != nil && !tut.Done {
+		clock := 0.0
+		o := s.Spawn("tutorial")
+		o.Layer = 30
+		o.Add(DrawFunc(func(_ engine.Camera, r engine.Renderer) {
+			if tut.Done {
+				return
+			}
+			clock += 1.0 / 60
+			drawCoach(r, clock, engine.Rect{X: ScreenW/2 - 270, Y: 84, W: 540, H: 66},
+				"Hold GAS to drive. Grab the stars on the way and reach the flag.",
+				engine.Rect{X: gas.X, Y: gas.Y, W: gas.W, H: gas.H})
+		}))
+	}
+
 	s.OnUpdate = func(dt float64) {
+		if tut := ses.Tut; tut != nil && !tut.Done && (g.In.Right || gas.Held) {
+			if tut.Gas += dt; tut.Gas >= tutGasSeconds {
+				FinishTutorial(g.Host, tut)
+			}
+		}
 		th := 0.0
 		if g.In.Right || gas.Held {
 			th++

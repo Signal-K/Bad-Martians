@@ -14,6 +14,7 @@ type Session struct {
 	emitted map[int]Class // labels already sent to the host
 	Reward  int           // extra parts credits from a mission's reward
 	Exp     *Expedition   // set when this attempt is part of an expedition
+	Tut     *Tutorial     // first-time guided build and drive; nil when off
 }
 
 func NewSession(l *Level) *Session {
@@ -31,6 +32,10 @@ func NewSessionFor(h engine.Host, l *Level) *Session {
 	}
 	for seg, c := range LoadProgress(h).Labels[l.ID] {
 		s.Labels[seg], s.emitted[seg] = Class(c), Class(c)
+	}
+	// A first-time player builds their first rover by hand, step by step.
+	if l.ID == LevelDefs[0].ID && !TutorialDone(h) {
+		s.Tut, s.Design = &Tutorial{}, Design{}
 	}
 	return s
 }
