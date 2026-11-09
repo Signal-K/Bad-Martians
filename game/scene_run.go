@@ -11,10 +11,10 @@ func runScene(g *engine.Game, arg any) *engine.Scene {
 	lvl := ses.Level
 	s := newScene()
 	run := NewRun(lvl, ses.Design)
+	run.Speed = DriveSpeed
 	s.Cam.Zoom = 38
 	s.Cam.Pos = run.Rover.Center()
 	endTimer := 0.0
-	var gas, rev *Button
 
 	ro := s.Spawn("rover")
 	ro.Layer = 5
@@ -102,10 +102,20 @@ func runScene(g *engine.Game, arg any) *engine.Scene {
 			r.Line(c.Add(engine.V(cosf(a)*rad*0.7, sinf(a)*rad*0.7)), c.Add(engine.V(cosf(a)*d, sinf(a)*d)), 3, colChipLt.Alpha(uint8(255*(1-k))))
 		}
 	})
-	gas = AddButton(s, ScreenW-234, ScreenH-110, 210, 86, "GAS", nil)
-	gas.Icon = IconRight
-	rev = AddButton(s, 24, ScreenH-110, 210, 86, "REVERSE", nil)
-	rev.Icon = IconLeft
+	// The stick: right drives, left reverses, up and down lean the rover.
+	stick := &Stick{Home: engine.V(ScreenW-120, ScreenH-112), R: 62,
+		Zone: engine.Rect{X: 0, Y: 70, W: ScreenW, H: ScreenH - 70}}
+	stick.Block = func(p engine.Vec2) bool { // the Restart button takes its own taps
+		return !restart.Hidden && p.X >= restart.X && p.X <= restart.X+restart.W && p.Y >= restart.Y && p.Y <= restart.Y+restart.H
+	}
+	so := s.Spawn("stick")
+	so.Layer = 20
+	so.Add(stick)
+	AddDraw(s, 19, func(_ engine.Camera, r engine.Renderer) {
+		if !stick.Held() {
+			r.Text("drive", stick.Home.X, stick.Home.Y+stick.R+18, 12, colMuted, engine.AlignCenter)
+		}
+	})
 
 	// tutorial: the last step is learning to drive
 	if tut := ses.Tut; tut != nil && !tut.Done {
@@ -117,25 +127,31 @@ func runScene(g *engine.Game, arg any) *engine.Scene {
 				return
 			}
 			clock += 1.0 / 60
-			drawCoach(r, clock, engine.Rect{X: ScreenW/2 - 140, Y: 76, W: 280, H: 48},
-				"Hold GAS to drive.",
-				engine.Rect{X: gas.X, Y: gas.Y, W: gas.W, H: gas.H})
+			drawCoach(r, clock, engine.Rect{X: ScreenW/2 - 190, Y: 76, W: 380, H: 48},
+				"Push the stick right to drive.", stick.Box())
 		}))
 	}
 
 	s.OnUpdate = func(dt float64) {
-		if tut := ses.Tut; tut != nil && !tut.Done && (g.In.Right || gas.Held) {
+		th, lean := stick.X, stick.Y
+		if g.In.Right {
+			th = 1
+		}
+		if g.In.Left {
+			th = -1
+		}
+		if g.In.Up {
+			lean = 1
+		}
+		if g.In.DownKey {
+			lean = -1
+		}
+		if tut := ses.Tut; tut != nil && !tut.Done && th > 0.5 {
 			if tut.Gas += dt; tut.Gas >= tutGasSeconds {
 				FinishTutorial(g.Host, tut)
 			}
 		}
-		th := 0.0
-		if g.In.Right || gas.Held {
-			th++
-		}
-		if g.In.Left || rev.Held {
-			th--
-		}
+		run.Lean = lean
 		run.Step(dt, th)
 		run.Debris(dt)
 		if boom >= 0 {

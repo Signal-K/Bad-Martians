@@ -86,6 +86,8 @@ func (a *App) readInput() engine.Input {
 	in.Delete = inpututil.IsKeyJustPressed(ebiten.KeyDelete) || inpututil.IsKeyJustPressed(ebiten.KeyBackspace)
 	in.Left = ebiten.IsKeyPressed(ebiten.KeyArrowLeft) || ebiten.IsKeyPressed(ebiten.KeyA)
 	in.Right = ebiten.IsKeyPressed(ebiten.KeyArrowRight) || ebiten.IsKeyPressed(ebiten.KeyD)
+	in.Up = ebiten.IsKeyPressed(ebiten.KeyArrowUp) || ebiten.IsKeyPressed(ebiten.KeyW)
+	in.DownKey = ebiten.IsKeyPressed(ebiten.KeyArrowDown) || ebiten.IsKeyPressed(ebiten.KeyS)
 	if ids := ebiten.AppendTouchIDs(nil); len(ids) > 0 {
 		in.Pointer, in.Down = a.toVirtual(ebiten.TouchPosition(ids[0])), true
 		a.touch, a.touching = in.Pointer, true

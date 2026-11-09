@@ -7,6 +7,8 @@ type Input struct {
 	Down    bool
 	Left    bool
 	Right   bool
+	Up      bool
+	DownKey bool // down arrow (Down is the pointer button)
 
 	// Editor commands, sent by the host as one-frame edges.
 	ToggleEdit, Pause, Step, Delete bool

@@ -29,7 +29,13 @@ func Setup(g *engine.Game) {
 	}, buildScene)
 	g.RegisterScene(engine.SceneMeta{
 		Name: SceneRun, Title: "Drive", Type: engine.TypePlay, Layout: LayoutHUD,
-		Fixture: func(g *engine.Game) any { return NewSessionFor(g.Host, GetLevel(1)) },
+		Fixture: func(g *engine.Game) any {
+			s := NewSessionFor(g.Host, GetLevel(1))
+			if len(s.Design.Cells) == 0 { // a first-time player's tutorial bay starts empty
+				s.Design = StarterDesign()
+			}
+			return s
+		},
 	}, runScene)
 	g.RegisterScene(engine.SceneMeta{
 		Name: SceneResult, Title: "Mission report", Type: engine.TypeResults, Layout: LayoutCenter,

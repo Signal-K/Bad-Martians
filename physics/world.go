@@ -122,6 +122,9 @@ func (w *World) Connect(a, b *Body, stiffness float64) *Constraint {
 	return c
 }
 
+// SubstepDT is the substep length Step(dt) uses.
+func (w *World) SubstepDT(dt float64) float64 { return dt / float64(max(1, w.Substeps)) }
+
 // Step advances the world by dt seconds.
 func (w *World) Step(dt float64) {
 	n := w.Substeps
