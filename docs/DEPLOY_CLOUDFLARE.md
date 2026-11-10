@@ -61,6 +61,23 @@ Not checked: a real deploy, the workflow on GitHub, and the iPad.
 To go live, you add the two secrets, merge or push to `main`, and open the
 `*.workers.dev` URL Wrangler prints.
 
+### For now: served from Landnam at playlandnam.space/martians/ (KES-495)
+
+Until the subdomain exists, the game is a static folder in the Landnam repo
+(`web/public/martians/`), deployed with Landnam's own Worker. Same origin as
+Landnam, so a player signed in there is signed in here: `host.js` adopts
+Landnam's PocketBase auth (`shareAuth: "pocketbase_auth"`), and both use the
+shared backend. To update it:
+
+1. `scripts/build-landnam.sh <landnam>/web/public/martians` (gzips the wasm to
+   about 5 MB; the page unpacks it).
+2. Commit that folder in the Landnam repo. Landnam's deploy runs
+   `web/scripts/martians-config.mjs`, which writes `config.js` with its Clerk key.
+
+The game's service worker is off there (`sw: false`): its cache cleanup would
+delete Landnam's caches on the same origin. Moving to `martians.playlandnam.space`
+later is the `wrangler.jsonc` route below plus deleting that folder.
+
 ### Connecting to the Star Sailors backend (decided, KES-494)
 
 The game uses the **shared Star Sailors PocketBase** (`signal-k-starsailors` on

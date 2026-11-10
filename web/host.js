@@ -70,7 +70,7 @@
     auth = null; LS.del('hm.auth');
     // Leaving the game does not sign the player out of Landnam; it only stops
     // the shared session from signing them straight back in here.
-    if (CLERK_KEY) LS.set('hm.signedOut', '1');
+    if (CLERK_KEY || (cfg && cfg.shareAuth)) LS.set('hm.signedOut', '1');
     render();
   }
   async function setAuth(r) { auth = { token: r.token, record: r.record }; LS.set('hm.auth', JSON.stringify(auth)); LS.del('hm.signedOut'); render(); flush(); }
@@ -215,6 +215,17 @@
   });
   for (const t of ['keydown', 'keyup', 'keypress']) dlg.addEventListener(t, (e) => e.stopPropagation()); // typing here is not for the game
   if (!CLERK_KEY) $('forgot').hidden = true;
+  // shareAuth names another app's PocketBase auth in this origin's storage
+  // (Landnam's pocketbase-js store, when the game is served from
+  // playlandnam.space/martians/). Both talk to the same shared backend, so a
+  // player signed in to Landnam is signed in here too. Leaving the game does
+  // not touch Landnam's copy.
+  if (!auth && !DEMO && cfg && cfg.shareAuth && !LS.get('hm.signedOut')) {
+    try {
+      const shared = JSON.parse(LS.get(cfg.shareAuth) || 'null');
+      if (shared && shared.token && shared.record && shared.record.collectionName === 'users') auth = { token: shared.token, record: shared.record };
+    } catch {}
+  }
   render();
   if (auth && !DEMO) {
     pb('/api/collections/users/auth-refresh', { method: 'POST' }).then(setAuth).catch((e) => { if (e.status === 401 || e.status === 403) signOut(); });

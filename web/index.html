@@ -55,16 +55,27 @@
 <script src="host.js"></script>
 <script src="wasm_exec.js"></script>
 <script>
+const cfg = window.HM_CONFIG || {};
 (async () => {
   const msg = document.getElementById('bootmsg');
   try {
     const go = new Go();
     let inst;
-    try {
-      inst = await WebAssembly.instantiateStreaming(fetch('game.wasm'), go.importObject);
-    } catch (e) { // wrong MIME type or no streaming support
-      const buf = await (await fetch('game.wasm')).arrayBuffer();
+    if (cfg.wasmGzip) {
+      // Hosts with a small per-file limit (or a git repo) ship the wasm gzipped
+      // under another name; it is unpacked here. Needs DecompressionStream.
+      const res = await fetch(cfg.wasm || 'game-gz.wasm');
+      if (!res.ok) throw new Error('download failed (' + res.status + ')');
+      const buf = await new Response(res.body.pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
       inst = await WebAssembly.instantiate(buf, go.importObject);
+    } else {
+      const wasm = cfg.wasm || 'game.wasm';
+      try {
+        inst = await WebAssembly.instantiateStreaming(fetch(wasm), go.importObject);
+      } catch (e) { // wrong MIME type or no streaming support
+        const buf = await (await fetch(wasm)).arrayBuffer();
+        inst = await WebAssembly.instantiate(buf, go.importObject);
+      }
     }
     document.getElementById('boot').remove();
     await go.run(inst.instance);
@@ -73,7 +84,9 @@
     console.error(e);
   }
 })();
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+// sw: false where the game shares an origin with another app (Landnam): its
+// cache cleanup would delete that app's caches.
+if (cfg.sw !== false && 'serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
 </body>
 </html>
