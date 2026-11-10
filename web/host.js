@@ -97,6 +97,37 @@
     setTimeout(() => URL.revokeObjectURL(url), 10000);
   }
 
+  // askText shows a real text box over the game, because a phone only opens its
+  // keyboard for one. window.prompt is avoided: embedded pages often block it.
+  function askText(p) {
+    let d = document.getElementById('askdlg');
+    if (!d) {
+      d = document.createElement('dialog');
+      d.id = 'askdlg';
+      d.innerHTML = '<form id="askform"><h2 id="asktitle"></h2>' +
+        '<input id="askin" type="text" autocomplete="off" autocapitalize="words" enterkeyhint="done">' +
+        '<div class="row"><button type="button" id="askno">Cancel</button>' +
+        '<button type="submit" class="primary">OK</button></div></form>';
+      document.body.appendChild(d);
+      // keys typed here belong to the box, not to the game underneath
+      for (const t of ['keydown', 'keyup', 'keypress']) d.addEventListener(t, (e) => e.stopPropagation());
+      d.querySelector('#askno').addEventListener('click', () => d.close());
+      d.querySelector('#askform').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const v = d.querySelector('#askin').value;
+        d.close();
+        if (window.haphazard.text) window.haphazard.text(v);
+      });
+    }
+    const input = d.querySelector('#askin');
+    d.querySelector('#asktitle').textContent = p.title || 'Name';
+    input.maxLength = p.max || 40;
+    input.value = p.value || '';
+    d.showModal();
+    input.focus();
+    input.select();
+  }
+
   window.haphazard = {
     photo: (name, bytes) => { photo(name, bytes); },
     load: (k) => LS.get('hm.' + k),
@@ -104,13 +135,7 @@
     emit: (ev, json) => {
       let p; try { p = JSON.parse(json); } catch { return; }
       if (ev === 'scene') { btn.hidden = DEMO || p.name !== 'menu'; return; } // keep the HTML chrome off the in-game HUD
-      if (ev === 'prompt') { // a text field in the game: a phone only shows its keyboard for a real text box
-        setTimeout(() => {
-          const v = window.prompt(p.title || 'Name', p.value || '');
-          if (v !== null && window.haphazard.text) window.haphazard.text(v.slice(0, (p.max || 40) * 2));
-        }, 0);
-        return;
-      }
+      if (ev === 'prompt') { setTimeout(() => askText(p), 0); return; } // a text field in the game
       if (DEMO) return; // nothing to send to: progress is already saved locally
       const rec = toRecord(ev, p);
       if (!rec) return;
