@@ -21,6 +21,7 @@ type Game struct {
 	prevDown  bool
 	pressL    bool // latched edges, consumed by the next fixed step
 	releaseL  bool
+	textL     Input // latched text entry (Typed, Backspace, Enter, Replace)
 
 	// Ed is the in-game editor (see editor.go).
 	Ed Editor
@@ -131,6 +132,7 @@ func (g *Game) Tick(frameDt float64, in Input) {
 	g.pressL = g.pressL || (in.Down && !g.prevDown)
 	g.releaseL = g.releaseL || (!in.Down && g.prevDown)
 	g.prevDown = in.Down
+	g.latchText(in)
 	g.In = in
 	if g.scene == nil {
 		return
@@ -141,12 +143,26 @@ func (g *Game) Tick(frameDt float64, in Input) {
 		// Edge flags are delivered to exactly one fixed step.
 		g.In.Pressed, g.In.Released = g.pressL, g.releaseL
 		g.pressL, g.releaseL = false, false
+		g.In.Typed, g.In.Backspace, g.In.Enter = g.textL.Typed, g.textL.Backspace, g.textL.Enter
+		g.In.Replace, g.In.Replacing = g.textL.Replace, g.textL.Replacing
+		g.textL = Input{}
 		g.scene.update(FixedDT)
 		g.applyPending()
 		if g.pending != nil || g.scene == nil {
 			break
 		}
 	}
+}
+
+// latchText keeps text entry from frames that ran no fixed step.
+func (g *Game) latchText(in Input) {
+	t := &g.textL
+	if in.Replacing {
+		t.Replace, t.Replacing, t.Typed = in.Replace, true, nil
+	}
+	t.Typed = append(t.Typed, in.Typed...)
+	t.Backspace = t.Backspace || in.Backspace
+	t.Enter = t.Enter || in.Enter
 }
 
 func (g *Game) Draw(r Renderer) {

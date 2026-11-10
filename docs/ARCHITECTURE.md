@@ -104,6 +104,18 @@ and contact shadows. The drive and the rover bay share every one of these.
 - **Run** (`game/run.go`) holds win/lose rules headless so tests exercise them.
   Tests assert every level is beatable by a reference rover and that the
   starter rover is not enough for level 4.
+- **Launch** (`game/scene_launch.go`): GO opens a naming step before the
+  drive. A generated name is suggested (`SuggestName`); the player types over
+  it, shuffles, or taps it on a phone, which emits a `prompt` event that the
+  web host answers with a text box (`haphazard.text`). The name rides on the
+  drive HUD, photos, the debrief and the `run` event (`rover`), and carries
+  to the next mission while the rover survives. A lost rover's successor gets
+  a numeral ("Plucky Mule II").
+- **Salvage** (`game/salvage.go`): a drive is damaged when a frame or the mast
+  touches the ground (`Run.Scrapes`; the HUD shows it live). An undamaged
+  finish gives back one extra part, the rover's priciest other than the mast:
+  in an expedition it goes into the kit (`Expedition.Salvage`), in a single
+  mission its credits add to the next mission's budget (`Session.Spare`).
 - **Score** (`game/score.go`): finish 500, +150 per sample, plus up to 500 for
   speed (full at 0.6 x par, none at 2 x par, linear between). Stars are
   unchanged (finish, all samples, under par). Best score is saved per level and

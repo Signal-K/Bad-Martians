@@ -22,8 +22,9 @@ type App struct {
 	r *ebitenRenderer
 
 	mu      sync.Mutex
-	pending string // scene a host asked to open, applied on the next Update
-	edit    int    // editor request from the host: 1 on, 2 off, 3 toggle
+	pending string  // scene a host asked to open, applied on the next Update
+	edit    int     // editor request from the host: 1 on, 2 off, 3 toggle
+	text    *string // text a host prompt returned, applied on the next Update
 
 	touch    engine.Vec2 // last touch point, used for the release frame
 	touching bool
@@ -55,6 +56,14 @@ func (a *App) Open(scene string) {
 func (a *App) Edit(mode string) {
 	a.mu.Lock()
 	a.edit = map[string]int{"on": 1, "off": 2, "toggle": 3}[mode]
+	a.mu.Unlock()
+}
+
+// SetText hands the game the answer to a host text prompt (see the "prompt"
+// event). Safe from any goroutine.
+func (a *App) SetText(s string) {
+	a.mu.Lock()
+	a.text = &s
 	a.mu.Unlock()
 }
 
@@ -92,6 +101,9 @@ func (a *App) readInput() engine.Input {
 	in.Right = ebiten.IsKeyPressed(ebiten.KeyArrowRight) || ebiten.IsKeyPressed(ebiten.KeyD)
 	in.Up = ebiten.IsKeyPressed(ebiten.KeyArrowUp) || ebiten.IsKeyPressed(ebiten.KeyW)
 	in.DownKey = ebiten.IsKeyPressed(ebiten.KeyArrowDown) || ebiten.IsKeyPressed(ebiten.KeyS)
+	in.Typed = ebiten.AppendInputChars(nil)
+	in.Backspace = inpututil.IsKeyJustPressed(ebiten.KeyBackspace) || inpututil.KeyPressDuration(ebiten.KeyBackspace) > 20 && inpututil.KeyPressDuration(ebiten.KeyBackspace)%3 == 0
+	in.Enter = inpututil.IsKeyJustPressed(ebiten.KeyEnter) || inpututil.IsKeyJustPressed(ebiten.KeyNumpadEnter)
 	if ids := ebiten.AppendTouchIDs(nil); len(ids) > 0 {
 		// The pointer follows one finger until it lifts: the order of ids is
 		// not stable, so ids[0] could jump to another finger mid-drag.
@@ -132,11 +144,16 @@ func (a *App) Update() error {
 	a.pending = ""
 	ed := a.edit
 	a.edit = 0
+	txt := a.text
+	a.text = nil
 	a.mu.Unlock()
 	if p != "" {
 		a.G.OpenStandalone(p)
 	}
 	in := a.readInput()
+	if txt != nil {
+		in.Replace, in.Replacing = *txt, true
+	}
 	switch ed {
 	case 1:
 		a.G.SetEditor(true)

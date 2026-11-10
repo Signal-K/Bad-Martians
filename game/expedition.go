@@ -46,6 +46,9 @@ type Expedition struct {
 	Done   bool
 	Failed bool
 	Lost   Kit // parts lost by the most recent crash
+
+	Salvaged Kind   // part the most recent mission gave back, if any
+	Name     string // the rover's name; it carries on while the rover survives
 }
 
 // NewExpedition hands out the full kit.
@@ -67,7 +70,7 @@ func (e *Expedition) Level() *Level { return GetLevel(ExpeditionLevels[e.Index])
 
 // Finish applies the outcome of an attempt with rover d.
 func (e *Expedition) Finish(won bool, d Design, score int) {
-	e.Lost = nil
+	e.Lost, e.Salvaged = nil, ""
 	if won {
 		e.Score += score
 		if e.Index+1 >= len(ExpeditionLevels) {
@@ -85,6 +88,18 @@ func (e *Expedition) Finish(won bool, d Design, score int) {
 	if e.Inv[KMotor] < 1 || e.Inv[KMast] < 1 {
 		e.Failed = true
 	}
+}
+
+// Salvage puts one extra part from an undamaged rover back in the kit: its
+// most valuable part other than the mast. Call it after a winning Finish.
+func (e *Expedition) Salvage(d Design) Kind {
+	k, ok := SalvagePart(d)
+	if !ok {
+		return ""
+	}
+	e.Inv[k]++
+	e.Salvaged = k
+	return k
 }
 
 // Over reports whether the expedition has ended, in success or failure.
@@ -118,5 +133,6 @@ func partNoun(k Kind, n int) string {
 func ExpeditionSession(h engine.Host, e *Expedition) *Session {
 	s := NewSessionFor(h, e.Level())
 	s.Exp, s.Tut = e, nil
+	s.Name = e.Name
 	return s
 }

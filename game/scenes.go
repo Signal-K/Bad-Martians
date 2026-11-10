@@ -8,6 +8,7 @@ import (
 const (
 	SceneMenu   = "menu"
 	SceneBuild  = "build"
+	SceneLaunch = "launch"
 	SceneRun    = "run"
 	SceneResult = "result"
 	SceneReview = "review"
@@ -27,6 +28,16 @@ func Setup(g *engine.Game) {
 		Name: SceneBuild, Title: "Rover bay", Type: engine.TypeBuild, Layout: LayoutBay,
 		Fixture: func(g *engine.Game) any { return NewSessionFor(g.Host, GetLevel(1)) },
 	}, buildScene)
+	g.RegisterScene(engine.SceneMeta{
+		Name: SceneLaunch, Title: "Name your rover", Type: engine.TypeBuild, Layout: LayoutCenter,
+		Fixture: func(g *engine.Game) any {
+			s := NewSessionFor(g.Host, GetLevel(1))
+			if len(s.Design.Cells) == 0 { // bays start empty; launching needs a rover
+				s.Design = StarterDesign()
+			}
+			return s
+		},
+	}, launchScene)
 	g.RegisterScene(engine.SceneMeta{
 		Name: SceneRun, Title: "Drive", Type: engine.TypePlay, Layout: LayoutHUD,
 		Fixture: func(g *engine.Game) any {

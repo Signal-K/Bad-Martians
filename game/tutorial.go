@@ -56,7 +56,7 @@ var tutBuildText = [...]string{
 	tutMotor: "Put a Motor wheel under the back end.",
 	tutMast:  "Stand the Navcam mast on top.",
 	tutTest:  "Tap Test drop to see how it sits.",
-	tutGo:    "Press GO to drive.",
+	tutGo:    "Press GO to name and launch it.",
 }
 
 // hintCells are the empty cells where the next part of the tutorial should go.

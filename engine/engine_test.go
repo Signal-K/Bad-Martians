@@ -58,6 +58,33 @@ func TestPressEdgeSurvivesFramesWithoutSteps(t *testing.T) {
 	}
 }
 
+func TestTypedTextReachesExactlyOneStep(t *testing.T) {
+	g, _ := newTestGame()
+	g.Load("a", nil)
+	g.Tick(0, Input{})
+	got := ""
+	enters := 0
+	g.Scene().OnUpdate = func(float64) {
+		if g.In.Replacing {
+			got = g.In.Replace
+		}
+		got += string(g.In.Typed)
+		if g.In.Enter {
+			enters++
+		}
+	}
+	g.Tick(FixedDT/4, Input{Typed: []rune("Ro")}) // no step this frame
+	g.Tick(FixedDT/4, Input{Typed: []rune("ver")})
+	g.Tick(FixedDT*3, Input{Enter: true}) // several steps in one frame
+	if got != "Rover" || enters != 1 {
+		t.Fatalf("got %q enters=%d, want \"Rover\" once", got, enters)
+	}
+	g.Tick(FixedDT, Input{Replace: "Mule", Replacing: true, Typed: []rune("!")})
+	if got != "Mule!" {
+		t.Fatalf("replace then type: got %q, want \"Mule!\"", got)
+	}
+}
+
 func TestSceneSwitchAndDestroy(t *testing.T) {
 	g, h := newTestGame()
 	g.Load("a", nil)

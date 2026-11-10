@@ -54,6 +54,17 @@ func runScene(g *engine.Game, arg any) *engine.Scene {
 			drawStar(r, 600+float64(i)*26, 30, 10, c)
 		}
 		r.Text(fmt.Sprintf("Par %s", fmtTime(lvl.Par)), 700, 19, sizeSmall, colMuted, engine.AlignLeft)
+		// the rover's name, and whether it is still clean enough to salvage from
+		state, sc := "no damage", colGood
+		if run.Damaged() {
+			state, sc = "scraped: no salvage", colWarn
+		}
+		name := ses.Name
+		if name == "" {
+			name = "Rover"
+		}
+		r.Text(name, 146, 62, sizeSmall, colInk, engine.AlignLeft)
+		r.Text(state, 146+textW(name, sizeSmall)+14, 62, sizeSmall, sc, engine.AlignLeft)
 		if run.Outcome != Running && (run.Outcome != Scrapped || endTimer > 1.1) {
 			col, head := colGood, "Mission complete"
 			if run.Outcome != Won {
@@ -78,6 +89,9 @@ func runScene(g *engine.Game, arg any) *engine.Scene {
 	cam.Icon, cam.HideLabel = IconCamera, true
 	s.OnPhoto = func(r engine.Renderer) {
 		line := fmt.Sprintf("Mission %d · %s · %.0f m", lvl.ID, lvl.Name, run.Progress()*(lvl.GoalX-lvl.StartX))
+		if ses.Name != "" {
+			line = ses.Name + " · " + line
+		}
 		w := textW(line, sizeSmall) + 206
 		r.Rect(16, ScreenH-46, w, 32, colTile.Alpha(200), true)
 		r.Text("HAPHAZARD MARTIANS", 28, ScreenH-40, 13, colNeon, engine.AlignLeft)
@@ -196,7 +210,8 @@ func runScene(g *engine.Game, arg any) *engine.Scene {
 			if endTimer > 1.6+map[bool]float64{true: 0.8}[run.Outcome == Scrapped] {
 				g.Load(SceneResult, &ResultArg{Session: ses, Outcome: run.Outcome, Stars: run.Stars(),
 					Time: run.Time, Samples: run.SamplesGot(), Total: len(run.Got), Score: run.Score(),
-					Distance: run.Progress() * (lvl.GoalX - lvl.StartX), TopSpeed: run.TopSpeed, MaxAir: run.MaxAir})
+					Distance: run.Progress() * (lvl.GoalX - lvl.StartX), TopSpeed: run.TopSpeed, MaxAir: run.MaxAir,
+					Damaged: run.Damaged()})
 			}
 		}
 	}

@@ -70,6 +70,10 @@ func TestTutorialFirstBuildAndDrive(t *testing.T) {
 	}
 	h.clickButton("Test") // back to the grid
 	h.clickButton("GO")
+	if h.g.Scene().Name != SceneLaunch {
+		t.Fatalf("expected launch, got %s", h.g.Scene().Name)
+	}
+	h.clickButton("Send it out")
 	if h.g.Scene().Name != SceneRun {
 		t.Fatalf("expected run, got %s", h.g.Scene().Name)
 	}

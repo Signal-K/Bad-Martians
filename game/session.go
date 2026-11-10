@@ -16,6 +16,8 @@ type Session struct {
 	Reward  int           // extra parts credits from a mission's reward
 	Exp     *Expedition   // set when this attempt is part of an expedition
 	Tut     *Tutorial     // first-time guided build and drive; nil when off
+	Name    string        // the rover's name, given at launch
+	Spare   Kind          // part salvaged on the mission before: its credits add to the budget
 }
 
 func NewSession(l *Level) *Session {
@@ -61,7 +63,16 @@ func (s *Session) Budget() int {
 	if s.Exp != nil {
 		return 1 << 20
 	}
-	return s.Level.Credits + s.Reward + s.Bonus()
+	return s.Level.Credits + s.Reward + s.Bonus() + s.SpareCredits()
+}
+
+// SpareCredits is what the part salvaged on the previous mission is worth.
+func (s *Session) SpareCredits() int {
+	if s.Spare == "" {
+		return 0
+	}
+	p, _ := PartOf(s.Spare)
+	return p.Cost
 }
 
 // Have is how many of part k this build may use in an expedition: what is
@@ -159,6 +170,7 @@ type Progress struct {
 	Labels map[int]map[int]int   `json:"labels"` // level -> segment -> class
 
 	BestExpedition int `json:"best_expedition"`
+	Launched       int `json:"launched"` // rovers sent out; picks the next suggested name
 }
 
 const progressKey = "hm.progress"

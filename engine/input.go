@@ -17,6 +17,17 @@ type Input struct {
 	// Editor commands, sent by the host as one-frame edges.
 	ToggleEdit, Pause, Step, Delete bool
 
+	// Text entry, sent by the host. Typed holds the characters typed this
+	// frame; Backspace and Enter are one-frame edges. Replace, when Replacing
+	// is set, is a whole string from a host prompt (a phone's text box) that
+	// replaces the field being edited. Game.Tick latches all of these so each
+	// reaches exactly one fixed step.
+	Typed     []rune
+	Backspace bool
+	Enter     bool
+	Replace   string
+	Replacing bool
+
 	// Derived by Game.Tick from successive snapshots.
 	Pressed  bool
 	Released bool

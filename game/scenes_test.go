@@ -95,6 +95,10 @@ func TestFullFlow(t *testing.T) {
 	h.g.Load(SceneBuild, ses)
 	h.frames(2, engine.Input{})
 	h.clickButton("GO")
+	if h.g.Scene().Name != SceneLaunch {
+		t.Fatalf("expected launch, got %s", h.g.Scene().Name)
+	}
+	h.clickButton("Send it out")
 	if h.g.Scene().Name != SceneRun {
 		t.Fatalf("expected run, got %s", h.g.Scene().Name)
 	}

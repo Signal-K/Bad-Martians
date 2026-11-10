@@ -56,6 +56,12 @@ type Run struct {
 	TopSpeed float64 // m/s
 	MaxAir   float64 // longest time with every body off the ground, s
 	air      float64
+
+	// Scrapes counts the times a part that is not a wheel (frame or mast) hit
+	// the ground. A run with none is undamaged, and an undamaged finish
+	// salvages a part for the next mission.
+	Scrapes  int
+	scraping []bool
 }
 
 // DriveSpeed is how much faster than real time the drive scene runs the sim.
@@ -75,6 +81,7 @@ func NewRun(l *Level, d Design) *Run {
 	x := l.StartX + 2
 	r := &Run{Level: l, World: w, Got: make([]bool, len(l.Samples))}
 	r.Rover = SpawnRover(w, d, x, l.Terrain.HeightAt(x))
+	r.scraping = make([]bool, len(r.Rover.Bodies))
 	r.lastC = r.Rover.Center()
 	r.BestX = r.lastC.X
 	return r
@@ -196,6 +203,13 @@ func (r *Run) Step(dt, throttle float64) {
 	r.lean(dt)
 	r.World.Step(dt)
 	r.stats(dt)
+	for i, b := range r.Rover.Bodies {
+		hit := b.OnGround && !b.Wheel
+		if hit && !r.scraping[i] {
+			r.Scrapes++
+		}
+		r.scraping[i] = hit
+	}
 
 	for i, s := range r.Level.Samples {
 		if r.Got[i] {
@@ -228,6 +242,9 @@ func (r *Run) Step(dt, throttle float64) {
 		r.Outcome = TimedOut
 	}
 }
+
+// Damaged reports whether any part other than a wheel touched the ground.
+func (r *Run) Damaged() bool { return r.Scrapes > 0 }
 
 // Stars: 1 finish, 2 all samples, 3 under par time (needs all prior).
 func (r *Run) Stars() int {

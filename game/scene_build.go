@@ -371,6 +371,9 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 		}
 		w := textW(txt, sizeBody) + 46
 		drawChip(r, testBtn.X-14-w, 14, IconCredit, txt, col)
+		if ses.Spare != "" { // salvage from the mission before, under the budget it raised
+			r.Text(fmt.Sprintf("+%d salvaged %s", ses.SpareCredits(), partNoun(ses.Spare, 1)), testBtn.X-14, 46, sizeSmall, colGood, engine.AlignRight)
+		}
 
 		// terrain map: the whole course, coloured by the player's own review
 		const sx, sy, sw, sh = bGX, 376.0, bCell * GridW, 34.0
@@ -559,7 +562,7 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 		}
 		r.Text(label, b.X+b.W/2, b.Y+12, sizeSmall+1, ink, engine.AlignCenter)
 	}
-	launch := AddButton(s, ScreenW-20-170, bTrayY+22, 170, 72, "GO", func() { g.Load(SceneRun, ses) })
+	launch := AddButton(s, ScreenW-20-170, bTrayY+22, 170, 72, "GO", func() { g.Load(SceneLaunch, ses) })
 	launch.Primary, launch.Icon = true, IconRight
 
 	// tutorial: the status line says what to do next; here it only points at it

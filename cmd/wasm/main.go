@@ -53,6 +53,13 @@ func main() {
 		return nil
 	}))
 	bridge.Set("scenes", js.FuncOf(func(js.Value, []js.Value) any { return app.SceneList() }))
+	// haphazard.text(s) answers a "prompt" event (the phone text box for the rover name).
+	bridge.Set("text", js.FuncOf(func(_ js.Value, a []js.Value) any {
+		if len(a) > 0 {
+			app.SetText(a[0].String())
+		}
+		return nil
+	}))
 	bridge.Set("open", js.FuncOf(func(_ js.Value, a []js.Value) any { app.Open(a[0].String()); return nil }))
 	if err := ebiten.RunGame(app); err != nil {
 		panic(err)

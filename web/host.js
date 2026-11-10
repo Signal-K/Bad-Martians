@@ -104,6 +104,13 @@
     emit: (ev, json) => {
       let p; try { p = JSON.parse(json); } catch { return; }
       if (ev === 'scene') { btn.hidden = DEMO || p.name !== 'menu'; return; } // keep the HTML chrome off the in-game HUD
+      if (ev === 'prompt') { // a text field in the game: a phone only shows its keyboard for a real text box
+        setTimeout(() => {
+          const v = window.prompt(p.title || 'Name', p.value || '');
+          if (v !== null && window.haphazard.text) window.haphazard.text(v.slice(0, (p.max || 40) * 2));
+        }, 0);
+        return;
+      }
       if (DEMO) return; // nothing to send to: progress is already saved locally
       const rec = toRecord(ev, p);
       if (!rec) return;
