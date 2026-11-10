@@ -55,30 +55,173 @@
   }
 
   // ---- account UI ----
+  // Two sign-in modes. With a Clerk key in config.js (the deployed game) the
+  // player signs in with their Star Sailors account through Landnam's Clerk
+  // instance, and the shared backend swaps the Clerk session for a normal
+  // PocketBase token. On a playlandnam.space subdomain a player already signed
+  // in to Landnam is signed in here without typing anything. Without a key
+  // (the bundled server, `make run`) it is plain PocketBase email and password.
   const $ = (id) => document.getElementById(id);
   const btn = $('acct'), dlg = $('dlg'), msg = $('msg');
+  const CLERK_KEY = !DEMO && cfg && cfg.clerk ? String(cfg.clerk).trim() : '';
+  let step = 'password'; // Clerk only: 'password', then 'signup-code' or 'reset-code'
   function render() { if (DEMO) { btn.hidden = true; return; } btn.textContent = auth ? auth.record.email + ' · sign out' : 'Sign in'; }
-  function signOut() { auth = null; LS.del('hm.auth'); render(); }
-  async function setAuth(r) { auth = { token: r.token, record: r.record }; LS.set('hm.auth', JSON.stringify(auth)); render(); flush(); }
+  function signOut() {
+    auth = null; LS.del('hm.auth');
+    // Leaving the game does not sign the player out of Landnam; it only stops
+    // the shared session from signing them straight back in here.
+    if (CLERK_KEY) LS.set('hm.signedOut', '1');
+    render();
+  }
+  async function setAuth(r) { auth = { token: r.token, record: r.record }; LS.set('hm.auth', JSON.stringify(auth)); LS.del('hm.signedOut'); render(); flush(); }
   async function login(email, password) {
     await setAuth(await pb('/api/collections/users/auth-with-password', { method: 'POST', body: JSON.stringify({ identity: email, password }) }));
   }
-  btn.addEventListener('click', () => { if (auth) signOut(); else { msg.textContent = ''; dlg.showModal(); } });
+
+  // Clerk is loaded from the instance's own Frontend API, whose host is
+  // encoded in the publishable key. Versions are pinned so a Clerk release
+  // cannot change the game without a deploy. The UI bundle is loaded only for
+  // Clerk's bot check (Protect), which may show a challenge on sign-up; the
+  // sign-in form itself is ours.
+  const CLERK_JS = '6.41.0', CLERK_UI = '1.42.0'; // released together
+  function script(src) {
+    return new Promise((resolve, reject) => {
+      const sc = document.createElement('script');
+      sc.src = src; sc.async = true; sc.crossOrigin = 'anonymous';
+      sc.onload = resolve;
+      sc.onerror = () => reject(new Error('Sign-in could not load. Check your connection and try again.'));
+      document.head.appendChild(sc);
+    });
+  }
+  let clerkReady = null;
+  function loadClerk() {
+    if (clerkReady) return clerkReady;
+    clerkReady = (async () => {
+      let host;
+      try { host = atob(CLERK_KEY.split('_')[2]).replace(/\$$/, ''); } catch { throw new Error('Sign-in is misconfigured.'); }
+      const npm = `https://${host}/npm/@clerk`;
+      window.__clerk_publishable_key = CLERK_KEY; // clerk-js makes window.Clerk from this
+      await Promise.all([script(`${npm}/ui@${CLERK_UI}/dist/ui.browser.js`), script(`${npm}/clerk-js@${CLERK_JS}/dist/clerk.browser.js`)]);
+      const clerk = window.Clerk;
+      await clerk.load({ ui: { ClerkUI: window.__internal_ClerkUICtor } });
+      return clerk;
+    })();
+    clerkReady.catch(() => { clerkReady = null; }); // allow a retry
+    return clerkReady;
+  }
+  async function exchange(clerk) {
+    const token = await clerk.session.getToken();
+    if (!token) throw new Error('Sign-in did not finish. Try again.');
+    await setAuth(await pb('/auth/clerk-exchange', { method: 'POST', body: JSON.stringify({ token }) }));
+  }
+  async function activate(clerk, res, what) {
+    if (res.status !== 'complete') {
+      if ((res.missingFields || []).includes('protect_check')) throw new Error('The security check did not finish. Try again, or sign up on Landnam and sign in here.');
+      throw new Error(`This account needs another ${what} step the game does not support yet. Use Landnam to finish it.`);
+    }
+    await clerk.setActive({ session: res.createdSessionId });
+    await exchange(clerk);
+  }
+  const CLERK_MESSAGES = {
+    form_password_incorrect: 'Wrong email or password.',
+    form_identifier_not_found: 'Wrong email or password.',
+    form_identifier_exists: 'An account already exists for this email. Use Sign in.',
+    form_code_incorrect: 'That code is not right. Check the email and try again.',
+    verification_expired: 'That code has expired. Start again.',
+    form_password_pwned: 'That password has appeared in a data breach. Choose another.',
+    form_password_length_too_short: 'Use at least 8 characters.',
+    too_many_requests: 'Too many attempts. Wait a minute and try again.',
+  };
+  function errText(err) {
+    const first = err && err.errors && err.errors[0];
+    if (first) return CLERK_MESSAGES[first.code] || first.longMessage || first.message;
+    return (err && err.message) || 'Something went wrong. Try again.';
+  }
+  function showStep(next, note) {
+    step = next;
+    const code = step !== 'password';
+    $('codewrap').hidden = !code;
+    $('code').required = code;
+    $('forgot').hidden = !CLERK_KEY || code;
+    $('signup').hidden = code;
+    $('pwlabel').firstChild.textContent = step === 'reset-code' ? 'New password' : 'Password';
+    $('signin').textContent = step === 'password' ? 'Sign in' : step === 'signup-code' ? 'Create account' : 'Set password';
+    msg.textContent = note || ''; msg.classList.toggle('note', !!note);
+    if (code) $('code').focus();
+  }
+  async function clerkSubmit(email, password) {
+    const clerk = await loadClerk();
+    if (step === 'signup-code') {
+      await activate(clerk, await clerk.client.signUp.attemptEmailAddressVerification({ code: $('code').value.trim() }), 'sign-up');
+    } else if (step === 'reset-code') {
+      await activate(clerk, await clerk.client.signIn.attemptFirstFactor({ strategy: 'reset_password_email_code', code: $('code').value.trim(), password }), 'sign-in');
+    } else {
+      if (clerk.session) await clerk.signOut(); // one Clerk session at a time
+      await activate(clerk, await clerk.client.signIn.create({ identifier: email, password }), 'sign-in');
+    }
+  }
+
+  btn.addEventListener('click', async () => {
+    if (auth) { signOut(); return; }
+    if (CLERK_KEY) {
+      // already signed in to Landnam on this domain: no form needed
+      try { const clerk = await loadClerk(); if (clerk.session) { await exchange(clerk); return; } } catch {}
+    }
+    showStep('password'); dlg.showModal();
+  });
   $('close').addEventListener('click', () => dlg.close());
   $('form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    try { await login($('email').value, $('pw').value); dlg.close(); } catch (err) { msg.textContent = err.message; }
+    const email = $('email').value.trim(), password = $('pw').value;
+    msg.textContent = ''; msg.classList.remove('note');
+    try {
+      if (CLERK_KEY) await clerkSubmit(email, password);
+      else await login(email, password);
+      dlg.close();
+    } catch (err) { msg.classList.remove('note'); msg.textContent = errText(err); }
   });
   $('signup').addEventListener('click', async () => {
-    const email = $('email').value, password = $('pw').value;
+    const email = $('email').value.trim(), password = $('pw').value;
     if (!email || password.length < 8) { msg.textContent = 'Enter an email and a password of 8+ characters.'; return; }
     try {
+      if (CLERK_KEY) {
+        const clerk = await loadClerk();
+        if (clerk.session) await clerk.signOut();
+        await clerk.client.signUp.create({ emailAddress: email, password });
+        await clerk.client.signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
+        showStep('signup-code', `We emailed a code to ${email}.`);
+        return;
+      }
       await pb('/api/collections/users/records', { method: 'POST', body: JSON.stringify({ email, password, passwordConfirm: password }) });
       await login(email, password); dlg.close();
-    } catch (err) { msg.textContent = err.message; }
+    } catch (err) { msg.classList.remove('note'); msg.textContent = errText(err); }
   });
+  $('forgot').addEventListener('click', async () => {
+    const email = $('email').value.trim();
+    if (!email) { msg.textContent = 'Enter your email first.'; return; }
+    try {
+      const clerk = await loadClerk();
+      if (clerk.session) await clerk.signOut();
+      // Accounts made before Clerk exist only in PocketBase; copy them over first
+      // (always 204, so it says nothing about which emails have accounts).
+      await pb('/auth/landnam/clerk-ensure', { method: 'POST', body: JSON.stringify({ email }) }).catch(() => {});
+      await clerk.client.signIn.create({ strategy: 'reset_password_email_code', identifier: email });
+      showStep('reset-code', `If ${email} has an account, we emailed it a code. Enter it and a new password.`);
+    } catch (err) {
+      const first = err && err.errors && err.errors[0];
+      if (first && first.code === 'form_identifier_not_found') showStep('reset-code', `If ${email} has an account, we emailed it a code. Enter it and a new password.`);
+      else { msg.classList.remove('note'); msg.textContent = errText(err); }
+    }
+  });
+  for (const t of ['keydown', 'keyup', 'keypress']) dlg.addEventListener(t, (e) => e.stopPropagation()); // typing here is not for the game
+  if (!CLERK_KEY) $('forgot').hidden = true;
   render();
-  if (auth && !DEMO) pb('/api/collections/users/auth-refresh', { method: 'POST' }).then(setAuth).catch((e) => { if (e.status === 401 || e.status === 403) signOut(); });
+  if (auth && !DEMO) {
+    pb('/api/collections/users/auth-refresh', { method: 'POST' }).then(setAuth).catch((e) => { if (e.status === 401 || e.status === 403) signOut(); });
+  } else if (CLERK_KEY && !LS.get('hm.signedOut')) {
+    // signed in to Landnam already? then this game is signed in too
+    loadClerk().then((clerk) => clerk.session && exchange(clerk)).catch(() => {});
+  }
   addEventListener('online', flush);
 
   // A rover photo from the game: the share sheet where there is one (phones),

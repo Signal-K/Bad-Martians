@@ -2,5 +2,10 @@
   // Static site only: the game is a WebAssembly PWA and needs no Worker code.
   "name": "haphazard-martians",
   "compatibility_date": "2026-11-01",
-  "assets": { "directory": "./dist" }
+  "assets": { "directory": "./dist" },
+  // A playlandnam.space subdomain so Landnam's Clerk production instance
+  // accepts it and a player signed in to Landnam is signed in here too.
+  // playlandnam.space is already a zone on the same Cloudflare account, so
+  // the first deploy creates this DNS record itself; no registrar change.
+  "routes": [{ "pattern": "martians.playlandnam.space", "custom_domain": true }]
 }

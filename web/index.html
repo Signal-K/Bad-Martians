@@ -27,6 +27,8 @@
   .row { display:flex; gap:8px; margin-top:16px; }
   .row button { flex:1; padding:10px; font:inherit; border-radius:6px; border:1px solid var(--dim); background:var(--bg); color:var(--fg); cursor:pointer; }
   .row button.primary { background:var(--accent); border-color:var(--accent); color:#1a0f10; font-weight:600; }
+  [hidden] { display:none !important; }
+  #msg.note { color:var(--dim); }
   #msg { min-height:1.2em; margin-top:10px; font-size:13px; color:#ff786e; }
 </style>
 </head>
@@ -36,15 +38,17 @@
 <dialog id="dlg">
   <form method="dialog" id="form">
     <h2 id="dlgtitle">Sign in</h2>
-    <p>Optional. Signing in saves your labels and runs to the Mars survey.</p>
+    <p>Optional. Use your Star Sailors account (the one you use for Landnam). Signing in saves your labels and runs to the Mars survey.</p>
     <label>Email<input id="email" type="email" autocomplete="username" required></label>
-    <label>Password<input id="pw" type="password" autocomplete="current-password" minlength="8" required></label>
+    <label id="codewrap" hidden>Code from the email<input id="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8"></label>
+    <label id="pwlabel">Password<input id="pw" type="password" autocomplete="current-password" minlength="8" required></label>
+    <div id="clerk-captcha"></div>
     <div id="msg" role="alert"></div>
     <div class="row">
       <button type="button" id="signup">Create account</button>
       <button type="submit" class="primary" id="signin" value="signin">Sign in</button>
     </div>
-    <div class="row"><button type="button" id="close">Close</button></div>
+    <div class="row"><button type="button" id="forgot">Forgot password?</button><button type="button" id="close">Close</button></div>
   </form>
 </dialog>
 <script src="config.js"></script>
