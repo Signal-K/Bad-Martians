@@ -3,6 +3,7 @@ package game
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/signal-k/haphazard-martians/engine"
@@ -143,6 +144,26 @@ func TestFullFlow(t *testing.T) {
 	h.clickButton("Soil")
 	h.clickButton("Sand") // selection auto-advanced to panel 2
 	h.clickButton("Send review")
+	// The client snaps the two review photos (strip, then strip with labels)
+	// before the review is sent.
+	var photos []string
+	for i := 0; i < 6 && h.g.Scene().Name == SceneReview; i++ {
+		if name := h.g.TakePhotoRequest(); name != "" {
+			photos = append(photos, name)
+		}
+		h.frames(1, engine.Input{})
+	}
+	if len(photos) != 2 || !strings.HasPrefix(photos[0], ReviewPhotoPrefix+"source-1-") || !strings.HasPrefix(photos[1], ReviewPhotoPrefix+"marked-1-") {
+		t.Fatalf("review photos = %v", photos)
+	}
+	if h.count("review") != 1 {
+		t.Fatalf("expected one review event, got %d", h.count("review"))
+	}
+	for _, e := range h.h.Events {
+		if e.Name == "review" && (!strings.Contains(string(e.Payload), `"class":"soil"`) || !strings.Contains(string(e.Payload), `"class":"sand"`)) {
+			t.Fatalf("review should carry every label: %s", e.Payload)
+		}
+	}
 	if h.g.Scene().Name != SceneResult {
 		t.Fatalf("review should return to the result, got %s", h.g.Scene().Name)
 	}

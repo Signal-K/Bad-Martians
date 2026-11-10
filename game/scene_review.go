@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/signal-k/haphazard-martians/engine"
 )
@@ -87,11 +88,61 @@ func reviewScene(g *engine.Game, arg any) *engine.Scene {
 			20, 414, sizeSmall, colMuted, engine.AlignLeft)
 	})
 	addBack(s, func() { g.Load(ra.Return, ra.ReturnArg) })
+
+	// Sending keeps the review in full: a photo of the navcam strip as the
+	// player saw it, one with their labels on it, then every label (see
+	// Session.SubmitReview). The photos leave the buttons out (they are UI
+	// layers), so OnPhoto paints the strip itself.
+	const (
+		idle = iota
+		snapSource
+		snapMarked
+	)
+	phase := idle
+	stamp := ""
+	s.OnPhoto = func(r engine.Renderer) {
+		for i := 0; i < n; i++ {
+			x := px0 + float64(i)*(pw+pgap)
+			paintTerrainSample(r, lvl, i, x, py, pw, ph)
+			if phase != snapMarked {
+				continue
+			}
+			if c, ok := ses.Labels[i]; ok {
+				outline(r, x-3, py-3, pw+6, ph+6, c.Info().Color)
+				r.Rect(x, py+ph-28, pw, 28, colTile.Alpha(225), true)
+				r.Text(c.Info().Name, x+pw/2, py+ph-24, 15, colInk, engine.AlignCenter)
+			} else {
+				r.Rect(x+pw/2-14, py+ph-34, 28, 28, colTile.Alpha(200), true)
+				r.Text("?", x+pw/2, py+ph-34, 22, colInk, engine.AlignCenter)
+			}
+		}
+	}
 	done := AddButton(s, ScreenW-264, 470, 240, 60, "Send review", func() {
-		ses.SubmitLabels(g.Host)
-		g.Load(ra.Return, ra.ReturnArg)
+		if phase != idle {
+			return
+		}
+		stamp = fmt.Sprintf("%d-%d", lvl.ID, time.Now().UnixMilli())
+		phase = snapSource
+		g.RequestPhoto(ReviewPhotoPrefix + "source-" + stamp + ".png")
 	})
 	done.Primary, done.Icon = true, IconReview
-	s.OnUpdate = func(float64) { done.Disabled = len(ses.Labels) == 0 }
+	s.OnUpdate = func(float64) {
+		done.Disabled = len(ses.Labels) == 0 || phase != idle
+		if phase == idle || g.PhotoPending() {
+			return
+		}
+		if phase == snapSource {
+			phase = snapMarked
+			g.RequestPhoto(ReviewPhotoPrefix + "marked-" + stamp + ".png")
+			return
+		}
+		phase = idle
+		ses.SubmitReview(g.Host, stamp)
+		g.Load(ra.Return, ra.ReturnArg)
+	}
 	return s
 }
+
+// ReviewPhotoPrefix names the photos taken when a review is sent; hosts keep
+// them with the review instead of sharing them.
+const ReviewPhotoPrefix = "hm-review-"
