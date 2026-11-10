@@ -101,7 +101,7 @@ func menuScene(g *engine.Game, _ any) *engine.Scene {
 		}
 	}
 	ex := AddButton(s, 56, 462, 420, 64, fmt.Sprintf("Expedition · %d missions", len(ExpeditionLevels)), func() {
-		g.Load(SceneBuild, ExpeditionSession(g.Host, NewExpedition()))
+		g.Load(SceneBriefing, NewExpedition())
 	})
 	ex.Icon = IconRover
 	ex.Primary = true

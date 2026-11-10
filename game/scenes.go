@@ -8,10 +8,13 @@ import (
 const (
 	SceneMenu   = "menu"
 	SceneBuild  = "build"
+	SceneLaunch = "launch"
 	SceneRun    = "run"
 	SceneResult = "result"
 	SceneReview = "review"
 	SceneStyle  = "style"
+	// SceneBriefing hands out an expedition's kit before its first mission.
+	SceneBriefing = "briefing"
 )
 
 // Setup registers every scene. Opening the menu is left to the host so any
@@ -22,15 +25,31 @@ func Setup(g *engine.Game) {
 		Fixture: func(*engine.Game) any { return nil },
 	}, menuScene)
 	g.RegisterScene(engine.SceneMeta{
-		Name: SceneBuild, Title: "Rover bay", Type: engine.TypeBuild, Layout: LayoutCargo,
+		Name: SceneBuild, Title: "Rover bay", Type: engine.TypeBuild, Layout: LayoutBay,
 		Fixture: func(g *engine.Game) any { return NewSessionFor(g.Host, GetLevel(1)) },
 	}, buildScene)
 	g.RegisterScene(engine.SceneMeta{
+		Name: SceneLaunch, Title: "Name your rover", Type: engine.TypeBuild, Layout: LayoutCenter,
+		Fixture: func(g *engine.Game) any {
+			s := NewSessionFor(g.Host, GetLevel(1))
+			if len(s.Design.Cells) == 0 { // bays start empty; launching needs a rover
+				s.Design = StarterDesign()
+			}
+			return s
+		},
+	}, launchScene)
+	g.RegisterScene(engine.SceneMeta{
 		Name: SceneRun, Title: "Drive", Type: engine.TypePlay, Layout: LayoutHUD,
-		Fixture: func(g *engine.Game) any { return NewSessionFor(g.Host, GetLevel(1)) },
+		Fixture: func(g *engine.Game) any {
+			s := NewSessionFor(g.Host, GetLevel(1))
+			if len(s.Design.Cells) == 0 { // bays start empty; the standalone drive needs a rover
+				s.Design = StarterDesign()
+			}
+			return s
+		},
 	}, runScene)
 	g.RegisterScene(engine.SceneMeta{
-		Name: SceneResult, Title: "Mission report", Type: engine.TypeResults, Layout: LayoutCenter,
+		Name: SceneResult, Title: "Mission debrief", Type: engine.TypeResults, Layout: LayoutCenter,
 		Fixture: func(g *engine.Game) any { return sampleResult(g) },
 	}, resultScene)
 	g.RegisterScene(engine.SceneMeta{
@@ -39,6 +58,10 @@ func Setup(g *engine.Game) {
 			return &ReviewArg{Session: NewSessionFor(g.Host, GetLevel(2)), Return: SceneMenu}
 		},
 	}, reviewScene)
+	g.RegisterScene(engine.SceneMeta{
+		Name: SceneBriefing, Title: "Expedition briefing", Type: engine.TypeMenu, Layout: LayoutCenter,
+		Fixture: func(*engine.Game) any { return NewExpedition() },
+	}, briefingScene)
 	g.RegisterScene(engine.SceneMeta{
 		Name: SceneStyle, Title: "Style sheet", Type: engine.TypeDebug, Layout: LayoutCenter,
 		Fixture: func(*engine.Game) any { return nil },

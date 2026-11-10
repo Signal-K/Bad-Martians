@@ -19,6 +19,7 @@ type Button struct {
 	HideLabel  bool // icon-only look; Label stays as the accessible name
 	Primary    bool // the scene's main action: neon fill
 	Disabled   bool
+	Hidden     bool // not drawn and ignores the pointer
 	OnClick    func()
 	// Custom replaces the default look.
 	Custom func(b *Button, r engine.Renderer)
@@ -33,6 +34,10 @@ func (b *Button) inside(p engine.Vec2) bool {
 
 func (b *Button) Update(o *engine.GameObject, _ float64) {
 	in := o.Scene.Game.In
+	if b.Hidden {
+		b.Held, b.armed = false, false
+		return
+	}
 	in_ := b.inside(in.Pointer)
 	b.Held = in.Down && in_ && !b.Disabled
 	if in.Pressed && in_ {
@@ -47,6 +52,9 @@ func (b *Button) Update(o *engine.GameObject, _ float64) {
 }
 
 func (b *Button) Draw(_ *engine.GameObject, _ engine.Camera, r engine.Renderer) {
+	if b.Hidden {
+		return
+	}
 	if b.Custom != nil {
 		b.Custom(b, r)
 		return
@@ -100,33 +108,6 @@ func AddDraw(s *engine.Scene, layer int, f DrawFunc) {
 func lerpColor(a, b engine.Color, t float64) engine.Color {
 	l := func(x, y uint8) uint8 { return uint8(float64(x) + (float64(y)-float64(x))*t) }
 	return engine.Color{R: l(a.R, b.R), G: l(a.G, b.G), B: l(a.B, b.B), A: 255}
-}
-
-// drawSky paints a dusty Martian sky with two parallax dune layers.
-func drawSky(r engine.Renderer, camX float64) {
-	top, hor := engine.RGB(120, 76, 78), engine.RGB(236, 184, 140)
-	const bands = 14
-	for i := 0; i < bands; i++ {
-		t := float64(i) / (bands - 1)
-		r.Rect(0, ScreenH*float64(i)/bands, ScreenW, ScreenH/bands+1, lerpColor(top, hor, t*t), true)
-	}
-	layers := []struct {
-		par, amp, base, freq float64
-		col                  engine.Color
-	}{
-		{0.15, 26, 330, 0.011, engine.RGB(190, 128, 100)},
-		{0.35, 20, 380, 0.017, engine.RGB(160, 100, 84)},
-	}
-	for _, L := range layers {
-		var pts []engine.Vec2
-		pts = append(pts, engine.V(0, ScreenH))
-		for x := 0.0; x <= ScreenW+16; x += 16 {
-			wx := x + camX*L.par*40
-			pts = append(pts, engine.V(x, L.base+L.amp*sinf(wx*L.freq)+L.amp*0.5*sinf(wx*L.freq*2.3+1)))
-		}
-		pts = append(pts, engine.V(ScreenW+16, ScreenH))
-		r.Poly(pts, L.col)
-	}
 }
 
 func drawStar(r engine.Renderer, cx, cy, rad float64, c engine.Color) {

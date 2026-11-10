@@ -46,7 +46,7 @@ Every scene registers with `Game.RegisterScene(SceneMeta, factory)`. It panics
 unless the scene has:
 
 - a **type**: menu, build, play, activity, results, sandbox or debug;
-- a **layout**: named screen regions (`game/layouts.go`: `center`, `cargo`,
+- a **layout**: named screen regions (`game/layouts.go`: `center`, `bay`,
   `hud`). Scenes with the same layout share the same bones;
 - a **fixture**: the argument it needs to boot on its own.
 
@@ -68,6 +68,13 @@ widgets (`drawPanel`, `drawTile`, `drawChip`, `drawMeter`, `Button`) in
 there are no image assets to keep consistent. The `style` scene shows all of it.
 The assets are our own, in that style; nothing is copied from the game.
 
+World art lives in `art.go`, also drawn from primitives: the layered sky
+(sun, Phobos, parallax mesas and dunes in dust haze), the ground (strata in the
+class colour, a lit crust, and pebbles, ripples, cracks or boulders seeded by
+segment index so they hold still), rover parts (hex frame nodes, truss beams,
+knobbly wheels whose treads turn, a hub-motor wheel, the stereo Navcam mast),
+and contact shadows. The drive and the rover bay share every one of these.
+
 ## Game (`game/`)
 
 - **Terrain classes** follow AI4Mars (soil, bedrock, sand, big rock); each maps
@@ -83,13 +90,32 @@ The assets are our own, in that style; nothing is copied from the game.
   segments flagged `Gold` have known truth and score the labeller (+2 credits
   for a correct calibration label); the rest are collected for consensus. The
   procedural "Navcam" panels are a stand-in until real AI4Mars imagery is wired in.
-- **Build scene** is a 12×7 cargo-style grid; parts cost credits; validation
-  (one mast, a motor, connected, within budget) gates the GO button. The course
-  preview is coloured by the *player's* review, so a bad label misleads their
-  build. The Specs panel summarises power, traction and mass.
+- **Build scene** (the rover bay) is a 12×5 grid that stands in the world: the
+  Mars sky and the mission's real start terrain sit behind and under it, and
+  parts and beams use the same art as the drive (one cell = 1 m). A parts tray
+  along the bottom shows each part, its cost and how many more fit the budget;
+  tap, swipe sideways or drag a part onto the grid. Beams snap in as parts are
+  placed, and hovering a cell previews its links. **Test drop** spawns the
+  design on the start terrain with live physics and reports its tilt and
+  whether the frame bends (`PoseOf`, a best-fit rotation from blueprint to
+  bodies). Validation (one mast, a motor, connected, within budget) gates GO.
+  The terrain map under the grid is coloured by the *player's* review, so a
+  bad label misleads their build.
 - **Run** (`game/run.go`) holds win/lose rules headless so tests exercise them.
   Tests assert every level is beatable by a reference rover and that the
   starter rover is not enough for level 4.
+- **Launch** (`game/scene_launch.go`): GO opens a naming step before the
+  drive. A generated name is suggested (`SuggestName`); the player types over
+  it, shuffles, or taps it on a phone, which emits a `prompt` event that the
+  web host answers with a text box (`haphazard.text`). The name rides on the
+  drive HUD, photos, the debrief and the `run` event (`rover`), and carries
+  to the next mission while the rover survives. A lost rover's successor gets
+  a numeral ("Plucky Mule II").
+- **Salvage** (`game/salvage.go`): a drive is damaged when a frame or the mast
+  touches the ground (`Run.Scrapes`; the HUD shows it live). An undamaged
+  finish gives back one extra part, the rover's priciest other than the mast:
+  in an expedition it goes into the kit (`Expedition.Salvage`), in a single
+  mission its credits add to the next mission's budget (`Session.Spare`).
 - **Score** (`game/score.go`): finish 500, +150 per sample, plus up to 500 for
   speed (full at 0.6 x par, none at 2 x par, linear between). Stars are
   unchanged (finish, all samples, under par). Best score is saved per level and

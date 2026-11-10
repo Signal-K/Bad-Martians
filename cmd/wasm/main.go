@@ -24,6 +24,13 @@ func (h jsHost) Load(key string) []byte {
 func (h jsHost) Save(key string, b []byte)   { h.bridge.Call("save", key, string(b)) }
 func (h jsHost) Emit(event string, p []byte) { h.bridge.Call("emit", event, string(p)) }
 
+// Photo hands a PNG to the page, which shares or downloads it.
+func (h jsHost) Photo(name string, png []byte) {
+	u8 := js.Global().Get("Uint8Array").New(len(png))
+	js.CopyBytesToJS(u8, png)
+	h.bridge.Call("photo", name, u8)
+}
+
 func main() {
 	bridge := js.Global().Get("haphazard")
 	ebiten.SetWindowTitle("Haphazard Martians")
@@ -46,6 +53,13 @@ func main() {
 		return nil
 	}))
 	bridge.Set("scenes", js.FuncOf(func(js.Value, []js.Value) any { return app.SceneList() }))
+	// haphazard.text(s) answers a "prompt" event (the phone text box for the rover name).
+	bridge.Set("text", js.FuncOf(func(_ js.Value, a []js.Value) any {
+		if len(a) > 0 {
+			app.SetText(a[0].String())
+		}
+		return nil
+	}))
 	bridge.Set("open", js.FuncOf(func(_ js.Value, a []js.Value) any { app.Open(a[0].String()); return nil }))
 	if err := ebiten.RunGame(app); err != nil {
 		panic(err)

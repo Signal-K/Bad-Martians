@@ -26,6 +26,7 @@ type harness struct {
 
 func newHarness(t *testing.T) *harness {
 	h := engine.NewMemHost()
+	FinishTutorial(h, nil) // these tests drive the returning player's flow
 	g := engine.NewGame(ScreenW, ScreenH, h)
 	Setup(g)
 	hs := &harness{t, g, h}
@@ -84,7 +85,20 @@ func TestFullFlow(t *testing.T) {
 	if h.g.Scene().Name != SceneBuild {
 		t.Fatalf("expected build, got %s", h.g.Scene().Name)
 	}
+	// the bay starts empty: nothing to drive until the player builds a rover
 	h.clickButton("GO")
+	if h.g.Scene().Name != SceneBuild {
+		t.Fatalf("GO with an empty bay should stay in build, got %s", h.g.Scene().Name)
+	}
+	ses := NewSessionFor(h.g.Host, GetLevel(1))
+	ses.Design = StarterDesign()
+	h.g.Load(SceneBuild, ses)
+	h.frames(2, engine.Input{})
+	h.clickButton("GO")
+	if h.g.Scene().Name != SceneLaunch {
+		t.Fatalf("expected launch, got %s", h.g.Scene().Name)
+	}
+	h.clickButton("Send it out")
 	if h.g.Scene().Name != SceneRun {
 		t.Fatalf("expected run, got %s", h.g.Scene().Name)
 	}

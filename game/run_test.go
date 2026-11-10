@@ -118,3 +118,97 @@ var goldenTerrain = map[int]uint64{
 	1: 0xb67c4e8e94c2a439, 2: 0x7c9b5d5a920caeac, 3: 0xa15b7fe52f477289,
 	4: 0x8d6d0ebe36f97387, 5: 0x5e365f19704d38a6,
 }
+
+// A rover whose motor wheel never touches the ground goes nowhere: after a few
+// seconds of trying the Restart offer appears, and scrapping it fails the run
+// and costs an expedition the parts.
+func TestStuckRoverOffersRestartAndScrapCostsParts(t *testing.T) {
+	d := Design{Cells: []Cell{{0, 0, KFrame}, {1, 0, KFrame}, {2, 0, KFrame}, {1, 1, KMotor}, {2, 1, KMast}}}
+	if errs := d.Validate(99); len(errs) > 0 {
+		t.Fatal(errs)
+	}
+	r := NewRun(GetLevel(1), d)
+	for i := 0; i < 60*3 && !r.IsStuck(); i++ {
+		r.Step(1.0/60, 1)
+	}
+	if r.IsStuck() {
+		t.Fatal("stuck offered too early")
+	}
+	for i := 0; i < 60*3 && !r.IsStuck(); i++ {
+		r.Step(1.0/60, 1)
+	}
+	if !r.IsStuck() || r.Outcome != Running {
+		t.Fatalf("want the Restart offer with the run still going, stuck=%v outcome=%v", r.IsStuck(), r.Outcome)
+	}
+	c0 := r.Rover.Center()
+	r.Scrap()
+	for i := 0; i < 30; i++ {
+		r.Debris(1.0 / 60)
+	}
+	if r.Outcome != Scrapped || len(r.World.Cons) != 0 {
+		t.Fatalf("scrap: outcome %v, %d joints left", r.Outcome, len(r.World.Cons))
+	}
+	spread := 0.0
+	for _, b := range r.Rover.Bodies {
+		spread = max(spread, b.Pos.Sub(c0).Len())
+	}
+	if spread < 2 {
+		t.Fatalf("parts did not fly apart: max %.2f m", spread)
+	}
+	e := NewExpedition()
+	before := e.Inv.Total()
+	e.Finish(false, d, 0)
+	if e.Inv.Total() != before-len(d.Cells) {
+		t.Fatalf("expedition kept the scrapped parts: %d -> %d", before, e.Inv.Total())
+	}
+}
+
+// The drive runs the sim 1.5x faster with the same physics substep, so a
+// level plays out the same in sim time but takes a third fewer frames.
+func TestDriveSpeedKeepsTheLevelButSavesFrames(t *testing.T) {
+	play := func(speed float64) (*Run, int) {
+		r := NewRun(GetLevel(1), StarterDesign())
+		r.Speed = speed
+		n := 0
+		for r.Outcome == Running && n < 60*120 {
+			r.Step(1.0/60, 1)
+			n++
+		}
+		return r, n
+	}
+	base, n0 := play(0)
+	fast, n1 := play(DriveSpeed)
+	if base.Outcome != Won || fast.Outcome != Won {
+		t.Fatalf("outcomes %v / %v", base.Outcome, fast.Outcome)
+	}
+	if math.Abs(fast.Time-base.Time) > 1.5 {
+		t.Fatalf("sim time drifted: %.1f vs %.1f", base.Time, fast.Time)
+	}
+	if float64(n1) > float64(n0)/DriveSpeed*1.1 {
+		t.Fatalf("not faster: %d frames vs %d", n1, n0)
+	}
+	if fast.TopSpeed < 1 {
+		t.Fatalf("top speed not recorded: %.2f", fast.TopSpeed)
+	}
+}
+
+// Pushing the stick up rocks the rover nose up; down, nose down. It matters
+// most in the air, landing a jump.
+func TestLeanTipsTheRover(t *testing.T) {
+	tilt := func(lean float64) float64 {
+		r := NewRun(GetLevel(1), StarterDesign())
+		for _, b := range r.Rover.Bodies { // mid-jump
+			b.Pos.Y += 4
+			b.Prev.Y += 4
+		}
+		r.Lean = lean
+		for i := 0; i < 30; i++ {
+			r.Step(1.0/60, 0)
+		}
+		return PoseOf(r.Rover).Tilt
+	}
+	flat, up, down := tilt(0), tilt(1), tilt(-1)
+	if !(up > flat+0.05 && down < flat-0.05) {
+		t.Fatalf("lean did not tip: down %.3f flat %.3f up %.3f", down, flat, up)
+	}
+}

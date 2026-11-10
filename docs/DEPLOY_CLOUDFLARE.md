@@ -61,19 +61,37 @@ Not checked: a real deploy, the workflow on GitHub, and the iPad.
 To go live, you add the two secrets, merge or push to `main`, and open the
 `*.workers.dev` URL Wrangler prints.
 
-### Connecting to the Star Sailors backend
+### Connecting to the Star Sailors backend (decided, KES-494)
 
-Set `HM_API_URL` to its public URL and rebuild. The game then uses the same
-calls as today: `users` auth and the `hm_runs` and `hm_labels` collections. For
-that to work:
+The game uses the **shared Star Sailors PocketBase** (`signal-k-starsailors` on
+Fly, deployed from `Signal-K/tickets-please`) and **Landnam's Clerk instance**.
+A player has one account across Landnam and this game, and nothing new costs
+money: no new Fly app, no new Clerk instance, no new domain.
 
-- the backend needs those two collections (migration
-  `migrations/1_haphazard_martians.go`) and a CORS rule that allows the game's
-  origin;
-- sign-in uses PocketBase email and password for now. If the shared backend
-  authenticates differently, `web/host.js` is the only file that changes.
-
-I have not seen that backend, so I have not tested any of this against it.
+- **Collections.** `hm_runs` and `hm_labels` live on the shared backend:
+  migration `backend/pb_migrations/20261110120000_hm_runs_and_labels.js` in
+  tickets-please, with `hm_` added to that backend's approved collection
+  prefixes. Same schema and rules as `migrations/1_haphazard_martians.go` here,
+  which stays for the bundled server (`make run`). Archiving the game is
+  dropping the two `hm_` collections.
+- **Sign-in.** `web/host.js` loads Clerk from the instance's Frontend API, signs
+  in or signs up with our own dialog (email codes, password reset), then calls
+  the shared backend's `/auth/clerk-exchange` for a normal PocketBase token. On a
+  `playlandnam.space` subdomain a player already signed in to Landnam is signed
+  in here without typing anything. Signing out of the game does not sign them out
+  of Landnam.
+- **Domain.** `martians.playlandnam.space`, set in `wrangler.jsonc`. The Landnam
+  Clerk production instance accepts subdomains of `playlandnam.space` (Landnam
+  staging already runs on one), and the zone is on the same Cloudflare account,
+  so the deploy creates the DNS record.
+- **Configuration** (GitHub repository variables, both public):
+  `HM_API_URL=https://signal-k-starsailors.fly.dev` and `HM_CLERK_KEY` = the same
+  value as Landnam's `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` variable (`pk_live_…`).
+  The production key only works on `playlandnam.space` hosts, so a
+  `*.workers.dev` preview built with it cannot sign in; previews stay demo or
+  use the development key.
+- **CORS.** The shared backend allows any origin (`Access-Control-Allow-Origin: *`),
+  so nothing to add.
 
 ## Phase 2: PocketBase backend
 
@@ -151,10 +169,10 @@ committing to a paid product.
 
 ## Decisions
 
-1. **Domain.** Decided: `*.workers.dev` for now.
-2. **Backend.** Decided: the demo has none; it will connect to the Star Sailors
-   backend later. Phase 2 hosting is only needed if a separate PocketBase is
-   still wanted.
+1. **Domain.** Decided: `martians.playlandnam.space` (was `*.workers.dev`).
+2. **Backend.** Decided: the shared Star Sailors PocketBase with Landnam's Clerk
+   instance, no separate spoke or Fly app while the game is a trial (see above).
+   Phase 2 hosting is only needed if the game outgrows the shared backend.
 3. **Secrets.** Liam adds `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as
    GitHub Actions secrets himself.
 
@@ -162,5 +180,6 @@ committing to a paid product.
 
 1. Add the Cloudflare secrets, push to `main`, check the URL on the iPad.
 2. Add the post-deploy smoke test to the workflow.
-3. Connect to the Star Sailors backend (needs its URL and CORS rule).
-4. Phase 2 hosting only if a separate PocketBase is still wanted.
+3. Merge the tickets-please branch to `main` so the shared backend gets the
+   `hm_` collections, then set `HM_API_URL` and `HM_CLERK_KEY` and redeploy.
+4. Phase 2 hosting only if the game outgrows the shared backend.

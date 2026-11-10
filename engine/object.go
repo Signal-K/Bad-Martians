@@ -57,6 +57,11 @@ type Scene struct {
 	// logic (state machines, win conditions).
 	OnUpdate func(dt float64)
 	Time     float64
+
+	// Photos: objects on PhotoUI and above (default 10, the HUD) are left
+	// out, and OnPhoto draws a caption over the shot instead.
+	PhotoUI int
+	OnPhoto func(r Renderer)
 }
 
 func (s *Scene) Spawn(name string) *GameObject {
@@ -125,11 +130,22 @@ func (s *Scene) draw(r Renderer) {
 		}
 	}
 	sort.SliceStable(order, func(i, j int) bool { return order[i].Layer < order[j].Layer })
+	snap := s.Game != nil && s.Game.Snapping
+	hideFrom := s.PhotoUI
+	if hideFrom == 0 {
+		hideFrom = 10
+	}
 	for _, o := range order {
+		if snap && o.Layer >= hideFrom {
+			continue
+		}
 		for _, c := range o.comps {
 			if d, ok := c.(Drawer); ok {
 				d.Draw(o, s.Cam, r)
 			}
 		}
+	}
+	if snap && s.OnPhoto != nil {
+		s.OnPhoto(r)
 	}
 }

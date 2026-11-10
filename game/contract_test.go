@@ -78,8 +78,9 @@ func TestEverySceneHonoursTheContract(t *testing.T) {
 func TestSceneTypesAndLayoutsAreDistinctAndUsed(t *testing.T) {
 	g, _ := newGame()
 	want := map[string]engine.SceneType{
-		SceneMenu: engine.TypeMenu, SceneBuild: engine.TypeBuild, SceneRun: engine.TypePlay,
+		SceneMenu: engine.TypeMenu, SceneBuild: engine.TypeBuild, SceneLaunch: engine.TypeBuild, SceneRun: engine.TypePlay,
 		SceneResult: engine.TypeResults, SceneReview: engine.TypeActivity, SceneStyle: engine.TypeDebug,
+		SceneBriefing: engine.TypeMenu,
 	}
 	for _, m := range g.Scenes() {
 		if want[m.Name] != m.Type {

@@ -25,11 +25,13 @@ const (
 	IconRover   Icon = "rover"
 	IconMass    Icon = "mass"
 	IconStarIco Icon = "star"
+	IconRetry   Icon = "retry"
+	IconCamera  Icon = "camera"
 )
 
 // AllIcons is the full set, for the style sheet and tests.
 var AllIcons = []Icon{IconWheel, IconMotor, IconFrame, IconMast, IconErase, IconCredit, IconBack,
-	IconRight, IconLeft, IconClock, IconSample, IconReview, IconGear, IconRover, IconMass, IconStarIco}
+	IconRight, IconLeft, IconClock, IconSample, IconReview, IconGear, IconRover, IconMass, IconStarIco, IconRetry, IconCamera}
 
 func partIcon(k Kind) Icon {
 	switch k {
@@ -125,5 +127,21 @@ func drawIcon(r engine.Renderer, ic Icon, cx, cy, s float64, c engine.Color) {
 		ring(r, p(0, -0.26), s*0.14, c)
 	case IconStarIco:
 		drawStar(r, cx, cy, s*0.45, c)
+	case IconRetry: // an open ring with an arrowhead
+		const n = 14
+		prev := p(0.34*cosf(-0.9), 0.34*sinf(-0.9))
+		for i := 1; i <= n; i++ {
+			a := -0.9 + 4.9*float64(i)/n
+			q := p(0.34*cosf(a), 0.34*sinf(a))
+			r.Line(prev, q, lw, c)
+			prev = q
+		}
+		a := -0.9
+		tip := p(0.34*cosf(a), 0.34*sinf(a))
+		r.Poly([]engine.Vec2{tip.Add(engine.V(-s*0.2, -s*0.06)), tip.Add(engine.V(s*0.1, -s*0.2)), tip.Add(engine.V(s*0.06, s*0.14))}, c)
+	case IconCamera:
+		r.Rect(cx-s*0.4, cy-s*0.22, s*0.8, s*0.54, c, false)
+		r.Rect(cx-s*0.16, cy-s*0.34, s*0.32, s*0.12, c, true)
+		ring(r, p(0, 0.05), s*0.16, c)
 	}
 }
