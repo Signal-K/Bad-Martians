@@ -15,10 +15,10 @@ make wasm >/dev/null
 rm -rf "$OUT" && mkdir -p "$OUT"
 cp web/index.html web/host.js web/wasm_exec.js web/manifest.webmanifest "$OUT"/
 cp -r web/icons "$OUT"/
-gzip -9 -n -c web/game.wasm > "$OUT/game-gz.wasm"
+gzip -9 -n -c web/game.wasm > "$OUT/game.wasm.gz"
 cat > "$OUT/config.js" <<'JS'
 // Haphazard Martians on playlandnam.space/martians/. Landnam's deploy rewrites
 // this file with its Clerk key (web/scripts/martians-config.mjs).
-window.HM_CONFIG = { api: "https://signal-k-starsailors.fly.dev", clerk: "", shareAuth: "pocketbase_auth", wasm: "game-gz.wasm", wasmGzip: true, sw: false };
+window.HM_CONFIG = { api: "https://signal-k-starsailors.fly.dev", clerk: "", shareAuth: "pocketbase_auth", wasm: "game.wasm.gz", wasmGzip: true, sw: false };
 JS
-echo "built $(git rev-parse --short HEAD 2>/dev/null): $(du -h "$OUT/game-gz.wasm" | cut -f1) game-gz.wasm in $OUT"
+echo "built $(git rev-parse --short HEAD 2>/dev/null): $(du -h "$OUT/game.wasm.gz" | cut -f1) game.wasm.gz in $OUT"
