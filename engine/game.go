@@ -35,6 +35,9 @@ type Game struct {
 // RequestPhoto asks the client to snap the next frame as a photo called name.
 func (g *Game) RequestPhoto(name string) { g.photoName = name }
 
+// PhotoPending reports whether a requested photo has not been snapped yet.
+func (g *Game) PhotoPending() bool { return g.photoName != "" }
+
 // TakePhotoRequest returns and clears a pending photo request ("" for none).
 func (g *Game) TakePhotoRequest() string {
 	n := g.photoName

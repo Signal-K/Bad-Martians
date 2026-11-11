@@ -130,6 +130,35 @@ func (s *Session) Problems() []string {
 	return errs
 }
 
+// SubmitReview sends the labels like SubmitLabels, then one "review" event
+// with every label of the strip, so the host can keep the whole review with
+// its photos (named with stamp, see reviewScene).
+func (s *Session) SubmitReview(h engine.Host, stamp string) {
+	s.SubmitLabels(h)
+	type label struct {
+		Segment int     `json:"segment"`
+		X0      float64 `json:"x0"`
+		X1      float64 `json:"x1"`
+		Class   string  `json:"class"`
+		Gold    bool    `json:"gold"`
+		Correct bool    `json:"correct"`
+	}
+	labels := []label{}
+	for i := range s.Level.Segments {
+		c, ok := s.Labels[i]
+		if !ok {
+			continue
+		}
+		seg := s.Level.Segments[i]
+		labels = append(labels, label{i, seg.X0, seg.X1, c.Info().Key, seg.Gold, seg.Gold && seg.Class == c})
+	}
+	p, _ := json.Marshal(map[string]any{
+		"level": s.Level.ID, "seed": s.Level.Seed, "segments": len(s.Level.Segments),
+		"labels": labels, "stamp": stamp,
+	})
+	h.Emit("review", p)
+}
+
 // SubmitLabels sends each new or changed label to the host and remembers the
 // labels in the player's progress.
 func (s *Session) SubmitLabels(h engine.Host) {
