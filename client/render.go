@@ -55,11 +55,14 @@ func newRenderer() *ebitenRenderer {
 	return &ebitenRenderer{faces: map[int]*text.GoTextFace{}, scale: 1}
 }
 
-// begin starts a frame on dst, fitting the virtual screen inside it.
+// begin starts a frame on dst, fitting the virtual screen inside it. Drawing
+// is clipped to the virtual screen: the ground is painted 60 m deep, and on a
+// portrait phone it would otherwise spill into the letterbox bar below.
 func (e *ebitenRenderer) begin(dst *ebiten.Image, vw, vh float64) {
-	e.dst = dst
 	b := dst.Bounds()
 	e.scale, e.ox, e.oy = fit(float64(b.Dx()), float64(b.Dy()), vw, vh)
+	area := image.Rect(int(math.Floor(e.ox)), int(math.Floor(e.oy)), int(math.Ceil(e.ox+vw*e.scale)), int(math.Ceil(e.oy+vh*e.scale)))
+	e.dst = dst.SubImage(area.Add(b.Min)).(*ebiten.Image)
 	e.vs, e.is = e.vs[:0], e.is[:0]
 }
 
