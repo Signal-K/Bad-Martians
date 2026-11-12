@@ -212,3 +212,30 @@ func TestLeanTipsTheRover(t *testing.T) {
 		t.Fatalf("lean did not tip: down %.3f flat %.3f up %.3f", down, flat, up)
 	}
 }
+
+// The playtest jumble (motors buried in the frame) must be offered Restart
+// within a few seconds, even while the player rocks it with the lean stick.
+func TestJumbleIsOfferedRestartQuickly(t *testing.T) {
+	jumble := Design{Cells: []Cell{
+		{0, 3, KFrame}, {1, 3, KFrame}, {2, 3, KWheel},
+		{0, 2, KFrame}, {1, 2, KMotor}, {2, 2, KFrame},
+		{0, 1, KFrame}, {1, 1, KMotor}, {2, 1, KFrame}, {3, 1, KMast},
+		{0, 0, KWheel}, {1, 0, KFrame}, {2, 0, KFrame},
+	}}
+	for _, rock := range []bool{false, true} {
+		r := NewRun(GetLevel(1), jumble)
+		for r.Time < StuckSeconds+2 && !r.IsStuck() {
+			if rock {
+				r.Lean = 1
+				if int(r.Time/0.6)%2 == 1 {
+					r.Lean = -1
+				}
+			}
+			r.Step(1.0/60, 1)
+		}
+		if !r.IsStuck() {
+			t.Fatalf("rocking=%v: no Restart offer after %.1fs", rock, r.Time)
+		}
+		t.Logf("rocking=%v: Restart offered at %.1fs", rock, r.Time)
+	}
+}
