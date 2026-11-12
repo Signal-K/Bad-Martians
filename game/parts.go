@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"math"
 	"sort"
 
 	"github.com/signal-k/haphazard-martians/engine"
@@ -188,6 +189,7 @@ func SpawnRover(w *physics.World, d Design, originX, groundY float64) *Rover {
 			minBottom = b
 		}
 	}
+	groundY = spawnLift(w.Terrain, cells, originX, groundY, minBottom)
 	for i, c := range cells {
 		p, _ := PartOf(c.K)
 		b := &physics.Body{
@@ -213,6 +215,25 @@ func SpawnRover(w *physics.World, d Design, originX, groundY float64) *Rover {
 		}
 	}
 	return r
+}
+
+// spawnLift raises groundY until no part starts inside the terrain. A wide
+// rover on a slope would otherwise spawn with its downhill-side wheels buried,
+// and the collision solver would fling it into the air on the first step.
+func spawnLift(t *physics.Terrain, cells []Cell, originX, groundY, minBottom float64) float64 {
+	if t == nil {
+		return groundY
+	}
+	for _, c := range cells {
+		p, _ := PartOf(c.K)
+		cx, rel := originX+float64(c.X), float64(c.Y)-minBottom
+		for k := -10; k <= 10; k++ {
+			dx := p.Radius * float64(k) / 10
+			need := t.HeightAt(cx+dx) + math.Sqrt(max(0, p.Radius*p.Radius-dx*dx)) - rel - 0.05
+			groundY = max(groundY, need)
+		}
+	}
+	return groundY
 }
 
 func (r *Rover) SetThrottle(t float64) {
