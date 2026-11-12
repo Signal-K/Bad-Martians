@@ -1,6 +1,7 @@
 package game
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/signal-k/haphazard-martians/engine"
@@ -86,5 +87,47 @@ func TestTrayDragSwipeAndQuantity(t *testing.T) {
 	}
 	if CanAdd(ses.Design, KMast, ses.Budget()) != 0 {
 		t.Fatal("mast quantity is 0 once placed")
+	}
+}
+
+// dropVerdict settles d on Mission 1's start and reads the bay's verdict.
+func dropVerdict(d Design) (string, engine.Color) {
+	l := GetLevel(1)
+	w := physics.NewWorld()
+	w.Terrain = l.Terrain
+	x := l.StartX + 2
+	r := SpawnRover(w, d, x, l.Terrain.HeightAt(x))
+	for t := 0.0; t < 2; t += engine.FixedDT {
+		w.Step(engine.FixedDT)
+	}
+	return testVerdict(r, l.Terrain, 2)
+}
+
+// The playtest jumble: motor wheels buried inside the frame. It stalls on the
+// course, so the test drop must not call it fine.
+func TestTestDropFlagsMotorsOffTheGround(t *testing.T) {
+	msg, col := dropVerdict(StarterDesign())
+	t.Log("starter:", msg)
+	if col != colGood {
+		t.Fatalf("starter rover should pass the test drop, got %q", msg)
+	}
+	jumble := Design{Cells: []Cell{
+		{0, 3, KFrame}, {1, 3, KFrame}, {2, 3, KWheel},
+		{0, 2, KFrame}, {1, 2, KMotor}, {2, 2, KFrame},
+		{0, 1, KFrame}, {1, 1, KMotor}, {2, 1, KFrame}, {3, 1, KMast},
+		{0, 0, KWheel}, {1, 0, KFrame}, {2, 0, KFrame},
+	}}
+	msg, col = dropVerdict(jumble)
+	t.Log("jumble:", msg)
+	if col != colWarn || !strings.Contains(msg, "motor") {
+		t.Fatalf("motors inside the frame should be flagged, got %q", msg)
+	}
+	// one motor on the ground and one up top: drives, but the top one is waste
+	top := StarterDesign()
+	top.Set(1, 2, KMotor)
+	msg, _ = dropVerdict(top)
+	t.Log("top motor:", msg)
+	if !strings.Contains(msg, "a motor wheel is off the ground") {
+		t.Fatalf("a motor on the roof should be flagged, got %q", msg)
 	}
 }

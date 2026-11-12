@@ -247,7 +247,7 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 	// the grid, the parts, and the test drop
 	AddDraw(s, 2, func(_ engine.Camera, r engine.Renderer) {
 		if testing {
-			drawTestDrop(r, cam, lvl.Terrain, testRover)
+			drawTestDrop(r, cam, lvl.Terrain, testRover, testT)
 			return
 		}
 		for cy := 0; cy < GridH; cy++ { // sockets
@@ -340,7 +340,7 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 		r.Text(fmt.Sprintf("Rover bay · Mission %d", lvl.ID), 92, 8, 22, colInk, engine.AlignLeft)
 		switch {
 		case testing:
-			msg, col := testVerdict(testRover, testT)
+			msg, col := testVerdict(testRover, lvl.Terrain, testT)
 			r.Text(msg, 92, 38, sizeSmall+1, col, engine.AlignLeft)
 		case tut != nil && !tut.Done: // the tutorial speaks in the status line
 			msg := tutBuildText[tut.BuildStep(ses.Design)]
@@ -710,9 +710,18 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 
 // drawTestDrop draws the dropped rover, with its chassis axis against a level
 // line only when it tilts.
-func drawTestDrop(r engine.Renderer, cam engine.Camera, ter *physics.Terrain, rv *Rover) {
+func drawTestDrop(r engine.Renderer, cam engine.Camera, ter *physics.Terrain, rv *Rover, t float64) {
 	roverShadows(r, cam, ter, rv)
 	rv.Draw(nil, cam, r)
+	for _, i := range liftedMotors(rv, ter) { // motors spinning in the air
+		if t < 1.2 {
+			break
+		}
+		b := rv.Bodies[i]
+		c := cam.ToScreen(b.Pos)
+		r.Circle(c, b.Radius*cam.Zoom+6, colWarn, false)
+		r.Circle(c, b.Radius*cam.Zoom+9, colWarn.Alpha(120), false)
+	}
 	pose := PoseOf(rv)
 	if math.Abs(pose.Tilt*180/math.Pi) < 2 {
 		return
@@ -724,10 +733,39 @@ func drawTestDrop(r engine.Renderer, cam engine.Camera, ter *physics.Terrain, rv
 	r.Line(c.Sub(d), c.Add(d), 3, colWarn)
 }
 
+// liftedMotors are the indices of motor wheels that do not touch the ground,
+// so they spin in the air and push nothing.
+func liftedMotors(rv *Rover, ter *physics.Terrain) []int {
+	var out []int
+	for i, b := range rv.Bodies {
+		if !b.Motor || b.OnGround {
+			continue
+		}
+		if b.Pos.Y-b.Radius-ter.HeightAt(b.Pos.X) > 0.12 {
+			out = append(out, i)
+		}
+	}
+	return out
+}
+
 // testVerdict is the one-line result of a test drop for the status line.
-func testVerdict(rv *Rover, t float64) (string, engine.Color) {
+func testVerdict(rv *Rover, ter *physics.Terrain, t float64) (string, engine.Color) {
 	if t < 1.2 {
 		return "Test drop: settling…", colChipLt
+	}
+	motors := 0
+	for _, b := range rv.Bodies {
+		if b.Motor {
+			motors++
+		}
+	}
+	switch lifted := len(liftedMotors(rv, ter)); {
+	case motors > 0 && lifted == motors:
+		return "Test drop: no motor wheel touches the ground. Move one down.", colWarn
+	case lifted == 1:
+		return "Test drop: a motor wheel is off the ground and does nothing.", colWarn
+	case lifted > 1:
+		return fmt.Sprintf("Test drop: %d motor wheels are off the ground and do nothing.", lifted), colWarn
 	}
 	pose := PoseOf(rv)
 	if pose.Bend > bendLimit {
