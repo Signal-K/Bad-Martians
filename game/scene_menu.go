@@ -111,7 +111,8 @@ func menuScene(g *engine.Game, _ any) *engine.Scene {
 	if n := SchoolDone(g.Host); n > 0 && n < len(Lessons) {
 		sl = fmt.Sprintf("Shape school %d/%d", n, len(Lessons))
 	}
-	sc := AddButton(s, 904-196, 34, 196, 56, sl, func() { g.Load(SceneBuild, LessonSession(NextLesson(g.Host))) })
+	sc := AddButton(s, 904-196, 44, 196, 52, sl, // clear of the host page's Sign in button
+		func() { g.Load(SceneBuild, LessonSession(NextLesson(g.Host))) })
 	sc.Icon = IconRover
 	st := AddButton(s, ScreenW-84, 470, 60, 60, "Style sheet", func() { g.Load(SceneStyle, nil) })
 	st.Icon, st.HideLabel = IconGear, true
