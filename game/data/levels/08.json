@@ -1,17 +1,16 @@
 {
   "id": 8,
-  "name": "Frost Hollow",
-  "blurb": "Morning frost in a shallow basin. Ease off the throttle.",
-  "biome": "ice",
-  "length": 100,
-  "seed": 82,
-  "credits": 14,
-  "par": 20,
-  "hill": 1.2,
-  "traction": 0.6,
+  "name": "Dune Sea",
+  "blurb": "Deep, soft drifts. Small wheels sink; bring more motors.",
+  "biome": "dunes",
+  "length": 120,
+  "seed": 281,
+  "credits": 24,
+  "par": 32,
+  "hill": 2.0,
+  "traction": 1.0,
   "mix": {
-    "soil": 3,
-    "bedrock": 3,
-    "sand": 1
+    "sand": 5,
+    "soil": 1
   }
 }

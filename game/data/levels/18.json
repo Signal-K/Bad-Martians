@@ -1,18 +1,18 @@
 {
   "id": 18,
-  "name": "Scree Slope",
-  "blurb": "Loose rock on a steep face. Every wheel needs to push.",
+  "name": "Crevasse Ridge",
+  "blurb": "Cracks cut across the hills. Long and well powered.",
   "biome": "ridge",
-  "length": 190,
-  "seed": 201,
-  "credits": 21,
-  "par": 43,
-  "hill": 4.0,
-  "traction": 0.85,
+  "length": 130,
+  "seed": 302,
+  "credits": 26,
+  "par": 25,
+  "hill": 2.0,
+  "traction": 1.0,
   "mix": {
-    "soil": 1,
-    "bedrock": 2,
-    "sand": 2,
-    "big_rock": 3
-  }
+    "bedrock": 3,
+    "soil": 2
+  },
+  "gaps": 2,
+  "gap_width": 3.5
 }

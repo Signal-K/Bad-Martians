@@ -28,6 +28,11 @@ type levelFile struct {
 	Hill     float64            `json:"hill"`
 	Traction float64            `json:"traction"`
 	Mix      map[string]float64 `json:"mix"`
+	Gaps     int                `json:"gaps,omitempty"`
+	GapWidth float64            `json:"gap_width,omitempty"`
+	MaxWidth int                `json:"max_width,omitempty"`
+	MaxParts int                `json:"max_parts,omitempty"`
+	MaxMotor int                `json:"max_motors,omitempty"`
 }
 
 // Reward is what a mission pays out on completion.
@@ -99,7 +104,8 @@ func strictJSON(data []byte, v any) error {
 
 func (f levelFile) def() (LevelDef, error) {
 	d := LevelDef{ID: f.ID, Name: f.Name, Blurb: f.Blurb, Biome: f.Biome, Length: f.Length,
-		Seed: f.Seed, Credits: f.Credits, Par: f.Par, Hill: f.Hill, Traction: f.Traction}
+		Seed: f.Seed, Credits: f.Credits, Par: f.Par, Hill: f.Hill, Traction: f.Traction,
+		Gaps: f.Gaps, GapWidth: f.GapWidth, MaxWidth: f.MaxWidth, MaxParts: f.MaxParts, MaxMotor: f.MaxMotor}
 	switch {
 	case f.ID <= 0:
 		return d, fmt.Errorf("id must be positive")
@@ -113,6 +119,18 @@ func (f levelFile) def() (LevelDef, error) {
 		return d, fmt.Errorf("level %d: par must be positive", f.ID)
 	case f.Hill < 0 || f.Hill > 8:
 		return d, fmt.Errorf("level %d: hill %.1f outside 0..8 m", f.ID, f.Hill)
+	}
+	switch {
+	case f.Gaps < 0 || f.Gaps > 6:
+		return d, fmt.Errorf("level %d: gaps %d outside 0..6", f.ID, f.Gaps)
+	case f.GapWidth < 0 || f.GapWidth > 6:
+		return d, fmt.Errorf("level %d: gap_width %.1f outside 0..6 m", f.ID, f.GapWidth)
+	case f.MaxWidth < 0 || f.MaxWidth > GridW:
+		return d, fmt.Errorf("level %d: max_width %d outside 0..%d", f.ID, f.MaxWidth, GridW)
+	case f.MaxMotor < 0 || f.MaxMotor > 12:
+		return d, fmt.Errorf("level %d: max_motors %d outside 0..12", f.ID, f.MaxMotor)
+	case f.MaxParts < 0 || (f.MaxParts > 0 && f.MaxParts < 3):
+		return d, fmt.Errorf("level %d: max_parts %d must be 0 or at least 3", f.ID, f.MaxParts)
 	}
 	if d.Traction == 0 {
 		d.Traction = 1

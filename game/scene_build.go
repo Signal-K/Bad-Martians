@@ -251,14 +251,31 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 			drawTestDrop(r, cam, lvl.Terrain, testRover, testT)
 			return
 		}
+		bay := lvl.BayWidth()
 		for cy := 0; cy < GridH; cy++ { // sockets
 			for cx := 0; cx < GridW; cx++ {
 				x, y := cellXY(cx, cy)
+				if cx >= bay { // outside the lander bay: closed off
+					r.Rect(x, y, bCell, bCell, colSpace.Alpha(215), true)
+					r.Line(engine.V(x+6, y+bCell-6), engine.V(x+bCell-6, y+6), 2, colWarn.Alpha(70))
+					continue
+				}
 				r.Rect(x+3, y+3, bCell-6, bCell-6, colSpace.Alpha(46), true)
 				r.Rect(x+3, y+3, bCell-6, bCell-6, colInk.Alpha(34), false)
 				c := centre(cx, cy)
 				r.Circle(c, 2.5, colInk.Alpha(70), true)
 			}
+		}
+		if bay < GridW { // the bay wall
+			x, _ := cellXY(bay, 0)
+			r.Rect(x-2, bGY, 4, bCell*GridH, colWarn.Alpha(200), true)
+		}
+		if rl := RuleLine(lvl.LevelDef); rl != "" && ses.Exp == nil {
+			w := textW(rl, sizeSmall+1) + 24
+			cx := bGX + bCell*GridW/2
+			r.Rect(cx-w/2, bGY+6, w, 28, colSpace.Alpha(220), true)
+			outline(r, cx-w/2, bGY+6, w, 28, colNeon.Alpha(160))
+			r.Text(rl, cx, bGY+11, sizeSmall+1, colNeon, engine.AlignCenter)
 		}
 		// hover: where a part would go, and the beams it would snap to
 		hover, hk := [2]int{-1, -1}, tool
@@ -388,11 +405,15 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 		outline(r, sx-8, sy-6, sw+16, sh+12, colInk.Alpha(120))
 		x0, x1 := lvl.Terrain.X0, lvl.Terrain.X0+lvl.Terrain.DX*float64(lvl.Terrain.Len()-1)
 		lo, hi := math.Inf(1), math.Inf(-1)
-		for _, h := range lvl.Terrain.H {
+		for i, h := range lvl.Terrain.H {
+			if lvl.InGap(lvl.Terrain.X0 + float64(i)*lvl.Terrain.DX) {
+				continue // crevasse floors would flatten the rest of the map
+			}
 			lo, hi = math.Min(lo, h), math.Max(hi, h)
 		}
 		hh := math.Max(hi-lo, 2)
 		pt := func(x, h float64) engine.Vec2 {
+			h = math.Max(h, lo-hh*0.25)
 			return engine.V(sx+(x-x0)/(x1-x0)*sw, sy+sh-3-(h-lo)/hh*(sh-12))
 		}
 		for i, seg := range lvl.Segments {

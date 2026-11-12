@@ -119,8 +119,8 @@ func TestLevelTerrainGolden(t *testing.T) {
 }
 
 var goldenTerrain = map[int]uint64{
-	1: 0xb67c4e8e94c2a439, 2: 0x7c9b5d5a920caeac, 3: 0xa15b7fe52f477289,
-	4: 0x8d6d0ebe36f97387, 5: 0x5e365f19704d38a6,
+	1: 0xb67c4e8e94c2a439, 2: 0x8543c9d91d1cd041, 3: 0x4a718764d71962b2,
+	4: 0x632f59947b7da089, 5: 0x59623bb489b88f1a, 9: 0x4a4816960508af8e,
 }
 
 // A rover whose motor wheel never touches the ground goes nowhere: after a few
@@ -167,8 +167,8 @@ func TestStuckRoverOffersRestartAndScrapCostsParts(t *testing.T) {
 	}
 }
 
-// The drive runs the sim 1.5x faster with the same physics substep, so a
-// level plays out the same in sim time but takes a third fewer frames.
+// The drive runs the sim DriveSpeed times faster with the same physics substep, so a
+// level plays out the same in sim time in far fewer frames.
 func TestDriveSpeedKeepsTheLevelButSavesFrames(t *testing.T) {
 	play := func(speed float64) (*Run, int) {
 		r := NewRun(GetLevel(1), StarterDesign())

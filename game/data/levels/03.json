@@ -1,18 +1,18 @@
 {
   "id": 3,
-  "name": "Boulder Field",
-  "blurb": "Rocks everywhere. Ride the bumps.",
-  "biome": "boulders",
-  "length": 120,
-  "seed": 33,
-  "credits": 14,
-  "par": 23,
-  "hill": 1.5,
+  "name": "Small Lander",
+  "blurb": "Only four parts fit in this lander. Make every one count.",
+  "biome": "plains",
+  "length": 100,
+  "seed": 160,
+  "credits": 18,
+  "par": 20,
+  "hill": 1.8,
   "traction": 1.0,
   "mix": {
-    "soil": 2,
-    "bedrock": 1,
-    "sand": 1,
-    "big_rock": 4
-  }
+    "soil": 3,
+    "bedrock": 3,
+    "sand": 1
+  },
+  "max_parts": 4
 }

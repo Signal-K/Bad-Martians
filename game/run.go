@@ -65,7 +65,7 @@ type Run struct {
 }
 
 // DriveSpeed is how much faster than real time the drive scene runs the sim.
-const DriveSpeed = 1.5
+const DriveSpeed = 2.25
 
 // physH is the physics substep the levels were tuned with.
 const physH = engine.FixedDT / 10
@@ -228,7 +228,7 @@ func (r *Run) Step(dt, throttle float64) {
 		r.Outcome = Won
 		return
 	}
-	if c.Y < r.Level.Terrain.HeightAt(c.X)-12 {
+	if r.inCrevasse(c) || c.Y < r.Level.Terrain.HeightAt(c.X)-12 {
 		r.Outcome = Fell
 		return
 	}
@@ -241,6 +241,17 @@ func (r *Run) Step(dt, throttle float64) {
 	if r.Time > maxSeconds {
 		r.Outcome = TimedOut
 	}
+}
+
+// inCrevasse reports whether the rover has dropped well below the rim of a
+// crevasse it is over.
+func (r *Run) inCrevasse(c engine.Vec2) bool {
+	for _, g := range r.Level.Gaps {
+		if c.X > g[0]-1 && c.X < g[1]+1 && c.Y < r.Level.Terrain.HeightAt(g[0]-terrainDX)-3 {
+			return true
+		}
+	}
+	return false
 }
 
 // Damaged reports whether any part other than a wheel touched the ground.

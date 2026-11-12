@@ -1,18 +1,18 @@
 {
   "id": 19,
   "name": "Last Light",
-  "blurb": "Thin budget, long shadows, rough ground.",
-  "biome": "crater",
-  "length": 170,
-  "seed": 194,
-  "credits": 15,
-  "par": 31,
-  "hill": 3.4,
-  "traction": 0.9,
+  "blurb": "Steep sand in a four-column bay. Push hard.",
+  "biome": "dunes",
+  "length": 120,
+  "seed": 484,
+  "credits": 24,
+  "par": 33,
+  "hill": 4.0,
+  "traction": 1.0,
   "mix": {
-    "soil": 2,
     "bedrock": 2,
     "sand": 2,
-    "big_rock": 2
-  }
+    "big_rock": 1
+  },
+  "max_width": 4
 }

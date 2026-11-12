@@ -1,18 +1,18 @@
 {
   "id": 15,
-  "name": "The Long Haul",
-  "blurb": "A long survey line across open ground. Pace yourself.",
-  "biome": "plains",
-  "length": 300,
-  "seed": 159,
-  "credits": 16,
-  "par": 53,
-  "hill": 2.0,
-  "traction": 1.0,
+  "name": "Low Sun",
+  "blurb": "Frozen hills, weak batteries: two motors only.",
+  "biome": "ice",
+  "length": 120,
+  "seed": 157,
+  "credits": 20,
+  "par": 35,
+  "hill": 3.0,
+  "traction": 0.8,
   "mix": {
-    "soil": 4,
+    "soil": 3,
     "bedrock": 3,
-    "sand": 2,
-    "big_rock": 1
-  }
+    "sand": 1
+  },
+  "max_motors": 2
 }

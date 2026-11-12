@@ -21,13 +21,13 @@ func TestSalvagePicksPriciestPartButNotTheMast(t *testing.T) {
 }
 
 // The scrape counter decides salvage: the starter rover glides through level
-// 1 untouched but drags its frame on the sand trap.
+// 1 untouched but drags its frame across Black Ice.
 func TestUndamagedRunsAreDetected(t *testing.T) {
 	if r := drive(GetLevel(1), StarterDesign(), 120); r.Outcome != Won || r.Damaged() {
 		t.Fatalf("level 1 starter: outcome %v scrapes %d", r.Outcome, r.Scrapes)
 	}
-	if r := drive(GetLevel(2), StarterDesign(), 120); !r.Damaged() {
-		t.Fatalf("level 2 starter should scrape, scrapes %d", r.Scrapes)
+	if r := drive(GetLevel(12), StarterDesign(), 120); !r.Damaged() {
+		t.Fatalf("level 12 starter should scrape, scrapes %d", r.Scrapes)
 	}
 }
 

@@ -1,13 +1,18 @@
 {
   "id": 6,
-  "name": "Featherweight",
-  "blurb": "The lander can only spare a few parts. Travel light.",
-  "biome": "plains",
-  "length": 90,
-  "seed": 66,
-  "credits": 11,
-  "par": 16,
-  "hill": 1.0,
+  "name": "Narrow Bay",
+  "blurb": "The lander bay is three columns wide. Build compact.",
+  "biome": "ridge",
+  "length": 110,
+  "seed": 193,
+  "credits": 18,
+  "par": 25,
+  "hill": 3.0,
   "traction": 1.0,
-  "mix": { "soil": 4, "bedrock": 3, "sand": 1, "big_rock": 0 }
+  "mix": {
+    "soil": 2,
+    "bedrock": 3,
+    "sand": 1
+  },
+  "max_width": 3
 }

@@ -1,17 +1,18 @@
 {
   "id": 7,
-  "name": "Dust Flats",
-  "blurb": "Fine dust over hardpan. Wheels spin before they bite.",
+  "name": "Low Power",
+  "blurb": "The batteries can drive one motor wheel. Let the others roll.",
   "biome": "plains",
-  "length": 130,
-  "seed": 71,
-  "credits": 14,
-  "par": 29,
-  "hill": 1.4,
-  "traction": 0.8,
+  "length": 100,
+  "seed": 237,
+  "credits": 18,
+  "par": 23,
+  "hill": 1.5,
+  "traction": 1.0,
   "mix": {
     "soil": 3,
-    "bedrock": 2,
-    "sand": 3
-  }
+    "bedrock": 3,
+    "sand": 1
+  },
+  "max_motors": 1
 }

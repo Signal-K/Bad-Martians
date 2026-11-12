@@ -1,17 +1,19 @@
 {
   "id": 9,
-  "name": "Pebble Run",
-  "blurb": "Fist-sized rocks the whole way. Keep it low and short.",
-  "biome": "boulders",
-  "length": 140,
-  "seed": 93,
-  "credits": 15,
-  "par": 30,
-  "hill": 1.8,
+  "name": "Twin Crevasses",
+  "blurb": "Two cracks to bridge. Spread the motors along a long rover.",
+  "biome": "crater",
+  "length": 120,
+  "seed": 312,
+  "credits": 26,
+  "par": 23,
+  "hill": 1.0,
   "traction": 1.0,
   "mix": {
     "soil": 2,
-    "bedrock": 2,
-    "big_rock": 3
-  }
+    "bedrock": 3,
+    "sand": 1
+  },
+  "gaps": 2,
+  "gap_width": 3.5
 }

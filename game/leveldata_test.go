@@ -17,9 +17,8 @@ func TestShippedDataLoads(t *testing.T) {
 			t.Errorf("level %d: %+v", i+1, d)
 		}
 	}
-	// The campaign gets harder: difficulty never drops from one level to the next
-	// by more than a small margin, and the last is harder than the first.
-	if LevelDefs[4].Difficulty() <= LevelDefs[0].Difficulty() {
+	// The last level is harder than the first.
+	if LevelDefs[len(LevelDefs)-1].Difficulty() <= LevelDefs[0].Difficulty() {
 		t.Error("final level should be harder than the first")
 	}
 	m, ok := MissionFor("2026-11-08")
@@ -53,6 +52,10 @@ func TestParseLevelRejectsBadFiles(t *testing.T) {
 		"no name":       {`"name":"A"`, `"name":""`, "name"},
 		"no par":        {`"par":14`, `"par":0`, "par"},
 		"zero id":       {`"id":1`, `"id":0`, "id"},
+		"many gaps":     {`"traction":1`, `"traction":1,"gaps":9`, "gaps"},
+		"wide bay":      {`"traction":1`, `"traction":1,"max_width":13`, "max_width"},
+		"two parts":     {`"traction":1`, `"traction":1,"max_parts":2`, "max_parts"},
+		"neg motors":    {`"traction":1`, `"traction":1,"max_motors":-1`, "max_motors"},
 	}
 	if _, err := ParseLevel([]byte(goodLevel)); err != nil {
 		t.Fatalf("good level rejected: %v", err)

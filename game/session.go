@@ -3,6 +3,7 @@ package game
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/signal-k/haphazard-martians/engine"
 )
@@ -93,7 +94,14 @@ func (s *Session) Have(k Kind) int {
 // CanAdd is how many more of part k this rover can take: the tray's number.
 func (s *Session) CanAdd(k Kind) int {
 	if s.Exp == nil {
-		return CanAdd(s.Design, k, s.Budget())
+		n := CanAdd(s.Design, k, s.Budget())
+		if m := s.Level.MaxParts; m > 0 {
+			n = min(n, max(0, m-len(s.Design.Cells)))
+		}
+		if m := s.Level.MaxMotor; m > 0 && k == KMotor {
+			n = min(n, max(0, m-KitOf(s.Design)[KMotor]))
+		}
+		return n
 	}
 	n := max(0, s.Have(k)-KitOf(s.Design)[k])
 	if k == KMast {
@@ -120,6 +128,7 @@ func (s *Session) Fits() bool {
 // Problems is what stops this rover launching, for the player.
 func (s *Session) Problems() []string {
 	errs := s.Design.Validate(s.Budget())
+	errs = append(errs, RuleProblems(s.Level.LevelDef, s.Design)...)
 	if s.Exp != nil {
 		used := KitOf(s.Design)
 		for _, k := range []Kind{KFrame, KWheel, KMotor, KMast} {
@@ -241,4 +250,66 @@ func (p *Progress) Record(id, stars int, t float64, score int) {
 		cur.Score = score
 	}
 	p.Levels[id] = cur
+}
+
+// Span is how many grid columns a design covers.
+func (d *Design) Span() int {
+	if len(d.Cells) == 0 {
+		return 0
+	}
+	lo, hi := GridW, -1
+	for _, c := range d.Cells {
+		lo, hi = min(lo, c.X), max(hi, c.X)
+	}
+	return hi - lo + 1
+}
+
+// RuleProblems is what breaks a level's lander rules: the bay width and the
+// parts it can carry and the motors its power can drive.
+func RuleProblems(def LevelDef, d Design) []string {
+	var errs []string
+	if w := def.BayWidth(); w < GridW {
+		for _, c := range d.Cells {
+			if c.X >= w {
+				errs = append(errs, fmt.Sprintf("The lander bay is only %d columns wide", w))
+				break
+			}
+		}
+	}
+	if def.MaxParts > 0 && len(d.Cells) > def.MaxParts {
+		errs = append(errs, fmt.Sprintf("The lander carries %d parts; this rover has %d", def.MaxParts, len(d.Cells)))
+	}
+	if n := KitOf(d)[KMotor]; def.MaxMotor > 0 && n > def.MaxMotor {
+		errs = append(errs, fmt.Sprintf("Power for %d %s; this rover has %d", def.MaxMotor, partNoun(KMotor, def.MaxMotor), n))
+	}
+	return errs
+}
+
+// RuleLine is the level's lander rules for the build screen, or "".
+func RuleLine(def LevelDef) string {
+	var p []string
+	if def.MaxParts > 0 {
+		p = append(p, fmt.Sprintf("%d parts at most", def.MaxParts))
+	}
+	if def.MaxMotor > 0 {
+		p = append(p, fmt.Sprintf("power for %d %s", def.MaxMotor, partNoun(KMotor, def.MaxMotor)))
+	}
+	if w := def.BayWidth(); w < GridW {
+		p = append(p, fmt.Sprintf("bay %d columns wide", w))
+	}
+	if def.Gaps > 0 {
+		w := def.GapWidth
+		if w <= 0 {
+			w = 2.5
+		}
+		n := "crevasse"
+		if def.Gaps > 1 {
+			n = "crevasses"
+		}
+		p = append(p, fmt.Sprintf("%d %s %.1f m wide", def.Gaps, n, w))
+	}
+	if len(p) == 0 {
+		return ""
+	}
+	return "Lander: " + strings.Join(p, " · ")
 }

@@ -167,6 +167,14 @@ A level declares `biome`, `length`, `seed`, `credits` (parts budget), `par`,
 AI4Mars classes. `Obstacle()` and `Difficulty()` give the visible obstacle load
 and a weighted difficulty from those fields. Campaign ids run 1..n without gaps.
 
+Optional lander rules make a level ask for a particular kind of rover:
+`gaps` and `gap_width` cut crevasses across the course (a short rover drops in
+and is lost), `max_width` closes the bay beyond that many columns, `max_parts`
+caps the part count and `max_motors` the motor wheels. The build screen shows
+them and the tray stops at the caps. `TestNoSingleDesignClearsEveryLevel`
+drives a library of rovers over every level and fails if any one of them wins
+more than half the campaign.
+
 A mission wraps a level (id 100 or more) with a `date`, `title`, `story` and a
 `reward` (`credits`, `free_retry`). `MissionFor("YYYY-MM-DD")` returns the day's
 mission. A test requires the reference rover to beat every shipped mission, so a

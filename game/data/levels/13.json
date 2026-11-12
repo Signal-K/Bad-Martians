@@ -1,17 +1,18 @@
 {
   "id": 13,
-  "name": "Black Ice",
-  "blurb": "Clear ice under a skin of dust. Grip is precious.",
+  "name": "Ice Shelf",
+  "blurb": "Slippery crevasses. Bridge them on a long frame.",
   "biome": "ice",
-  "length": 140,
-  "seed": 146,
-  "credits": 16,
-  "par": 32,
-  "hill": 2.0,
-  "traction": 0.5,
+  "length": 120,
+  "seed": 82,
+  "credits": 26,
+  "par": 24,
+  "hill": 1.0,
+  "traction": 0.7,
   "mix": {
-    "soil": 2,
-    "bedrock": 3,
-    "sand": 1
-  }
+    "soil": 3,
+    "bedrock": 3
+  },
+  "gaps": 2,
+  "gap_width": 3.5
 }

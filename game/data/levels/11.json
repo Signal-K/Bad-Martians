@@ -1,17 +1,16 @@
 {
   "id": 11,
-  "name": "Shoestring",
-  "blurb": "Half the parts went to the drill team. Build small.",
-  "biome": "plains",
+  "name": "Frosted Dunes",
+  "blurb": "Drifts glazed with frost. Weight and motors both help.",
+  "biome": "ice",
   "length": 110,
-  "seed": 115,
-  "credits": 11,
-  "par": 27,
-  "hill": 1.6,
-  "traction": 1.0,
+  "seed": 452,
+  "credits": 24,
+  "par": 32,
+  "hill": 1.5,
+  "traction": 0.7,
   "mix": {
-    "soil": 4,
-    "bedrock": 3,
-    "sand": 1
+    "sand": 4,
+    "soil": 1
   }
 }

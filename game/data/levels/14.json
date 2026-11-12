@@ -1,18 +1,18 @@
 {
   "id": 14,
-  "name": "Rockfall",
-  "blurb": "A slope littered with fallen blocks. More motors, more wheels down.",
-  "biome": "boulders",
-  "length": 160,
-  "seed": 161,
-  "credits": 18,
-  "par": 42,
-  "hill": 2.2,
+  "name": "Long Haul",
+  "blurb": "A long sandy drive on two motors.",
+  "biome": "dunes",
+  "length": 140,
+  "seed": 487,
+  "credits": 20,
+  "par": 32,
+  "hill": 2.0,
   "traction": 1.0,
   "mix": {
-    "soil": 1,
-    "bedrock": 1,
-    "sand": 1,
-    "big_rock": 6
-  }
+    "sand": 3,
+    "soil": 2,
+    "bedrock": 1
+  },
+  "max_motors": 2
 }
