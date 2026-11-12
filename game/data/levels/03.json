@@ -11,8 +11,7 @@
   "traction": 1.0,
   "mix": {
     "soil": 3,
-    "bedrock": 3,
-    "sand": 1
+    "bedrock": 3
   },
   "max_parts": 4
 }

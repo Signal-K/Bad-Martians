@@ -119,7 +119,7 @@ func TestLevelTerrainGolden(t *testing.T) {
 }
 
 var goldenTerrain = map[int]uint64{
-	1: 0xb67c4e8e94c2a439, 2: 0x8543c9d91d1cd041, 3: 0x4a718764d71962b2,
+	1: 0xb67c4e8e94c2a439, 2: 0x8543c9d91d1cd041, 3: 0xc8bc62061a4bd331,
 	4: 0x632f59947b7da089, 5: 0x59623bb489b88f1a, 9: 0x4a4816960508af8e,
 }
 
