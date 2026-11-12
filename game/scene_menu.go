@@ -12,8 +12,9 @@ func menuScene(g *engine.Game, _ any) *engine.Scene {
 	prog := LoadProgress(g.Host)
 	addBackdrop(s)
 	AddDraw(s, 2, func(_ engine.Camera, r engine.Renderer) {
-		r.Text("HAPHAZARD MARTIANS", ScreenW/2, 26, 52, colInk, engine.AlignCenter)
-		r.Text("Build a rover. Cross Mars. Help us read its terrain.", ScreenW/2, 86, sizeBody, colMuted, engine.AlignCenter)
+		// left-aligned so the Shape school button fits beside the title
+		r.Text("HAPHAZARD MARTIANS", 56, 26, 52, colInk, engine.AlignLeft)
+		r.Text("Build a rover. Cross Mars. Help us read its terrain.", 58, 86, sizeBody, colMuted, engine.AlignLeft)
 		drawPanel(r, 56, 150, 848, 290, "Missions")
 		total := 0
 		for _, lp := range prog.Levels {
@@ -105,6 +106,13 @@ func menuScene(g *engine.Game, _ any) *engine.Scene {
 	})
 	ex.Icon = IconRover
 	ex.Primary = true
+	// Shape school: short lessons on how a rover should be arranged
+	sl := "Shape school"
+	if n := SchoolDone(g.Host); n > 0 && n < len(Lessons) {
+		sl = fmt.Sprintf("Shape school %d/%d", n, len(Lessons))
+	}
+	sc := AddButton(s, 904-196, 34, 196, 56, sl, func() { g.Load(SceneBuild, LessonSession(NextLesson(g.Host))) })
+	sc.Icon = IconRover
 	st := AddButton(s, ScreenW-84, 470, 60, 60, "Style sheet", func() { g.Load(SceneStyle, nil) })
 	st.Icon, st.HideLabel = IconGear, true
 	return s

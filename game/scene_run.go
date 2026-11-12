@@ -89,6 +89,9 @@ func runScene(g *engine.Game, arg any) *engine.Scene {
 	cam.Icon, cam.HideLabel = IconCamera, true
 	s.OnPhoto = func(r engine.Renderer) {
 		line := fmt.Sprintf("Mission %d · %s · %.0f m", lvl.ID, lvl.Name, run.Progress()*(lvl.GoalX-lvl.StartX))
+		if ses.Lesson > 0 {
+			line = fmt.Sprintf("Shape school · %s · %.0f m", lvl.Name, run.Progress()*(lvl.GoalX-lvl.StartX))
+		}
 		if ses.Name != "" {
 			line = ses.Name + " · " + line
 		}

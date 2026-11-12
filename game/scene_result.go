@@ -42,6 +42,9 @@ func sampleResult(g *engine.Game) *ResultArg {
 func resultScene(g *engine.Game, arg any) *engine.Scene {
 	ra := arg.(*ResultArg)
 	ses := ra.Session
+	if ses.Lesson > 0 {
+		return lessonResult(g, ra)
+	}
 	lvl := ses.Level
 	s := newScene()
 

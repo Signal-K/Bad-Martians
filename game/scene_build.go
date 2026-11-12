@@ -141,6 +141,7 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 	blk, dragBlock := -1, -1   // selected / dragged shapes block, -1 for none
 	idea, ideaUntil := -1, 0.0 // block whose idea the status line shows, and until when
 	tut := ses.Tut
+	lesson := LessonOf(ses)
 	var skip *engine.Rect // the tutorial's skip button, to keep taps off the grid
 
 	// test drop: live physics on the real start terrain
@@ -337,7 +338,11 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 	AddDraw(s, 9, func(_ engine.Camera, r engine.Renderer) {
 		r.Rect(0, 0, ScreenW, 64, colTile.Alpha(215), true)
 		r.Rect(0, 63, ScreenW, 2, colInk.Alpha(60), true)
-		r.Text(fmt.Sprintf("Rover bay · Mission %d", lvl.ID), 92, 8, 22, colInk, engine.AlignLeft)
+		title := fmt.Sprintf("Rover bay · Mission %d", lvl.ID)
+		if lesson != nil {
+			title = fmt.Sprintf("Shape school %d/%d · %s", ses.Lesson, len(Lessons), lesson.Title)
+		}
+		r.Text(title, 92, 8, 22, colInk, engine.AlignLeft)
 		switch {
 		case testing:
 			msg, col := testVerdict(testRover, lvl.Terrain, testT)
@@ -354,6 +359,8 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 			r.Text("Drag a shape or a part onto the grid.", 92, 38, sizeSmall, colChipLt, engine.AlignLeft)
 		case len(errs) > 0:
 			r.Text(errs[0], 92, 38, sizeSmall, colWarn, engine.AlignLeft)
+		case lesson != nil: // the lesson's one instruction stays up while fixing
+			r.Text(lesson.Teach, 92, 38, sizeSmall+1, colNeon, engine.AlignLeft)
 		default:
 			r.Text("Ready. Test to see how it sits, or GO to drive.", 92, 38, sizeSmall, colGood, engine.AlignLeft)
 		}
@@ -562,7 +569,13 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 		}
 		r.Text(label, b.X+b.W/2, b.Y+12, sizeSmall+1, ink, engine.AlignCenter)
 	}
-	launch := AddButton(s, ScreenW-20-170, bTrayY+22, 170, 72, "GO", func() { g.Load(SceneLaunch, ses) })
+	launch := AddButton(s, ScreenW-20-170, bTrayY+22, 170, 72, "GO", func() {
+		if ses.Lesson > 0 { // lessons drive straight away: the rover is a trainee
+			g.Load(SceneRun, ses)
+			return
+		}
+		g.Load(SceneLaunch, ses)
+	})
 	launch.Primary, launch.Icon = true, IconRight
 
 	// tutorial: the status line says what to do next; here it only points at it

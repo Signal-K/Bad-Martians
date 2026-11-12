@@ -18,6 +18,7 @@ type Session struct {
 	Tut     *Tutorial     // first-time guided build and drive; nil when off
 	Name    string        // the rover's name, given at launch
 	Spare   Kind          // part salvaged on the mission before: its credits add to the budget
+	Lesson  int           // 1-based Shape school lesson; 0 outside the school
 }
 
 func NewSession(l *Level) *Session {
