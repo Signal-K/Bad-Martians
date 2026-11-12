@@ -49,16 +49,20 @@ func referenceDesign() Design {
 	}}
 }
 
+// Every campaign level is won by at least one reference rover the player can
+// afford on the base budget. Which rover differs by level: some want a short
+// low rover, some three or four motors (see TestNoSingleDesignClearsEveryLevel).
 func TestEveryLevelBeatable(t *testing.T) {
-	d := referenceDesign()
 	for _, def := range LevelDefs {
-		l := BuildLevel(def)
-		if d.Cost() > l.Credits+8 { // base budget plus a typical labelling bonus
-			t.Fatalf("level %d reference design unaffordable", def.ID)
+		won := ""
+		for name, d := range referenceDesigns() {
+			if clears(def, d) {
+				won = name
+				break
+			}
 		}
-		r := drive(l, d, 120)
-		if r.Outcome != Won {
-			t.Errorf("level %d (%s): %s x=%.1f", def.ID, def.Name, r.Outcome.Message(), r.Rover.Center().X)
+		if won == "" {
+			t.Errorf("level %d (%s): no affordable reference rover wins it", def.ID, def.Name)
 		}
 	}
 }

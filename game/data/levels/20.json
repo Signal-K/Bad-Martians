@@ -1,0 +1,18 @@
+{
+  "id": 20,
+  "name": "The Summit",
+  "blurb": "The full climb. Everything you have learned.",
+  "biome": "ridge",
+  "length": 300,
+  "seed": 221,
+  "credits": 22,
+  "par": 70,
+  "hill": 4.8,
+  "traction": 0.9,
+  "mix": {
+    "soil": 2,
+    "bedrock": 3,
+    "sand": 2,
+    "big_rock": 2
+  }
+}

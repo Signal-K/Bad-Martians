@@ -1,0 +1,18 @@
+{
+  "id": 10,
+  "name": "Gale Crater",
+  "blurb": "Down the wall, across the floor, up the far side.",
+  "biome": "crater",
+  "length": 200,
+  "seed": 113,
+  "credits": 16,
+  "par": 38,
+  "hill": 3.3,
+  "traction": 1.0,
+  "mix": {
+    "soil": 2,
+    "bedrock": 3,
+    "sand": 2,
+    "big_rock": 1
+  }
+}

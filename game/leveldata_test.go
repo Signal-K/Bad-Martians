@@ -9,11 +9,11 @@ import (
 const goodLevel = `{"id":1,"name":"A","blurb":"b","biome":"plains","length":80,"seed":1,"credits":12,"par":14,"hill":1,"traction":1,"mix":{"soil":1}}`
 
 func TestShippedDataLoads(t *testing.T) {
-	if len(LevelDefs) != 6 {
-		t.Fatalf("want 6 campaign levels, got %d", len(LevelDefs))
+	if len(LevelDefs) != 20 {
+		t.Fatalf("want 20 campaign levels, got %d", len(LevelDefs))
 	}
 	for i, d := range LevelDefs {
-		if d.ID != i+1 || d.Biome == "" || d.Traction != 1 {
+		if d.ID != i+1 || d.Biome == "" || d.Traction <= 0 {
 			t.Errorf("level %d: %+v", i+1, d)
 		}
 	}

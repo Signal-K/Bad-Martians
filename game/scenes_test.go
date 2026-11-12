@@ -277,3 +277,41 @@ func TestCurrentMissionByDate(t *testing.T) {
 		t.Fatalf("later date should show the latest mission, got %v %v", m.Date, ok)
 	}
 }
+
+// Twenty missions page by chapter: five full-size tiles at a time, arrows to
+// turn the page, and the menu opens on the chapter of the furthest unlock.
+func TestMenuPagesByChapter(t *testing.T) {
+	defer func() { menuChapter = -1 }()
+	menuChapter = -1
+	h := newHarness(t)
+	h.g.Load(SceneMenu, nil)
+	h.frames(2, engine.Input{})
+	h.menuTile(1)
+	if !h.button("Previous chapter").Disabled {
+		t.Fatal("first chapter has no previous page")
+	}
+	h.clickButton("Next chapter")
+	h.menuTile(6)
+	if !h.menuTile(6).Disabled {
+		t.Fatal("mission 6 should be locked for a new player")
+	}
+	for range chapterCount() {
+		h.clickButton("Next chapter")
+	}
+	h.menuTile(20)
+	if !h.button("Next chapter").Disabled {
+		t.Fatal("last chapter has no next page")
+	}
+	// A player who has finished mission 12 opens on chapter 3.
+	p := LoadProgress(h.h)
+	for id := 1; id <= 12; id++ {
+		p.Record(id, 1, 30, 100)
+	}
+	p.Save(h.h)
+	menuChapter = -1
+	h.g.Load(SceneMenu, nil)
+	h.frames(2, engine.Input{})
+	if h.menuTile(13).Disabled || !h.menuTile(14).Disabled {
+		t.Fatal("chapter 3 should show 13 unlocked and 14 locked")
+	}
+}

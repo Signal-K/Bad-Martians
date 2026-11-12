@@ -1,0 +1,17 @@
+{
+  "id": 13,
+  "name": "Black Ice",
+  "blurb": "Clear ice under a skin of dust. Grip is precious.",
+  "biome": "ice",
+  "length": 140,
+  "seed": 146,
+  "credits": 16,
+  "par": 32,
+  "hill": 2.0,
+  "traction": 0.5,
+  "mix": {
+    "soil": 2,
+    "bedrock": 3,
+    "sand": 1
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "id": 14,
+  "name": "Rockfall",
+  "blurb": "A slope littered with fallen blocks. More motors, more wheels down.",
+  "biome": "boulders",
+  "length": 160,
+  "seed": 161,
+  "credits": 18,
+  "par": 42,
+  "hill": 2.2,
+  "traction": 1.0,
+  "mix": {
+    "soil": 1,
+    "bedrock": 1,
+    "sand": 1,
+    "big_rock": 6
+  }
+}

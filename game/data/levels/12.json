@@ -1,0 +1,18 @@
+{
+  "id": 12,
+  "name": "Drift Sea",
+  "blurb": "Dune after dune. Keep your speed up the soft faces.",
+  "biome": "dunes",
+  "length": 220,
+  "seed": 126,
+  "credits": 17,
+  "par": 46,
+  "hill": 2.2,
+  "traction": 0.9,
+  "mix": {
+    "soil": 1,
+    "bedrock": 1,
+    "sand": 6,
+    "big_rock": 1
+  }
+}

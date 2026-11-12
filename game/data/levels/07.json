@@ -1,0 +1,17 @@
+{
+  "id": 7,
+  "name": "Dust Flats",
+  "blurb": "Fine dust over hardpan. Wheels spin before they bite.",
+  "biome": "plains",
+  "length": 130,
+  "seed": 71,
+  "credits": 14,
+  "par": 29,
+  "hill": 1.4,
+  "traction": 0.8,
+  "mix": {
+    "soil": 3,
+    "bedrock": 2,
+    "sand": 3
+  }
+}

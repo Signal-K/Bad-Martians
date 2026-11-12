@@ -1,0 +1,18 @@
+{
+  "id": 16,
+  "name": "Knife Ridge",
+  "blurb": "Steep up, steep down, on a narrow crest.",
+  "biome": "ridge",
+  "length": 180,
+  "seed": 161,
+  "credits": 19,
+  "par": 35,
+  "hill": 5.0,
+  "traction": 1.0,
+  "mix": {
+    "soil": 2,
+    "bedrock": 4,
+    "sand": 1,
+    "big_rock": 1
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "id": 17,
+  "name": "Polar Cap",
+  "blurb": "Layered ice near the pole. Slippery and rolling.",
+  "biome": "ice",
+  "length": 200,
+  "seed": 173,
+  "credits": 18,
+  "par": 51,
+  "hill": 4.2,
+  "traction": 0.45,
+  "mix": {
+    "soil": 2,
+    "bedrock": 3,
+    "sand": 1
+  }
+}

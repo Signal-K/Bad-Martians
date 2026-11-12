@@ -1,0 +1,17 @@
+{
+  "id": 8,
+  "name": "Frost Hollow",
+  "blurb": "Morning frost in a shallow basin. Ease off the throttle.",
+  "biome": "ice",
+  "length": 100,
+  "seed": 82,
+  "credits": 14,
+  "par": 20,
+  "hill": 1.2,
+  "traction": 0.6,
+  "mix": {
+    "soil": 3,
+    "bedrock": 3,
+    "sand": 1
+  }
+}

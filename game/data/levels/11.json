@@ -1,0 +1,17 @@
+{
+  "id": 11,
+  "name": "Shoestring",
+  "blurb": "Half the parts went to the drill team. Build small.",
+  "biome": "plains",
+  "length": 110,
+  "seed": 115,
+  "credits": 11,
+  "par": 27,
+  "hill": 1.6,
+  "traction": 1.0,
+  "mix": {
+    "soil": 4,
+    "bedrock": 3,
+    "sand": 1
+  }
+}

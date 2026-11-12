@@ -1,0 +1,18 @@
+{
+  "id": 15,
+  "name": "The Long Haul",
+  "blurb": "A long survey line across open ground. Pace yourself.",
+  "biome": "plains",
+  "length": 300,
+  "seed": 159,
+  "credits": 16,
+  "par": 53,
+  "hill": 2.0,
+  "traction": 1.0,
+  "mix": {
+    "soil": 4,
+    "bedrock": 3,
+    "sand": 2,
+    "big_rock": 1
+  }
+}

@@ -7,15 +7,50 @@ import (
 	"github.com/signal-k/haphazard-martians/engine"
 )
 
+// Chapters group the campaign five missions to a page, so the menu keeps
+// full-size tiles however many missions ship.
+const chapterSize = 5
+
+var chapterNames = []string{"Landing site", "Open plains", "Cold ground", "Mount Sharp"}
+
+func chapterCount() int { return (len(LevelDefs) + chapterSize - 1) / chapterSize }
+
+func chapterName(i int) string {
+	if i < len(chapterNames) {
+		return chapterNames[i]
+	}
+	return fmt.Sprintf("Chapter %d", i+1)
+}
+
+// menuChapter is the page the player last looked at; -1 opens the page with
+// the furthest unlocked mission.
+var menuChapter = -1
+
+func currentChapter(prog *Progress) int {
+	if menuChapter >= 0 && menuChapter < chapterCount() {
+		return menuChapter
+	}
+	last := 0
+	for i, def := range LevelDefs {
+		if prog.Unlocked(def.ID) {
+			last = i
+		}
+	}
+	return last / chapterSize
+}
+
 func menuScene(g *engine.Game, _ any) *engine.Scene {
 	s := newScene()
 	prog := LoadProgress(g.Host)
+	ch := currentChapter(prog)
+	first := ch * chapterSize
+	page := LevelDefs[first:min(first+chapterSize, len(LevelDefs))]
 	addBackdrop(s)
 	AddDraw(s, 2, func(_ engine.Camera, r engine.Renderer) {
 		// left-aligned so the Shape school button fits beside the title
 		r.Text("HAPHAZARD MARTIANS", 56, 26, 52, colInk, engine.AlignLeft)
 		r.Text("Build a rover. Cross Mars. Help us read its terrain.", 58, 86, sizeBody, colMuted, engine.AlignLeft)
-		drawPanel(r, 56, 150, 848, 290, "Missions")
+		drawPanel(r, 56, 150, 848, 290, fmt.Sprintf("Chapter %d of %d · %s", ch+1, chapterCount(), chapterName(ch)))
 		total := 0
 		for _, lp := range prog.Levels {
 			total += lp.Score
@@ -23,12 +58,19 @@ func menuScene(g *engine.Game, _ any) *engine.Scene {
 		r.Text(fmt.Sprintf("%d total score · expedition best %d", total, prog.BestExpedition), 60, 446, sizeSmall, colMuted, engine.AlignLeft)
 		r.Text("Finish a mission to unlock the next.", 904, 446, sizeSmall, colMuted, engine.AlignRight)
 	})
-	// Tiles share the panel's width, so the row fits however many missions ship.
+	// One chapter of tiles at a time; the arrows either side turn the page.
 	const th, gap, pad = 232.0, 10.0, 16.0
-	n := float64(len(LevelDefs))
+	n := float64(chapterSize)
 	tw := math.Floor((848 - 2*pad - gap*(n-1)) / n)
 	x0 := 56 + (848-(tw*n+gap*(n-1)))/2
-	for i, def := range LevelDefs {
+	turn := func(to int) func() {
+		return func() { menuChapter = to; g.Load(SceneMenu, nil) }
+	}
+	prev := AddButton(s, 4, 184, 48, th, "Previous chapter", turn(ch-1))
+	prev.Icon, prev.HideLabel, prev.Disabled = IconLeft, true, ch == 0
+	next := AddButton(s, ScreenW-52, 184, 48, th, "Next chapter", turn(ch+1))
+	next.Icon, next.HideLabel, next.Disabled = IconRight, true, ch == chapterCount()-1
+	for i, def := range page {
 		def := def
 		x, y := x0+float64(i)*(tw+gap), 184.0
 		b := AddButton(s, x, y, tw, th, fmt.Sprintf("Mission %d", def.ID), func() {

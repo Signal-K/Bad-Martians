@@ -1,0 +1,18 @@
+{
+  "id": 19,
+  "name": "Last Light",
+  "blurb": "Thin budget, long shadows, rough ground.",
+  "biome": "crater",
+  "length": 170,
+  "seed": 194,
+  "credits": 15,
+  "par": 31,
+  "hill": 3.4,
+  "traction": 0.9,
+  "mix": {
+    "soil": 2,
+    "bedrock": 2,
+    "sand": 2,
+    "big_rock": 2
+  }
+}

@@ -74,7 +74,7 @@ func (b *Button) Draw(_ *engine.GameObject, _ engine.Camera, r engine.Renderer) 
 	if b.Icon != IconNone {
 		is := b.H * 0.52
 		if b.HideLabel || b.Label == "" {
-			drawIcon(r, b.Icon, cx, cy, is*1.1, ink)
+			drawIcon(r, b.Icon, cx, cy, min(b.H, b.W)*0.52*1.1, ink) // a tall arrow keeps its icon inside
 			return
 		}
 		drawIcon(r, b.Icon, b.X+b.H*0.5, cy, is, ink)
