@@ -70,12 +70,22 @@ func runScene(g *engine.Game, arg any) *engine.Scene {
 			if run.Outcome != Won {
 				col, head = colWarn, "Mission failed"
 			}
-			drawPanel(r, ScreenW/2-230, 190, 460, 110, "")
+			msg := run.Outcome.Message()
+			if run.Outcome != Won {
+				msg = run.Diagnose().What
+			}
+			lines := wrapText(msg, sizeBody, 560)
+			drawPanel(r, ScreenW/2-300, 190, 600, 84+24*float64(len(lines)), "")
 			r.Text(head, ScreenW/2, 206, 32, col, engine.AlignCenter)
-			r.Text(run.Outcome.Message(), ScreenW/2, 252, sizeBody, colInk, engine.AlignCenter)
+			for i, ln := range lines {
+				r.Text(ln, ScreenW/2, 252+24*float64(i), sizeBody, colInk, engine.AlignCenter)
+			}
 		}
 	})
-	ab := AddButton(s, 24, 10, 90, 44, "Abort", func() { g.Load(SceneBuild, ses) })
+	ab := AddButton(s, 24, 10, 90, 44, "Abort", func() {
+		ses.NoteFailure(run)
+		g.Load(SceneBuild, ses)
+	})
 	ab.Icon = IconBack
 	ab.Label, ab.HideLabel = "Abort", true
 	// Photo: snap the world without the HUD, with a caption, to share.
@@ -120,18 +130,27 @@ func runScene(g *engine.Game, arg any) *engine.Scene {
 		boom = 0
 	})
 	restart.Icon, restart.Primary, restart.Hidden = IconRetry, true, true
+	// Stuck: say why, mark the parts to blame, and what to change next time.
 	AddDraw(s, 15, func(cam engine.Camera, r engine.Renderer) {
-		if !restart.Hidden {
-			msg := "Stuck? Restart scraps this rover."
-			if ses.Exp != nil {
-				msg = fmt.Sprintf("Stuck? Restart scraps this rover: %d parts lost.", ses.Design.Cost())
-			}
-			w := textW(msg, sizeSmall) + 28
-			r.Rect(ScreenW/2-w/2, ScreenH-142, w, 30, colPanel.Alpha(230), true)
-			r.Text(msg, ScreenW/2, ScreenH-137, sizeSmall, colInk, engine.AlignCenter)
-			p := 0.5 + 0.5*sinf(run.Time*6)
-			outline(r, restart.X-3-3*p, restart.Y-3-3*p, restart.W+6+6*p, restart.H+6+6*p, colWarn.Alpha(uint8(140+110*p)))
+		if restart.Hidden {
+			return
 		}
+		c := run.Diagnose()
+		p := 0.5 + 0.5*sinf(run.Time*6)
+		for _, i := range c.Culprits {
+			b := run.Rover.Bodies[i]
+			r.Circle(cam.ToScreen(b.Pos), (b.Radius+0.25)*cam.Zoom+3*p, colWarn.Alpha(uint8(150+100*p)), false)
+			r.Circle(cam.ToScreen(b.Pos), (b.Radius+0.25)*cam.Zoom+1+3*p, colWarn.Alpha(uint8(150+100*p)), false)
+		}
+		drawCause(r, c, ScreenW-24-500, 104, 500)
+		msg := "Restart scraps this rover."
+		if ses.Exp != nil {
+			msg = fmt.Sprintf("Restart scraps this rover: %d parts lost.", ses.Design.Cost())
+		}
+		w := textW(msg, sizeSmall) + 28
+		r.Rect(ScreenW/2-w/2, ScreenH-142, w, 30, colPanel.Alpha(230), true)
+		r.Text(msg, ScreenW/2, ScreenH-137, sizeSmall, colInk, engine.AlignCenter)
+		outline(r, restart.X-3-3*p, restart.Y-3-3*p, restart.W+6+6*p, restart.H+6+6*p, colWarn.Alpha(uint8(140+110*p)))
 	})
 	AddDraw(s, 6, func(cam engine.Camera, r engine.Renderer) { // the blast, in the world
 		if boom < 0 || boom > 1.2 {
@@ -211,7 +230,12 @@ func runScene(g *engine.Game, arg any) *engine.Scene {
 		if run.Outcome != Running {
 			endTimer += dt
 			if endTimer > 1.6+map[bool]float64{true: 0.8}[run.Outcome == Scrapped] {
-				g.Load(SceneResult, &ResultArg{Session: ses, Outcome: run.Outcome, Stars: run.Stars(),
+				ses.NoteFailure(run)
+				cause := Cause{}
+				if run.Outcome != Won {
+					cause = run.Diagnose()
+				}
+				g.Load(SceneResult, &ResultArg{Session: ses, Outcome: run.Outcome, Stars: run.Stars(), Cause: cause,
 					Time: run.Time, Samples: run.SamplesGot(), Total: len(run.Got), Score: run.Score(),
 					Distance: run.Progress() * (lvl.GoalX - lvl.StartX), TopSpeed: run.TopSpeed, MaxAir: run.MaxAir,
 					Damaged: run.Damaged()})

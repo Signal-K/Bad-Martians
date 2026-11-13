@@ -2,6 +2,7 @@ package game
 
 import (
 	"math"
+	"strings"
 
 	"github.com/signal-k/haphazard-martians/engine"
 )
@@ -134,4 +135,26 @@ func drawBackdrop(r engine.Renderer) {
 		a := uint8(70 + rg.intn(185))
 		r.Circle(engine.V(rg.float()*ScreenW, rg.float()*ScreenH), 0.6+rg.float()*1.1, colInk.Alpha(a), true)
 	}
+}
+
+// wrapText breaks s into lines no wider than w at the given size.
+func wrapText(s string, size, w float64) []string {
+	var lines []string
+	line := ""
+	for _, word := range strings.Fields(s) {
+		try := word
+		if line != "" {
+			try = line + " " + word
+		}
+		if line != "" && textW(try, size) > w {
+			lines = append(lines, line)
+			line = word
+			continue
+		}
+		line = try
+	}
+	if line != "" {
+		lines = append(lines, line)
+	}
+	return lines
 }

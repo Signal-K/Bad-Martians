@@ -344,6 +344,32 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 		}
 	})
 
+	// Why the last drive failed: the parts to blame are marked on the grid and
+	// the change to make sits over it, until the player edits the rover.
+	var lastWhy Cause
+	var lastCells []Cell
+	AddDraw(s, 3, func(_ engine.Camera, r engine.Renderer) {
+		lastWhy, lastCells = ses.LastFailure()
+		if lastWhy.Empty() || testing || guide {
+			return
+		}
+		p := 0.5 + 0.5*sinf(clock*5)
+		for _, c := range lastCells {
+			x, y := cellXY(c.X, c.Y)
+			outline(r, x+1-2*p, y+1-2*p, bCell-2+4*p, bCell-2+4*p, colWarn.Alpha(uint8(160+90*p)))
+		}
+		if painting || dragging {
+			return
+		}
+		lines := wrapText("Try: "+lastWhy.Fix, sizeSmall, bCell*GridW-28)
+		h := 12 + 20*float64(len(lines))
+		r.Rect(bGX, 70, bCell*GridW, h, colSpace.Alpha(225), true)
+		outline(r, bGX, 70, bCell*GridW, h, colWarn.Alpha(170))
+		for i, ln := range lines {
+			r.Text(ln, bGX+14, 76+20*float64(i), sizeSmall, colNeon, engine.AlignLeft)
+		}
+	})
+
 	// chrome: top bar, terrain map, tray backing, specs
 	AddDraw(s, 9, func(_ engine.Camera, r engine.Renderer) {
 		r.Rect(0, 0, ScreenW, 64, colTile.Alpha(215), true)
@@ -367,6 +393,8 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 			r.Text(tip, 92, 38, sizeSmall, colChipLt, engine.AlignLeft)
 		case idea >= 0 && clock < ideaUntil:
 			r.Text(Blocks[idea].Idea, 92, 38, sizeSmall, colChipLt, engine.AlignLeft)
+		case !lastWhy.Empty():
+			r.Text("Last drive: "+lastWhy.What, 92, 38, sizeSmall, colWarn, engine.AlignLeft)
 		case len(ses.Design.Cells) == 0:
 			r.Text("Drag a shape or a part onto the grid.", 92, 38, sizeSmall, colChipLt, engine.AlignLeft)
 		case len(errs) > 0:

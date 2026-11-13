@@ -3,6 +3,7 @@ package game
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/signal-k/haphazard-martians/engine"
@@ -20,6 +21,40 @@ type Session struct {
 	Name    string        // the rover's name, given at launch
 	Spare   Kind          // part salvaged on the mission before: its credits add to the budget
 	Lesson  int           // 1-based Shape school lesson; 0 outside the school
+
+	// Last is why the last drive failed, shown in the bay with the parts to
+	// blame (LastCells) until the player changes the design it was about.
+	Last       Cause
+	LastCells  []Cell
+	lastDesign string
+}
+
+// NoteFailure keeps why run failed so the bay can explain it; a win clears it.
+func (s *Session) NoteFailure(r *Run) {
+	s.Last, s.LastCells, s.lastDesign = Cause{}, nil, ""
+	if r.Outcome == Won || (r.Outcome == Running && !r.IsStuck()) {
+		return
+	}
+	s.Last = r.Diagnose()
+	for _, i := range s.Last.Culprits {
+		s.LastCells = append(s.LastCells, r.Rover.Cells[i])
+	}
+	s.lastDesign = designKey(s.Design)
+}
+
+// LastFailure is the last drive's cause while the design is still the one
+// that failed; empty once the player has changed it.
+func (s *Session) LastFailure() (Cause, []Cell) {
+	if s.Last.Empty() || designKey(s.Design) != s.lastDesign {
+		return Cause{}, nil
+	}
+	return s.Last, s.LastCells
+}
+
+func designKey(d Design) string {
+	c := append([]Cell(nil), d.Cells...)
+	sort.Slice(c, func(i, j int) bool { return c[i].Y*GridW+c[i].X < c[j].Y*GridW+c[j].X })
+	return fmt.Sprint(c)
 }
 
 func NewSession(l *Level) *Session {
