@@ -131,3 +131,49 @@ func TestTestDropFlagsMotorsOffTheGround(t *testing.T) {
 		t.Fatalf("a motor on the roof should be flagged, got %q", msg)
 	}
 }
+
+// Every part says what it does: on its tray tile, in the status line when it
+// is picked, and in the parts guide, which is modal until "Got it".
+func TestPartsExplainThemselves(t *testing.T) {
+	for _, p := range Parts {
+		if p.Does == "" || p.Guide[0] == "" || p.Guide[1] == "" {
+			t.Fatalf("%s has no explanation", p.Name)
+		}
+	}
+	h := newHarness(t)
+	ses := NewSession(GetLevel(2))
+	h.g.Load(SceneBuild, ses)
+	h.frames(2, engine.Input{})
+	drawn := func(s string) bool {
+		rec := engine.NewRecorder()
+		h.g.Draw(rec)
+		for _, x := range rec.Strings {
+			if strings.Contains(x, s) {
+				return true
+			}
+		}
+		return false
+	}
+	if !drawn("Powered: drives") || !drawn("Rolls, no power") {
+		t.Fatal("tiles should say what the wheels do")
+	}
+	h.clickButton("Free wheel")
+	if !drawn("cannot push the rover") {
+		t.Fatal("picking a part should explain it")
+	}
+	h.clickButton("Parts guide")
+	h.frames(1, engine.Input{})
+	if !h.button("Motor wheel").Hidden || h.button("Got it").Hidden {
+		t.Fatal("the guide should cover the tray and offer Got it")
+	}
+	for _, p := range Parts {
+		if !drawn(p.Guide[1]) {
+			t.Fatalf("guide is missing %s", p.Name)
+		}
+	}
+	h.clickButton("Got it")
+	h.frames(1, engine.Input{})
+	if h.button("Motor wheel").Hidden || !h.button("Got it").Hidden {
+		t.Fatal("Got it should close the guide")
+	}
+}

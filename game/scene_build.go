@@ -17,10 +17,12 @@ const (
 	bGround  = 360.0 // screen y of the ground under the grid
 	bGY      = bGround - bCell*GridH
 	bTrayY   = 420.0 // top of the parts tray
-	bTileW   = 100.0
+	bTileW   = 124.0
 	bTileH   = 100.0
-	bTileGap = 10.0
-	bSwipe   = 40.0 // horizontal travel on the tray that counts as a swipe
+	bTileGap = 8.0
+	bSwipe   = 40.0
+	bGuideX  = 12.0 // the parts guide tile, first in the tray
+	bGuideW  = 60.0 // horizontal travel on the tray that counts as a swipe
 
 	// Shapes sidebar: ready-made frame blocks, left of the gantry
 	bSideX = 8.0
@@ -38,25 +40,6 @@ var skipBox = engine.Rect{X: 560, Y: 10, W: 84, H: 44}
 
 // bayTools is the order of the parts tray; "" is the eraser.
 var bayTools = []Kind{KFrame, KWheel, KMotor, KMast, ""}
-
-// Specs summarises a design; each is 0..10 segments.
-type Specs struct{ Power, Traction, Mass int }
-
-func SpecsOf(d Design) Specs {
-	var motors, wheels int
-	var mass float64
-	for _, c := range d.Cells {
-		p, _ := PartOf(c.K)
-		mass += p.Mass
-		if p.Motor {
-			motors++
-		} else if p.Wheel {
-			wheels++
-		}
-	}
-	cap10 := func(v int) int { return int(math.Min(10, math.Max(0, float64(v)))) }
-	return Specs{Power: cap10(motors * 3), Traction: cap10((wheels + motors) * 2), Mass: cap10(int(math.Round(mass / 1.4)))}
-}
 
 // CanAdd is how many more of part k fit in the budget: the number on its tray
 // tile. The mast is 1 until one is placed (placing another moves it).
@@ -140,6 +123,9 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 	var dragKind Kind = "-"
 	blk, dragBlock := -1, -1   // selected / dragged shapes block, -1 for none
 	idea, ideaUntil := -1, 0.0 // block whose idea the status line shows, and until when
+	tip, tipUntil := "", 0.0   // what the picked part does, shown in the status line
+	guide := false             // the parts guide overlay is open
+	var bayButtons []*Button   // hidden while the guide is open
 	tut := ses.Tut
 	lesson := LessonOf(ses)
 	var skip *engine.Rect // the tutorial's skip button, to keep taps off the grid
@@ -178,9 +164,8 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 		}
 		return 0
 	}
-	tileX := func(i int) float64 {
-		w := float64(len(bayTools))*bTileW + float64(len(bayTools)-1)*bTileGap
-		return (ScreenW-w)/2 + float64(i)*(bTileW+bTileGap)
+	tileX := func(i int) float64 { // right of the guide tile, left of GO
+		return bGuideX + bGuideW + bTileGap + float64(i)*(bTileW+bTileGap)
 	}
 	tileAt := func(p engine.Vec2) (Kind, bool) {
 		for i, k := range bayTools {
@@ -212,7 +197,15 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 			placedAt[c] = clock
 		}
 	}
-	showIdea := func(i int) { idea, ideaUntil = i, clock+5 }
+	showIdea := func(i int) { idea, ideaUntil, tipUntil = i, clock+5, 0 }
+	pick := func(k Kind) { // a part picked from the tray says what it does
+		tool, blk = k, -1
+		if p, ok := PartOf(k); ok {
+			tip, tipUntil, ideaUntil = p.Name+": "+p.Guide[0], clock+6, 0
+		} else {
+			tip, tipUntil, ideaUntil = "Erase: tap or drag over parts to take them off.", clock+6, 0
+		}
+	}
 	stopTest := func() { testing, testWorld, testRover = false, nil, nil }
 	var testBtn *Button
 	startTest := func() {
@@ -370,6 +363,8 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 				msg = "Almost: " + errs[0] + "."
 			}
 			r.Text(msg, 92, 38, sizeSmall+1, colNeon, engine.AlignLeft)
+		case clock < tipUntil:
+			r.Text(tip, 92, 38, sizeSmall, colChipLt, engine.AlignLeft)
 		case idea >= 0 && clock < ideaUntil:
 			r.Text(Blocks[idea].Idea, 92, 38, sizeSmall, colChipLt, engine.AlignLeft)
 		case len(ses.Design.Cells) == 0:
@@ -440,15 +435,6 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 		// tray backing and specs
 		r.Rect(0, bTrayY, ScreenW, ScreenH-bTrayY, colTile.Alpha(225), true)
 		r.Rect(0, bTrayY, ScreenW, 2, colInk.Alpha(60), true)
-		sp := SpecsOf(ses.Design)
-		for i, row := range []struct {
-			n string
-			v int
-		}{{"Power", sp.Power}, {"Grip", sp.Traction}, {"Mass", sp.Mass}} {
-			y := bTrayY + 22 + float64(i)*30
-			r.Text(row.n, 20, y, sizeSmall, colInk, engine.AlignLeft)
-			drawMeter(r, 82, y+2, 82, 10, row.v, colNeon)
-		}
 		// shapes sidebar backing
 		sideB := cardY(len(Blocks)) + 2 // stop above the course map's label
 		r.Rect(0, 64, bSideX+bSideW+8, sideB-64, colTile.Alpha(205), true)
@@ -480,10 +466,11 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 		}
 		b := AddButton(s, tileX(i), bTrayY+8, bTileW, bTileH, name, func() {
 			if !swiped {
-				tool, blk = k, -1
+				pick(k)
 				stopTest()
 			}
 		})
+		bayButtons = append(bayButtons, b)
 		b.Custom = func(b *Button, r engine.Renderer) {
 			sel := tool == k && blk < 0
 			n := ses.CanAdd(k)
@@ -500,33 +487,37 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 				outline(r, b.X-3, b.Y-3, b.W+6, b.H+6, colNeon.Alpha(110))
 			}
 			cx := b.X + b.W/2
-			label, cost := "Erase", "free"
+			label, does, cost := "Erase", "Takes parts off", "free"
 			if k == "" {
-				drawIcon(r, IconErase, cx, b.Y+36, 36, colWarn)
+				drawIcon(r, IconErase, cx, b.Y+32, 32, colWarn)
 			} else {
 				p, _ := PartOf(k)
 				if k == KMast { // the camera head stands tall: sit it lower and smaller
-					drawPart(r, k, engine.V(cx, b.Y+50), 34, 0)
+					drawPart(r, k, engine.V(cx, b.Y+42), 28, 0)
 				} else {
-					drawPart(r, k, engine.V(cx, b.Y+38), 46, 0)
+					drawPart(r, k, engine.V(cx, b.Y+32), 40, 0)
 				}
-				label, cost = p.Name, fmt.Sprintf("%d cr", p.Cost)
+				label, does, cost = p.Name, p.Does, fmt.Sprintf("%d cr", p.Cost)
 				if ses.Exp != nil {
 					cost = fmt.Sprintf("%d in kit", ses.Have(k))
 				}
 			}
-			ink := colInk
+			ink, sub := colInk, colNeon
 			if k != "" && n == 0 && k != KMast {
-				ink = colMuted
+				ink, sub = colMuted, colMuted
 			}
-			r.Text(label, cx, b.Y+66, sizeSmall, ink, engine.AlignCenter)
-			r.Text(cost, cx, b.Y+82, 12, colMuted, engine.AlignCenter)
-			if k != "" { // quantity badge
+			if k == "" {
+				sub = colMuted
+			}
+			r.Text(label, cx, b.Y+56, sizeSmall, ink, engine.AlignCenter)
+			r.Text(does, cx, b.Y+76, sizeSmall, sub, engine.AlignCenter)
+			r.Text(cost, b.X+8, b.Y+6, sizeSmall, colMuted, engine.AlignLeft)
+			if k != "" { // quantity badge: how many more fit
 				bc := colChip
 				if n == 0 {
 					bc = colStarOff
 				}
-				c := engine.V(b.X+b.W-14, b.Y+14)
+				c := engine.V(b.X+b.W-16, b.Y+16)
 				r.Circle(c, 13, bc, true)
 				r.Circle(c, 13, colInk, false)
 				r.Text(fmt.Sprint(n), c.X, c.Y-8, sizeSmall, colInk, engine.AlignCenter)
@@ -544,6 +535,7 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 				stopTest()
 			}
 		})
+		bayButtons = append(bayButtons, b)
 		b.Custom = func(b *Button, r engine.Renderer) {
 			sel := blk == i
 			fill, line := colPanel, colInk.Alpha(150)
@@ -598,6 +590,50 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 		g.Load(SceneLaunch, ses)
 	})
 	launch.Primary, launch.Icon = true, IconRight
+	bayButtons = append(bayButtons, back, testBtn, launch)
+
+	// parts guide: what every part does, side by side
+	gb := AddButton(s, bGuideX, bTrayY+8, bGuideW, bTileH, "Parts guide", func() { guide = true; stopTest() })
+	bayButtons = append(bayButtons, gb)
+	gb.Custom = func(b *Button, r engine.Renderer) {
+		fill, ink := colPanel, colNeon
+		if b.Held {
+			fill, ink = colNeon, colTile
+		}
+		r.Rect(b.X, b.Y, b.W, b.H, fill, true)
+		outline(r, b.X, b.Y, b.W, b.H, colNeon.Alpha(200))
+		r.Circle(engine.V(b.X+b.W/2, b.Y+34), 18, ink, false)
+		r.Text("?", b.X+b.W/2, b.Y+21, 24, ink, engine.AlignCenter)
+		r.Text("Guide", b.X+b.W/2, b.Y+66, sizeSmall, ink, engine.AlignCenter)
+	}
+	const gx, gy, gw, gh = 110.0, 70.0, 740.0, 400.0
+	AddDraw(s, 40, func(_ engine.Camera, r engine.Renderer) {
+		if !guide {
+			return
+		}
+		r.Rect(0, 0, ScreenW, ScreenH, colSpace.Alpha(190), true)
+		drawPanel(r, gx, gy, gw, gh, "Parts guide")
+		r.Text("What each part does", gx+28, gy+24, 22, colInk, engine.AlignLeft)
+		for i, p := range Parts {
+			y := gy + 66 + float64(i)*78
+			r.Rect(gx+24, y, gw-48, 70, colPanel, true)
+			c := engine.V(gx+66, y+35)
+			if p.Kind == KMast {
+				drawPart(r, p.Kind, engine.V(c.X, c.Y+8), 30, 0)
+			} else {
+				drawPart(r, p.Kind, c, 44, 0)
+			}
+			r.Text(p.Name, gx+112, y+8, sizeBody, colInk, engine.AlignLeft)
+			r.Text(p.Does, gx+gw-40, y+8, sizeSmall, colNeon, engine.AlignRight)
+			r.Text(p.Guide[0], gx+112, y+30, sizeSmall, colMuted, engine.AlignLeft)
+			r.Text(p.Guide[1], gx+112, y+48, sizeSmall, colMuted, engine.AlignLeft)
+		}
+	})
+	gclose := AddButton(s, gx+gw-176, gy+10, 152, 44, "Got it", func() { guide = false })
+	gclose.Primary = true
+	gclose.Hidden = true
+	s.Objects[len(s.Objects)-1].Layer = 41
+	syncGuide := func() { gclose.Hidden = !guide }
 
 	// tutorial: the status line says what to do next; here it only points at it
 	if tut != nil {
@@ -608,6 +644,7 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 				FinishTutorial(g.Host, tut)
 			}
 		})
+		bayButtons = append(bayButtons, sb)
 		sb.Custom = func(b *Button, r engine.Renderer) {
 			if tut.Done {
 				return
@@ -659,12 +696,20 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 
 	s.OnUpdate = func(dt float64) {
 		clock += dt
+		syncGuide()
 		errs = ses.Problems()
 		launch.Disabled = len(errs) > 0
 		testBtn.Disabled = len(ses.Design.Cells) == 0
 		if testing {
 			testWorld.Step(dt)
 			testT += dt
+		}
+		for _, b := range bayButtons {
+			b.Hidden = guide
+		}
+		if guide { // the guide is modal: the grid and tray wait
+			painting, dragging, trayDown, dragBlock = false, false, false, -1
+			return
 		}
 		in := g.In
 		p := in.Pointer
@@ -704,7 +749,7 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 				if cx, cy, ok := cellAt(p); ok {
 					stopTest()
 					place(cx, cy, dragKind)
-					tool, blk = dragKind, -1
+					pick(dragKind)
 				}
 				swiped = true
 			} else if dx := p.X - press.X; math.Abs(dx) > bSwipe && math.Abs(p.Y-press.Y) < 70 {
@@ -712,7 +757,7 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 				if dx > 0 {
 					step = -1
 				}
-				tool, blk = bayTools[(toolIndex(tool)+step+len(bayTools))%len(bayTools)], -1
+				pick(bayTools[(toolIndex(tool)+step+len(bayTools))%len(bayTools)])
 				stopTest()
 				swiped = true
 			}
