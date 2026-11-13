@@ -49,11 +49,11 @@ func TestEverySceneHonoursTheContract(t *testing.T) {
 			if _, _, sum2 := runStandalone(t, m.Name, 600); sum1 != sum2 {
 				t.Fatalf("not deterministic: %x vs %x", sum1, sum2)
 			}
-			// 3. every button is on screen, inside the layout, and big enough to tap
+			// 3. every shown button is on screen, inside the layout, and big enough to tap
 			screen := engine.Rect{X: 0, Y: 0, W: ScreenW, H: ScreenH}
 			for _, o := range g1.Scene().Objects {
 				b, ok := engine.Get[*Button](o)
-				if !ok {
+				if !ok || b.Hidden { // hidden buttons neither draw nor take taps
 					continue
 				}
 				br := engine.Rect{X: b.X, Y: b.Y, W: b.W, H: b.H}
