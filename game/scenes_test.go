@@ -3,12 +3,22 @@ package game
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/signal-k/haphazard-martians/engine"
 )
 
 type nullR struct{ calls int }
+
+type textR struct {
+	nullR
+	texts []string
+}
+
+func (r *textR) Text(s string, x, y, sz float64, c engine.Color, a engine.Align) {
+	r.texts = append(r.texts, s)
+}
 
 func (n *nullR) Line(a, b engine.Vec2, w float64, c engine.Color)          { n.calls++ }
 func (n *nullR) Circle(c engine.Vec2, r float64, col engine.Color, f bool) { n.calls++ }
@@ -235,6 +245,18 @@ func TestDailyMissionOpensWithReward(t *testing.T) {
 	ses := NewSessionFor(h.g.Host, BuildLevel(m.Level))
 	if want := m.Level.Credits + m.Reward.Credits; ses.Budget() != want {
 		t.Fatalf("budget %d, want %d", ses.Budget(), want)
+	}
+}
+
+func TestDailyMissionOnlyAdvertisesAvailableRewards(t *testing.T) {
+	h := newHarness(t)
+	h.g.Load(SceneMenu, nil)
+	h.frames(2, engine.Input{})
+	r := &textR{}
+	h.g.Draw(r)
+	text := strings.Join(r.texts, "\n")
+	if strings.Contains(text, "free retry") || !strings.Contains(text, "build credits") {
+		t.Fatalf("daily card advertises unavailable reward or hides build credits: %s", text)
 	}
 }
 

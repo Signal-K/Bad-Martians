@@ -90,10 +90,9 @@ func menuScene(g *engine.Game, _ any) *engine.Scene {
 			outline(r, b.X, b.Y, b.W, b.H, line)
 			r.Text(label, b.X+14, b.Y+8, sizeSmall, colNeon, engine.AlignLeft)
 			r.Text(m.Title, b.X+14, b.Y+26, 18, ink, engine.AlignLeft)
-			rw := fmt.Sprintf("+%d parts", m.Reward.Credits)
-			if m.Reward.FreeRetry > 0 {
-				rw += fmt.Sprintf("  +%d free retry", m.Reward.FreeRetry)
-			}
+			// Retry rewards are present in mission data but are not implemented.
+			// Only advertise the build credits actually available in the bay.
+			rw := fmt.Sprintf("+%d build credits", m.Reward.Credits)
 			r.Text(rw, b.X+b.W-14, b.Y+8, sizeSmall, sub, engine.AlignRight)
 			if lp := prog.Levels[m.Level.ID]; lp.Score > 0 {
 				r.Text(fmt.Sprintf("best %d", lp.Score), b.X+b.W-14, b.Y+34, sizeSmall, sub, engine.AlignRight)
