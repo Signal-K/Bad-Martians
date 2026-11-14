@@ -5,7 +5,10 @@ rover** on a grid and **drive it** to the finish. Collect samples and be fast:
 score depends on finishing, samples and time. The three-mission expedition
 challenges you to make one credit budget last across the whole route. Surviving
 rovers can be rebuilt at full part value; crashes lose their cost. An under-par
-finish earns two credits for the next stage. The terrain
+finish earns two credits for the next stage.
+The lander hops between completed expedition stages; continue when ready to
+enter the next rover bay with the surviving design and budget.
+The terrain
 review experience is paused while its real data flow and design are developed.
 Existing review data and previously earned standalone-mission credits are preserved;
 the unfinished review scene is not registered.
@@ -31,7 +34,7 @@ until you sign in.
 |---|---|
 | `engine/` | Game objects, components, scenes, fixed-step loop, input, `Renderer`/`Host` interfaces. No dependencies. |
 | `physics/` | Deterministic 2D position-based physics: particles, wheels with motors, distance constraints, heightfield terrain with materials. |
-| `game/` | Haphazard Martians: terrain classes, procedural levels, parts and rover, scenes (menu, build, run, result, review, style), progress. No rendering or platform code. |
+| `game/` | Haphazard Martians: terrain classes, procedural levels, parts and rover, scenes (menu, build, run, result, travel, style), progress. No rendering or platform code. |
 | `client/` | Ebitengine adapter: the only code that touches a graphics library. |
 | `cmd/wasm`, `web/` | Browser build and PWA shell (manifest, service worker, account dialog, PocketBase bridge). |
 | `cmd/server`, `migrations/` | PocketBase backend (auth, `hm_runs`, `hm_labels`) that also serves the PWA. |

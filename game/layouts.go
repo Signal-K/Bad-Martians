@@ -5,6 +5,12 @@ import "github.com/signal-k/haphazard-martians/engine"
 // Layouts are the shared bones of the UI. A scene picks one and arranges its
 // widgets inside the named regions.
 var (
+	// LayoutTravel separates the journey window from its action strip.
+	LayoutTravel = engine.Layout{Name: "travel", Regions: map[string]engine.Rect{
+		"title":   {X: 0, Y: 0, W: ScreenW, H: 100},
+		"journey": {X: 0, Y: 100, W: ScreenW, H: 360},
+		"actions": {X: 0, Y: 460, W: ScreenW, H: 80},
+	}}
 	// LayoutCenter: a title band over one wide content area.
 	LayoutCenter = engine.Layout{Name: "center", Regions: map[string]engine.Rect{
 		"title": {X: 0, Y: 0, W: ScreenW, H: 100},

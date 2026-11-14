@@ -6,7 +6,7 @@ const { mkdir, writeFile } = require('node:fs/promises');
 const assert = require('node:assert/strict');
 const path = require('node:path');
 
-const scenes = ['menu', 'build', 'launch', 'run', 'result', 'briefing', 'style'];
+const scenes = ['menu', 'build', 'launch', 'run', 'result', 'briefing', 'travel', 'style'];
 const sizes = [{ name: 'desktop', width: 960, height: 540 }, { name: 'phone', width: 390, height: 844 }];
 const output = path.resolve('test-results/visual');
 const base = 'http://127.0.0.1:18764';

@@ -14,13 +14,14 @@ const (
 	TypePlay     SceneType = "play"     // live physics simulation
 	TypeActivity SceneType = "activity" // citizen-science task
 	TypeResults  SceneType = "results"  // outcome and scoring
+	TypeTravel   SceneType = "travel"   // movement between expedition stages
 	TypeSandbox  SceneType = "sandbox"  // free-form authoring
 	TypeDebug    SceneType = "debug"    // tooling, style sheets, test beds
 )
 
 var sceneTypes = map[SceneType]bool{
 	TypeMenu: true, TypeBuild: true, TypePlay: true, TypeActivity: true,
-	TypeResults: true, TypeSandbox: true, TypeDebug: true,
+	TypeResults: true, TypeTravel: true, TypeSandbox: true, TypeDebug: true,
 }
 
 // Rect is an axis-aligned screen region in virtual pixels.

@@ -11,6 +11,7 @@ const (
 	SceneLaunch = "launch"
 	SceneRun    = "run"
 	SceneResult = "result"
+	SceneTravel = "travel"
 	SceneReview = "review"
 	SceneStyle  = "style"
 	// SceneBriefing hands out an expedition's kit before its first mission.
@@ -57,6 +58,10 @@ func Setup(g *engine.Game) {
 		Name: SceneBriefing, Title: "Expedition briefing", Type: engine.TypeMenu, Layout: LayoutCenter,
 		Fixture: func(*engine.Game) any { return NewExpedition() },
 	}, briefingScene)
+	g.RegisterScene(engine.SceneMeta{
+		Name: SceneTravel, Title: "Travel to the next site", Type: engine.TypeTravel, Layout: LayoutTravel,
+		Fixture: func(*engine.Game) any { e := NewExpedition(); e.Index = 1; e.Rover = StarterDesign(); return e },
+	}, travelScene)
 	g.RegisterScene(engine.SceneMeta{
 		Name: SceneStyle, Title: "Style sheet", Type: engine.TypeDebug, Layout: LayoutCenter,
 		Fixture: func(*engine.Game) any { return nil },

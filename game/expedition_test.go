@@ -115,8 +115,12 @@ func TestExpeditionResultAwardsOnce(t *testing.T) {
 		t.Fatalf("result paid twice: %+v", e)
 	}
 	h.clickButton("Next mission")
-	if h.g.Scene().Name != SceneBuild || len(e.Rover.Cells) == 0 {
-		t.Fatal("surviving rover should reach the next build")
+	if h.g.Scene().Name != SceneTravel || len(e.Rover.Cells) == 0 {
+		t.Fatal("surviving rover should travel to the next mission")
+	}
+	h.clickButton("Continue to rover bay")
+	if h.g.Scene().Name != SceneBuild || len(e.Rover.Cells) == 0 || e.Credits != credits {
+		t.Fatal("travel should carry the surviving rover and budget to the next build")
 	}
 }
 
@@ -130,5 +134,30 @@ func TestExpeditionRetryStartsWithEmptyBay(t *testing.T) {
 	h.clickButton("Retry")
 	if h.g.Scene().Name != SceneBuild || len(ses.Design.Cells) != 0 {
 		t.Fatal("lost rover must not return on retry")
+	}
+}
+
+func TestExpeditionTravelOnlyBetweenSuccessfulStages(t *testing.T) {
+	h := newHarness(t)
+	e := NewExpedition()
+	e.Index = 1
+	ses := ExpeditionSession(h.h, e)
+	ses.Design = StarterDesign()
+	h.g.Load(SceneResult, &ResultArg{Session: ses, Outcome: Won, Time: 30, Damaged: true})
+	h.frames(2, engine.Input{})
+	h.clickButton("Next mission")
+	if h.g.Scene().Name != SceneTravel || e.Index != 2 {
+		t.Fatalf("second stage should lead to travel for stage three: scene=%s index=%d", h.g.Scene().Name, e.Index)
+	}
+	h.clickButton("Continue to rover bay")
+	if h.g.Scene().Name != SceneBuild {
+		t.Fatalf("expected final stage bay, got %s", h.g.Scene().Name)
+	}
+	final := ExpeditionSession(h.h, e)
+	h.g.Load(SceneResult, &ResultArg{Session: final, Outcome: Won, Time: 30, Damaged: true})
+	h.frames(2, engine.Input{})
+	h.clickButton("Finish")
+	if h.g.Scene().Name != SceneMenu || !e.Done {
+		t.Fatal("finishing the final stage should end the expedition without another hop")
 	}
 }

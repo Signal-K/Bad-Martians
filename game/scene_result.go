@@ -199,7 +199,7 @@ func resultScene(g *engine.Game, arg any) *engine.Scene {
 				g.Load(SceneMenu, nil)
 				return
 			}
-			g.Load(SceneBuild, ExpeditionSession(g.Host, exp))
+			g.Load(SceneTravel, exp)
 		})
 		next.Primary, next.Icon = true, IconRight
 		next.Disabled = ra.Outcome != Won && !exp.Over()
