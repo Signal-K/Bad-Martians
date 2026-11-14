@@ -208,6 +208,21 @@ func TestLabelBonus(t *testing.T) {
 	}
 }
 
+func TestLegacyReviewCreditsSurviveChangedTerrain(t *testing.T) {
+	h := engine.NewMemHost()
+	l := GetLevel(1)
+	p := LoadProgress(h)
+	p.Labels[l.ID] = map[int]int{len(l.Segments) + 1: 0}
+	p.Save(h)
+	s := NewSessionFor(h, l)
+	if s.Bonus() != 1 || s.Budget() < l.Credits+1 {
+		t.Fatalf("legacy review credit should survive terrain changes: bonus=%d budget=%d", s.Bonus(), s.Budget())
+	}
+	if len(LoadProgress(h).Labels[l.ID]) != 1 {
+		t.Fatal("loading a mission must preserve its saved reviews")
+	}
+}
+
 func TestDailyMissionOpensWithReward(t *testing.T) {
 	h := newHarness(t)
 	h.g.Load(SceneMenu, nil)

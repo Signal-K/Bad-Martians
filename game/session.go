@@ -49,15 +49,14 @@ func (s *Session) Bonus() int {
 	b := 0
 	for i, c := range s.Labels {
 		b++
-		if s.Level.Segments[i].Gold && s.Level.Segments[i].Class == c {
+		if i >= 0 && i < len(s.Level.Segments) && s.Level.Segments[i].Gold && s.Level.Segments[i].Class == c {
 			b += 2
 		}
 	}
 	return b
 }
 
-// Budget is the credits a rover may cost. Expeditions count parts instead
-// (see Have), so their credit budget is unlimited.
+// Budget is the credits a rover may cost, including the shared expedition budget.
 func (s *Session) Budget() int {
 	if s.Exp != nil {
 		return s.Exp.Credits
