@@ -8,6 +8,18 @@ import (
 	"github.com/signal-k/haphazard-martians/physics"
 )
 
+func TestUnbracedSpanHint(t *testing.T) {
+	if !UnbracedSpan(longFrame(8, false)) {
+		t.Fatal("long unsupported row should suggest bracing")
+	}
+	if UnbracedSpan(longFrame(8, true)) {
+		t.Fatal("braced frame should not show the hint")
+	}
+	if UnbracedSpan(Design{}) {
+		t.Fatal("empty bay should not show the hint")
+	}
+}
+
 func settle(d Design, secs float64) Pose {
 	l := GetLevel(1)
 	w := physics.NewWorld()

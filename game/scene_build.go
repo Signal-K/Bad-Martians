@@ -102,6 +102,31 @@ func PoseOf(r *Rover) Pose {
 // bendLimit is the RMS shape change above which the bay says the frame bends.
 const bendLimit = 0.04
 
+// UnbracedSpan detects a long horizontal run with no neighboring row to
+// create diagonal links. It is a teaching hint, not a launch restriction.
+func UnbracedSpan(d Design) bool {
+	for y := 0; y < GridH; y++ {
+		for x := 0; x <= GridW-4; x++ {
+			unbraced := true
+			for dx := 0; dx < 4; dx++ {
+				if _, ok := d.At(x+dx, y); !ok {
+					unbraced = false
+				}
+				if _, ok := d.At(x+dx, y-1); ok {
+					unbraced = false
+				}
+				if _, ok := d.At(x+dx, y+1); ok {
+					unbraced = false
+				}
+			}
+			if unbraced {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func buildScene(g *engine.Game, arg any) *engine.Scene {
 	ses := arg.(*Session)
 	lvl := ses.Level
@@ -401,6 +426,8 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 			r.Text(errs[0], 92, 38, sizeSmall, colWarn, engine.AlignLeft)
 		case lesson != nil: // the lesson's one instruction stays up while fixing
 			r.Text(lesson.Teach, 92, 38, sizeSmall+1, colNeon, engine.AlignLeft)
+		case UnbracedSpan(ses.Design):
+			r.Text("Long frame may bend. Add a row to make triangles, then test.", 92, 38, sizeSmall, colWarn, engine.AlignLeft)
 		default:
 			r.Text("Ready. Test to see how it sits, or GO to drive.", 92, 38, sizeSmall, colGood, engine.AlignLeft)
 		}
