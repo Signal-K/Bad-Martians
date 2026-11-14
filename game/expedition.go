@@ -1,6 +1,8 @@
 package game
 
 import (
+	"encoding/json"
+
 	"github.com/signal-k/haphazard-martians/engine"
 )
 
@@ -28,6 +30,31 @@ type Expedition struct {
 }
 
 func NewExpedition() *Expedition { return &Expedition{Credits: ExpeditionStartingCredits} }
+
+const expeditionKey = "expedition-v1"
+
+// SaveExpedition stores the last completed-attempt checkpoint on this device.
+func SaveExpedition(h engine.Host, e *Expedition) {
+	if e == nil || e.Over() {
+		h.Save(expeditionKey, nil)
+		return
+	}
+	b, err := json.Marshal(e)
+	if err == nil {
+		h.Save(expeditionKey, b)
+	}
+}
+
+func LoadExpedition(h engine.Host) *Expedition {
+	var e Expedition
+	if json.Unmarshal(h.Load(expeditionKey), &e) != nil || e.Over() || e.Index < 0 || e.Index >= len(ExpeditionLevels) || e.Credits < MinRover() {
+		return nil
+	}
+	if len(e.Rover.Cells) > 0 && len(e.Rover.Validate(e.Credits)) != 0 {
+		return nil
+	}
+	return &e
+}
 
 // MinRover is the minimum valid connected design: one motor wheel and one mast.
 func MinRover() int {

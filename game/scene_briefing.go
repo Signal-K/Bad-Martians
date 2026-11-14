@@ -14,7 +14,7 @@ func briefingScene(g *engine.Game, arg any) *engine.Scene {
 	addBackdrop(s)
 	AddDraw(s, 2, func(_ engine.Camera, r engine.Renderer) {
 		r.Text("Expedition briefing", 28, 16, sizeTitle, colInk, engine.AlignLeft)
-		r.Text(fmt.Sprintf("%d missions, one budget. Make your credits last the whole way.", len(ExpeditionLevels)),
+		r.Text(fmt.Sprintf("Stage %d of %d · one budget. Progress saves after each attempt.", e.Index+1, len(ExpeditionLevels)),
 			28, 54, sizeBody, colMuted, engine.AlignLeft)
 
 		drawPanel(r, 28, 116, 500, 330, "Your budget")
@@ -52,6 +52,7 @@ func briefingScene(g *engine.Game, arg any) *engine.Scene {
 	})
 	addBack(s, func() { g.Load(SceneMenu, nil) })
 	start := AddButton(s, ScreenW-284, 470, 260, 60, fmt.Sprintf("Start Mission %d", ExpeditionLevels[e.Index]), func() {
+		SaveExpedition(g.Host, e)
 		g.Load(SceneBuild, ExpeditionSession(g.Host, e))
 	})
 	start.Primary, start.Icon = true, IconRight

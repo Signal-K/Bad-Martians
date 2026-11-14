@@ -81,6 +81,7 @@ func resultScene(g *engine.Game, arg any) *engine.Scene {
 				ses.Exp.Salvage(ses.Design)
 			}
 			ses.Exp.Name = ses.Name
+			SaveExpedition(g.Host, ses.Exp)
 			if ses.Exp.Over() && ses.Exp.Score > prog.BestExpedition {
 				prog.BestExpedition = ses.Exp.Score
 				prog.Save(g.Host)

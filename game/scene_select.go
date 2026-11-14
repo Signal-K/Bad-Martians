@@ -249,8 +249,17 @@ func menuScene(g *engine.Game, _ any) *engine.Scene {
 	build.Primary, build.Icon = true, IconRight
 
 	// other ways to play, along the bottom
-	ex := AddButton(s, 24, 466, 284, 60, fmt.Sprintf("Expedition · %d missions", len(ExpeditionLevels)), func() {
-		g.Load(SceneBriefing, NewExpedition())
+	savedExpedition := LoadExpedition(g.Host)
+	expeditionLabel := fmt.Sprintf("Expedition · %d missions", len(ExpeditionLevels))
+	if savedExpedition != nil {
+		expeditionLabel = "Resume expedition"
+	}
+	ex := AddButton(s, 24, 466, 284, 60, expeditionLabel, func() {
+		if savedExpedition != nil {
+			g.Load(SceneBriefing, savedExpedition)
+		} else {
+			g.Load(SceneBriefing, NewExpedition())
+		}
 	})
 	ex.Icon = IconRover
 	if m, ok, next := CurrentMission(); ok || next != nil {

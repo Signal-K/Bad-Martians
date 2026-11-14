@@ -29,6 +29,36 @@ func TestExpeditionBudgetAndCarryover(t *testing.T) {
 	}
 }
 
+func TestExpeditionCheckpointResumeAndClear(t *testing.T) {
+	h := newHarness(t)
+	e := NewExpedition()
+	e.Name = "Curiosity"
+	e.Finish(true, StarterDesign(), 700, 10, 14)
+	SaveExpedition(h.h, e)
+	h.g.Load(SceneMenu, nil)
+	h.frames(2, engine.Input{})
+	h.clickButton("Resume expedition")
+	h.clickButton("Start Mission 2")
+	if h.g.Scene().Name != SceneBuild {
+		t.Fatal("saved expedition did not resume its next mission")
+	}
+	loaded := LoadExpedition(h.h)
+	if loaded == nil || loaded.Index != 1 || loaded.Name != "Curiosity" || loaded.Credits != e.Credits || loaded.Rover.Cost() != e.Rover.Cost() {
+		t.Fatalf("checkpoint changed: %+v", loaded)
+	}
+	rover := StarterDesign()
+	loaded.Credits = rover.Cost()
+	loaded.Finish(false, StarterDesign(), 0, 20, 14)
+	SaveExpedition(h.h, loaded)
+	if LoadExpedition(h.h) != nil {
+		t.Fatal("ended expedition must not be resumable")
+	}
+	h.h.Save(expeditionKey, []byte(`{"Index":999,"Credits":99}`))
+	if LoadExpedition(h.h) != nil {
+		t.Fatal("invalid checkpoint must be ignored")
+	}
+}
+
 func TestExpeditionParRewards(t *testing.T) {
 	for _, tc := range []struct {
 		elapsed float64
