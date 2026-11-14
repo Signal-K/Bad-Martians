@@ -198,8 +198,10 @@ type Progress struct {
 	Levels map[int]LevelProgress `json:"levels"`
 	Labels map[int]map[int]int   `json:"labels"` // level -> segment -> class
 
-	BestExpedition int `json:"best_expedition"`
-	Launched       int `json:"launched"` // rovers sent out; picks the next suggested name
+	BestExpedition  int             `json:"best_expedition"`
+	Launched        int             `json:"launched"` // rovers sent out; picks the next suggested name
+	FreeRetries     int             `json:"free_retries,omitempty"`
+	ClaimedMissions map[string]bool `json:"claimed_missions,omitempty"`
 }
 
 const progressKey = "hm.progress"

@@ -256,8 +256,39 @@ func TestDailyMissionOnlyAdvertisesAvailableRewards(t *testing.T) {
 	r := &textR{}
 	h.g.Draw(r)
 	text := strings.Join(r.texts, "\n")
-	if strings.Contains(text, "free retry") || !strings.Contains(text, "build credits") {
-		t.Fatalf("daily card advertises unavailable reward or hides build credits: %s", text)
+	if !strings.Contains(text, "free retry on win") || !strings.Contains(text, "build credits") {
+		t.Fatalf("daily card hides available rewards: %s", text)
+	}
+}
+
+func TestDailyRetryAwardAndExpeditionUse(t *testing.T) {
+	h := newHarness(t)
+	m := Missions[0]
+	ses := NewSessionFor(h.h, BuildLevel(m.Level))
+	ses.Design = StarterDesign()
+	for i := 0; i < 2; i++ {
+		h.g.Load(SceneResult, &ResultArg{Session: ses, Outcome: Won})
+		h.frames(2, engine.Input{})
+	}
+	if got := LoadProgress(h.h).FreeRetries; got != m.FreeRetry {
+		t.Fatalf("expected one mission award, got %d", got)
+	}
+	e := NewExpedition()
+	es := ExpeditionSession(h.h, e)
+	es.Design = StarterDesign()
+	e.Credits = es.Design.Cost()
+	before := e.Credits
+	h.g.Load(SceneResult, &ResultArg{Session: es, Outcome: Fell})
+	h.frames(2, engine.Input{})
+	if !e.Failed {
+		t.Fatal("expected expedition to end without the retry")
+	}
+	h.clickButton("Use free retry")
+	if h.g.Scene().Name != SceneBuild || e.Credits != before || e.Failed || len(es.Design.Cells) == 0 {
+		t.Fatalf("retry did not restore the rover and budget: %+v", e)
+	}
+	if LoadProgress(h.h).FreeRetries != m.FreeRetry-1 || LoadExpedition(h.h) == nil {
+		t.Fatal("retry consumption and restored expedition must persist")
 	}
 }
 

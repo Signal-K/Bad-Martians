@@ -220,6 +220,9 @@ func menuScene(g *engine.Game, _ any) *engine.Scene {
 			total += lp.Score
 		}
 		r.Text(fmt.Sprintf("%d of %d stars · %d points", stars, 3*len(LevelDefs), total), 25, 40, sizeSmall, colMuted, engine.AlignLeft)
+		if prog.FreeRetries > 0 {
+			r.Text(fmt.Sprintf("Free retries: %d", prog.FreeRetries), ScreenW-24, 10, sizeSmall, colGood, engine.AlignRight)
+		}
 		d := LevelDefs[sel]
 		r.Text(fmt.Sprintf("Obstacles %.0f%% · difficulty %.0f%%", 100*d.Obstacle(), 100*d.Difficulty()), ScreenW-24, 40, sizeSmall, colMuted, engine.AlignRight)
 
@@ -284,6 +287,9 @@ func menuScene(g *engine.Game, _ any) *engine.Scene {
 			r.Text(label, b.X+14, b.Y+8, sizeSmall, colNeon, engine.AlignLeft)
 			r.Text(m.Title, b.X+14, b.Y+28, 18, ink, engine.AlignLeft)
 			r.Text(fmt.Sprintf("+%d build credits", m.Reward.Credits), b.X+b.W-14, b.Y+8, sizeSmall, sub, engine.AlignRight)
+			if m.FreeRetry > 0 && !prog.ClaimedMissions[m.Date] {
+				r.Text(fmt.Sprintf("+%d free retry on win", m.FreeRetry), b.X+b.W-14, b.Y+34, 11, sub, engine.AlignRight)
+			}
 		}
 	}
 	sl := "Shape school"

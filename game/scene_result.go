@@ -24,8 +24,9 @@ type ResultArg struct {
 
 	Cause Cause // why a failed run failed
 
-	Salvaged Kind   // extra part an undamaged finish gave back
-	Name     string // the rover that made this run
+	Salvaged       Kind   // extra part an undamaged finish gave back
+	Name           string // the rover that made this run
+	AwardedRetries int
 }
 
 // sampleResult is the standalone fixture: a won mission with plausible numbers.
@@ -55,6 +56,16 @@ func resultScene(g *engine.Game, arg any) *engine.Scene {
 		ra.Recorded = true
 		if ra.Outcome == Won {
 			prog.Record(lvl.ID, ra.Stars, ra.Time, ra.Score.Total())
+			for _, m := range Missions {
+				if m.Level.ID == lvl.ID && !prog.ClaimedMissions[m.Date] {
+					if prog.ClaimedMissions == nil {
+						prog.ClaimedMissions = map[string]bool{}
+					}
+					prog.ClaimedMissions[m.Date] = true
+					prog.FreeRetries += m.FreeRetry
+					ra.AwardedRetries = m.FreeRetry
+				}
+			}
 			prog.Save(g.Host)
 		}
 		design := make([]map[string]any, 0, len(ses.Design.Cells))
@@ -109,6 +120,9 @@ func resultScene(g *engine.Game, arg any) *engine.Scene {
 		}
 		r.Text(head, 28, 16, sizeTitle, col, engine.AlignLeft)
 		r.Text(ra.Outcome.Message(), 28, 54, sizeBody, colMuted, engine.AlignLeft)
+		if ra.AwardedRetries > 0 {
+			r.Text(fmt.Sprintf("Earned %d free expedition retry", ra.AwardedRetries), 596, 88, sizeSmall, colGood, engine.AlignLeft)
+		}
 		switch {
 		case ra.Salvaged != "" && exp != nil:
 			if !exp.Done {
@@ -200,6 +214,22 @@ func resultScene(g *engine.Game, arg any) *engine.Scene {
 		again := AddButton(s, 100, 470, 220, 60, "Retry", func() { ses.Design = Design{}; g.Load(SceneBuild, ses) })
 		again.Icon = IconRover
 		again.Disabled = ra.Outcome == Won || exp.Over()
+		if ra.Outcome != Won && prog.FreeRetries > 0 && exp.Lost > 0 {
+			free := AddButton(s, 340, 470, 350, 60, "Use free retry", func() {
+				p := LoadProgress(g.Host)
+				if p.FreeRetries <= 0 || exp.Lost <= 0 {
+					return
+				}
+				p.FreeRetries--
+				p.Save(g.Host)
+				exp.Credits += exp.Lost
+				exp.Lost, exp.Failed = 0, false
+				exp.Rover = Design{Cells: append([]Cell(nil), ses.Design.Cells...)}
+				SaveExpedition(g.Host, exp)
+				g.Load(SceneBuild, ses)
+			})
+			free.Icon = IconRetry
+		}
 		label := "Next mission"
 		if exp.Over() {
 			label = "Finish"

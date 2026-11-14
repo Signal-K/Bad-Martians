@@ -1,0 +1,33 @@
+name: Daily mission build
+on:
+  schedule:
+    - cron: '5 0 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  mission:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version-file: go.mod }
+      # The game tests validate every authored mission, including duplicate dates/IDs.
+      - run: go test ./game
+      - name: Require a mission for today (UTC)
+        run: |
+          python3 - <<'PY'
+          import datetime, glob, json, sys
+          today = datetime.datetime.now(datetime.timezone.utc).date().isoformat()
+          matches = [p for p in glob.glob('game/data/missions/*.json')
+                     if json.load(open(p, encoding='utf-8')).get('date') == today]
+          if len(matches) != 1:
+              sys.exit(f'Expected one mission for {today}; found {len(matches)}')
+          print(f'Mission for {today}: {matches[0]}')
+          PY
+      - run: scripts/build-dist.sh
+        env:
+          HM_API_URL: ${{ vars.HM_API_URL }}
+          HM_CLERK_KEY: ${{ vars.HM_CLERK_KEY }}
+      - uses: actions/upload-artifact@v4
+        with: { name: daily-mission-build, path: dist }
