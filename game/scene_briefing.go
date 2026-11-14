@@ -24,6 +24,7 @@ func briefingScene(g *engine.Game, arg any) *engine.Scene {
 			"Surviving parts can be reused or swapped.",
 			"Lost rovers cost their full value.",
 			"Finish under par for +2 credits next stage.",
+			"Finish the expedition to earn a free retry.",
 		} {
 			r.Text(ln, 52, 230+float64(i)*32, sizeSmall, colMuted, engine.AlignLeft)
 		}

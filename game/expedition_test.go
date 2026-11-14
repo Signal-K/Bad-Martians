@@ -154,6 +154,22 @@ func TestExpeditionResultAwardsOnce(t *testing.T) {
 	}
 }
 
+func TestExpeditionCompletionAwardsRetryOnce(t *testing.T) {
+	h := newHarness(t)
+	e := NewExpedition()
+	e.Index = len(ExpeditionLevels) - 1
+	ses := ExpeditionSession(h.h, e)
+	ses.Design = StarterDesign()
+	r := &ResultArg{Session: ses, Outcome: Won}
+	for i := 0; i < 2; i++ {
+		h.g.Load(SceneResult, r)
+		h.frames(2, engine.Input{})
+	}
+	if got := LoadProgress(h.h).FreeRetries; got != 1 {
+		t.Fatalf("expedition should award one persistent retry, got %d", got)
+	}
+}
+
 func TestExpeditionRetryStartsWithEmptyBay(t *testing.T) {
 	h := newHarness(t)
 	e := NewExpedition()

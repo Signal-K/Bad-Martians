@@ -88,6 +88,11 @@ func resultScene(g *engine.Game, arg any) *engine.Scene {
 		}
 		if ses.Exp != nil {
 			ses.Exp.Finish(won, ses.Design, ra.Score.Total(), ra.Time, lvl.Par)
+			if ses.Exp.Done {
+				prog.FreeRetries++
+				ra.AwardedRetries++
+				prog.Save(g.Host)
+			}
 			if ra.Salvaged != "" && !ses.Exp.Done {
 				ses.Exp.Salvage(ses.Design)
 			}

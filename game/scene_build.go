@@ -17,7 +17,7 @@ const (
 	bGround  = 360.0 // screen y of the ground under the grid
 	bGY      = bGround - bCell*GridH
 	bTrayY   = 420.0 // top of the parts tray
-	bTileW   = 124.0
+	bTileW   = 103.0
 	bTileH   = 100.0
 	bTileGap = 8.0
 	bSwipe   = 40.0
@@ -39,7 +39,7 @@ func cardY(i int) float64 { return bSideY + float64(i)*(bCardH+bCardG) }
 var skipBox = engine.Rect{X: 560, Y: 10, W: 84, H: 44}
 
 // bayTools is the order of the parts tray; "" is the eraser.
-var bayTools = []Kind{KFrame, KWheel, KMotor, KMast, ""}
+var bayTools = []Kind{KFrame, KWheel, KMotor, KMast, KGripMotor, ""}
 
 // CanAdd is how many more of part k fit in the budget: the number on its tray
 // tile. The mast is 1 until one is placed (placing another moves it).
@@ -661,9 +661,9 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 		drawPanel(r, gx, gy, gw, gh, "Parts guide")
 		r.Text("What each part does", gx+28, gy+24, 22, colInk, engine.AlignLeft)
 		for i, p := range Parts {
-			y := gy + 66 + float64(i)*78
-			r.Rect(gx+24, y, gw-48, 70, colPanel, true)
-			c := engine.V(gx+66, y+35)
+			y := gy + 60 + float64(i)*64
+			r.Rect(gx+24, y, gw-48, 60, colPanel, true)
+			c := engine.V(gx+66, y+30)
 			if p.Kind == KMast {
 				drawPart(r, p.Kind, engine.V(c.X, c.Y+8), 30, 0)
 			} else {
@@ -671,8 +671,8 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 			}
 			r.Text(p.Name, gx+112, y+8, sizeBody, colInk, engine.AlignLeft)
 			r.Text(p.Does, gx+gw-40, y+8, sizeSmall, colNeon, engine.AlignRight)
-			r.Text(p.Guide[0], gx+112, y+30, sizeSmall, colMuted, engine.AlignLeft)
-			r.Text(p.Guide[1], gx+112, y+48, sizeSmall, colMuted, engine.AlignLeft)
+			r.Text(p.Guide[0], gx+112, y+27, sizeSmall, colMuted, engine.AlignLeft)
+			r.Text(p.Guide[1], gx+112, y+43, sizeSmall, colMuted, engine.AlignLeft)
 		}
 	})
 	gclose := AddButton(s, gx+gw-176, gy+10, 152, 44, "Got it", func() { guide = false })

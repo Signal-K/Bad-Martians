@@ -12,10 +12,11 @@ import (
 type Kind string
 
 const (
-	KFrame Kind = "frame"
-	KWheel Kind = "wheel"
-	KMotor Kind = "motor"
-	KMast  Kind = "mast" // the Navcam mast: every rover must carry exactly one
+	KFrame     Kind = "frame"
+	KWheel     Kind = "wheel"
+	KMotor     Kind = "motor"
+	KGripMotor Kind = "grip_motor"
+	KMast      Kind = "mast" // the Navcam mast: every rover must carry exactly one
 )
 
 type PartDef struct {
@@ -40,9 +41,11 @@ var Parts = []PartDef{
 	{KWheel, "Free wheel", 2, 0.5, 1.0, true, false, engine.RGB(60, 60, 70), "Rolls, no power",
 		[2]string{"Rolls over the ground but cannot push the rover.", "Carries weight and stops the frame dragging."}},
 	{KMotor, "Motor wheel", 4, 0.5, 1.4, true, true, engine.RGB(236, 120, 60), "Powered: drives",
-		[2]string{"The only part with power. It pushes the rover forward.", "Every rover needs one. More motors climb steeper hills."}},
+		[2]string{"A powered wheel that pushes the rover forward.", "Every rover needs a motor. More motors climb steeper hills."}},
 	{KMast, "Navcam mast", 2, 0.3, 1.5, false, false, engine.RGB(90, 170, 230), "Camera, need 1",
 		[2]string{"The camera that reads the terrain. Every rover needs one.", "Stand it on top, where it will not scrape the ground."}},
+	{KGripMotor, "Grip motor", 6, 0.5, 1.7, true, true, engine.RGB(110, 190, 150), "More grip",
+		[2]string{"A heavier motor wheel with more grip on loose ground.", "Costs more credits and weighs more than a motor wheel."}},
 }
 
 func PartOf(k Kind) (PartDef, bool) {
@@ -128,7 +131,7 @@ func (d *Design) Validate(budget int) []string {
 	if count[KMast] != 1 {
 		errs = append(errs, "Add one Navcam mast")
 	}
-	if count[KMotor] == 0 {
+	if count[KMotor]+count[KGripMotor] == 0 {
 		errs = append(errs, "Add a motor wheel")
 	}
 	if c := d.Cost(); c > budget {
@@ -210,6 +213,9 @@ func SpawnRover(w *physics.World, d Design, originX, groundY float64) *Rover {
 		}
 		if p.Wheel {
 			b.Friction = 1
+		}
+		if c.K == KGripMotor {
+			b.Friction = 1.5
 		}
 		w.AddBody(b)
 		r.Bodies = append(r.Bodies, b)

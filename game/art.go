@@ -111,6 +111,9 @@ func drawPart(rd engine.Renderer, k Kind, c engine.Vec2, z, angle float64) {
 	switch {
 	case p.Wheel:
 		drawWheel(rd, c, p.Radius*z, z, angle, p.Motor)
+		if k == KGripMotor {
+			rd.Circle(c, p.Radius*z*0.7, p.Color, false)
+		}
 	case p.Kind == KMast:
 		drawMast(rd, c, z)
 	default:

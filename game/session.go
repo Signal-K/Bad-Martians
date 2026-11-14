@@ -117,8 +117,8 @@ func (s *Session) CanAdd(k Kind) int {
 	if m := s.Level.MaxParts; m > 0 {
 		n = min(n, max(0, m-len(s.Design.Cells)))
 	}
-	if m := s.Level.MaxMotor; m > 0 && k == KMotor {
-		n = min(n, max(0, m-KitOf(s.Design)[KMotor]))
+	if p, ok := PartOf(k); ok && p.Motor && s.Level.MaxMotor > 0 {
+		n = min(n, max(0, s.Level.MaxMotor-motorCount(s.Design)))
 	}
 	return n
 }
@@ -271,10 +271,20 @@ func RuleProblems(def LevelDef, d Design) []string {
 	if def.MaxParts > 0 && len(d.Cells) > def.MaxParts {
 		errs = append(errs, fmt.Sprintf("The lander carries %d parts; this rover has %d", def.MaxParts, len(d.Cells)))
 	}
-	if n := KitOf(d)[KMotor]; def.MaxMotor > 0 && n > def.MaxMotor {
+	if n := motorCount(d); def.MaxMotor > 0 && n > def.MaxMotor {
 		errs = append(errs, fmt.Sprintf("Power for %d %s; this rover has %d", def.MaxMotor, partNoun(KMotor, def.MaxMotor), n))
 	}
 	return errs
+}
+
+func motorCount(d Design) int {
+	n := 0
+	for _, c := range d.Cells {
+		if p, ok := PartOf(c.K); ok && p.Motor {
+			n++
+		}
+	}
+	return n
 }
 
 // RuleLine is the level's lander rules for the build screen, or "".

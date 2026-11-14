@@ -37,7 +37,7 @@ func partIcon(k Kind) Icon {
 	switch k {
 	case KWheel:
 		return IconWheel
-	case KMotor:
+	case KMotor, KGripMotor:
 		return IconMotor
 	case KMast:
 		return IconMast

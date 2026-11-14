@@ -108,7 +108,7 @@ func (e *Expedition) Over() bool { return e.Done || e.Failed }
 
 // partNoun is a part's short name, plural when n != 1.
 func partNoun(k Kind, n int) string {
-	w := map[Kind]string{KFrame: "frame", KWheel: "wheel", KMotor: "motor wheel", KMast: "mast"}[k]
+	w := map[Kind]string{KFrame: "frame", KWheel: "wheel", KMotor: "motor wheel", KGripMotor: "grip motor", KMast: "mast"}[k]
 	if n != 1 {
 		w += "s"
 	}
