@@ -46,7 +46,7 @@ func TestTutorialFirstBuildAndDrive(t *testing.T) {
 		k    Kind
 		name string
 		step int
-	}{{KWheel, "Wheel", tutWheel}, {KMotor, "Motor wheel", tutMotor}, {KMast, "Navcam mast", tutMast}} {
+	}{{KWheel, "Free wheel", tutWheel}, {KMotor, "Motor wheel", tutMotor}, {KMast, "Navcam mast", tutMast}} {
 		if got := ses.Tut.BuildStep(ses.Design); got != st.step {
 			t.Fatalf("step %d, want %d", got, st.step)
 		}

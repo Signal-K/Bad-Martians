@@ -1,0 +1,18 @@
+{
+  "id": 13,
+  "name": "Ice Shelf",
+  "blurb": "Slippery crevasses. Bridge them on a long frame.",
+  "biome": "ice",
+  "length": 120,
+  "seed": 82,
+  "credits": 44,
+  "par": 24,
+  "hill": 1.0,
+  "traction": 0.7,
+  "mix": {
+    "soil": 3,
+    "bedrock": 3
+  },
+  "gaps": 2,
+  "gap_width": 3.5
+}

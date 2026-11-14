@@ -28,6 +28,21 @@ type LevelDef struct {
 	Hill     float64 // hill amplitude (m)
 	Traction float64 // multiplies every class's friction; 1 is as labelled
 	Mix      [NumClasses]float64
+
+	// Rules that ask for a particular kind of rover. Zero means no rule.
+	Gaps     int     // crevasses across the course: a short rover drops in
+	GapWidth float64 // metres; 2.5 when Gaps is set and this is zero
+	MaxWidth int     // columns of the bay the lander can carry: a long rover will not fit
+	MaxParts int     // parts the lander can carry
+	MaxMotor int     // motor wheels the lander's power can drive
+}
+
+// BayWidth is how many grid columns the rover may use.
+func (d LevelDef) BayWidth() int {
+	if d.MaxWidth > 0 && d.MaxWidth < GridW {
+		return d.MaxWidth
+	}
+	return GridW
 }
 
 type Level struct {
@@ -37,6 +52,7 @@ type Level struct {
 	Samples  []engine.Vec2
 	StartX   float64
 	GoalX    float64
+	Gaps     [][2]float64 // crevasse spans, x0..x1
 }
 
 const (
@@ -140,6 +156,42 @@ func BuildLevel(def LevelDef) *Level {
 		}
 	}
 
+	// Crevasses: evenly spaced, after all random draws so they never shift the
+	// rest of the level. The floor is far below the rim, so a rover that drops
+	// in is lost.
+	if def.Gaps > 0 {
+		w := def.GapWidth
+		if w <= 0 {
+			w = 2.5
+		}
+		for k := 0; k < def.Gaps; k++ {
+			x0 := math.Round(def.Length*(0.25+0.55*float64(k)/math.Max(1, float64(def.Gaps-1)))/terrainDX) * terrainDX
+			if def.Gaps == 1 {
+				x0 = math.Round(def.Length*0.5/terrainDX) * terrainDX
+			}
+			x1 := x0 + w
+			rim := 0.0
+			for i := range h {
+				x := -terrainPad + float64(i)*terrainDX
+				if x > x0-terrainDX/2 && x < x0+terrainDX/2 {
+					rim = h[i]
+				}
+			}
+			for i := range h { // a flat shelf each side, blended into the hills
+				x := -terrainPad + float64(i)*terrainDX
+				d := math.Max(x0-x, x-x1)
+				switch {
+				case x > x0 && x < x1:
+					h[i] = rim - 30
+				case d < 10:
+					k := 1 - smooth((d-6)/4)
+					h[i] = h[i]*(1-k) + rim*k
+				}
+			}
+			L.Gaps = append(L.Gaps, [2]float64{x0, x1})
+		}
+	}
+
 	seg := make([]uint8, n-1)
 	for i := range seg {
 		x := -terrainPad + (float64(i)+0.5)*terrainDX
@@ -188,4 +240,14 @@ func (l *Level) SegmentAt(x float64) int {
 		}
 	}
 	return len(l.Segments) - 1
+}
+
+// InGap reports whether x is over a crevasse.
+func (l *Level) InGap(x float64) bool {
+	for _, g := range l.Gaps {
+		if x > g[0] && x < g[1] {
+			return true
+		}
+	}
+	return false
 }

@@ -1,18 +1,18 @@
 {
   "id": 5,
-  "name": "Rim Run",
-  "blurb": "Long, steep and mixed. The full survey.",
+  "name": "First Crevasse",
+  "blurb": "A crack across the plain. Too wide to drop a short rover into.",
   "biome": "crater",
-  "length": 180,
-  "seed": 55,
-  "credits": 16,
-  "par": 34,
-  "hill": 3.8,
+  "length": 100,
+  "seed": 227,
+  "credits": 40,
+  "par": 20,
+  "hill": 1.0,
   "traction": 1.0,
   "mix": {
-    "soil": 2,
-    "bedrock": 2,
-    "sand": 2,
-    "big_rock": 2
-  }
+    "soil": 3,
+    "bedrock": 3
+  },
+  "gaps": 1,
+  "gap_width": 3.5
 }

@@ -1,0 +1,19 @@
+{
+  "id": 9,
+  "name": "Twin Crevasses",
+  "blurb": "Two cracks to bridge. Spread the motors along a long rover.",
+  "biome": "crater",
+  "length": 120,
+  "seed": 312,
+  "credits": 44,
+  "par": 23,
+  "hill": 1.0,
+  "traction": 1.0,
+  "mix": {
+    "soil": 2,
+    "bedrock": 3,
+    "sand": 1
+  },
+  "gaps": 2,
+  "gap_width": 3.5
+}

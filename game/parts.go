@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"math"
 	"sort"
 
 	"github.com/signal-k/haphazard-martians/engine"
@@ -26,13 +27,22 @@ type PartDef struct {
 	Wheel  bool
 	Motor  bool
 	Color  engine.Color
+	// Does is the part's job in a few words, printed on its bay tile.
+	Does string
+	// Guide is two short lines for the parts guide; the first one also shows
+	// in the bay's status line when the part is picked.
+	Guide [2]string
 }
 
 var Parts = []PartDef{
-	{KFrame, "Frame", 1, 0.3, 1.0, false, false, engine.RGB(214, 214, 220)},
-	{KWheel, "Wheel", 2, 0.5, 1.0, true, false, engine.RGB(60, 60, 70)},
-	{KMotor, "Motor wheel", 4, 0.5, 1.4, true, true, engine.RGB(236, 120, 60)},
-	{KMast, "Navcam mast", 2, 0.3, 1.5, false, false, engine.RGB(90, 170, 230)},
+	{KFrame, "Frame", 1, 0.3, 1.0, false, false, engine.RGB(214, 214, 220), "Joins parts",
+		[2]string{"Cheap and light. It joins the other parts into one rover.", "It slides instead of rolling, so keep it off the ground."}},
+	{KWheel, "Free wheel", 2, 0.5, 1.0, true, false, engine.RGB(60, 60, 70), "Rolls, no power",
+		[2]string{"Rolls over the ground but cannot push the rover.", "Carries weight and stops the frame dragging."}},
+	{KMotor, "Motor wheel", 4, 0.5, 1.4, true, true, engine.RGB(236, 120, 60), "Powered: drives",
+		[2]string{"The only part with power. It pushes the rover forward.", "Every rover needs one. More motors climb steeper hills."}},
+	{KMast, "Navcam mast", 2, 0.3, 1.5, false, false, engine.RGB(90, 170, 230), "Camera, need 1",
+		[2]string{"The camera that reads the terrain. Every rover needs one.", "Stand it on top, where it will not scrape the ground."}},
 }
 
 func PartOf(k Kind) (PartDef, bool) {
@@ -188,6 +198,7 @@ func SpawnRover(w *physics.World, d Design, originX, groundY float64) *Rover {
 			minBottom = b
 		}
 	}
+	groundY = spawnLift(w.Terrain, cells, originX, groundY, minBottom)
 	for i, c := range cells {
 		p, _ := PartOf(c.K)
 		b := &physics.Body{
@@ -213,6 +224,25 @@ func SpawnRover(w *physics.World, d Design, originX, groundY float64) *Rover {
 		}
 	}
 	return r
+}
+
+// spawnLift raises groundY until no part starts inside the terrain. A wide
+// rover on a slope would otherwise spawn with its downhill-side wheels buried,
+// and the collision solver would fling it into the air on the first step.
+func spawnLift(t *physics.Terrain, cells []Cell, originX, groundY, minBottom float64) float64 {
+	if t == nil {
+		return groundY
+	}
+	for _, c := range cells {
+		p, _ := PartOf(c.K)
+		cx, rel := originX+float64(c.X), float64(c.Y)-minBottom
+		for k := -10; k <= 10; k++ {
+			dx := p.Radius * float64(k) / 10
+			need := t.HeightAt(cx+dx) + math.Sqrt(max(0, p.Radius*p.Radius-dx*dx)) - rel - 0.05
+			groundY = max(groundY, need)
+		}
+	}
+	return groundY
 }
 
 func (r *Rover) SetThrottle(t float64) {

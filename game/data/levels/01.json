@@ -5,8 +5,8 @@
   "biome": "plains",
   "length": 80,
   "seed": 11,
-  "credits": 12,
-  "par": 14,
+  "credits": 28,
+  "par": 15,
   "hill": 1.2,
   "traction": 1.0,
   "mix": {

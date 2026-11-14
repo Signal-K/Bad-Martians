@@ -90,8 +90,9 @@ func TestFullFlow(t *testing.T) {
 	h := newHarness(t)
 	h.g.Load(SceneMenu, nil)
 	h.frames(2, engine.Input{})
-	// build first: a mission card goes straight to the rover bay, no labelling gate
+	// build first: pick a stop on the route, then straight to the rover bay
 	h.clickButton("Mission 1")
+	h.clickButton("Build rover")
 	if h.g.Scene().Name != SceneBuild {
 		t.Fatalf("expected build, got %s", h.g.Scene().Name)
 	}
@@ -270,5 +271,54 @@ func TestCurrentMissionByDate(t *testing.T) {
 	Today = func() string { return "2030-01-01" }
 	if m, ok, _ := CurrentMission(); !ok || m.Date != "2026-11-08" {
 		t.Fatalf("later date should show the latest mission, got %v %v", m.Date, ok)
+	}
+}
+
+// Mission select is a route: tapping a stop picks it and Build rover opens
+// that mission's bay. Locked stops cannot be picked, a swipe scrolls the
+// route without picking, and the route opens on the furthest unlock.
+func TestRouteSelect(t *testing.T) {
+	defer func() { selMission = 0 }()
+	selMission = 0
+	h := newHarness(t)
+	h.g.Load(SceneMenu, nil)
+	h.frames(2, engine.Input{})
+	if h.menuTile(1).Disabled || !h.menuTile(2).Disabled {
+		t.Fatal("a new player has mission 1 open and mission 2 locked")
+	}
+	if !h.menuTile(20).Hidden {
+		t.Fatal("the far end of the route starts off screen")
+	}
+	// swipe left along the map: the route scrolls and nothing is picked
+	x0 := h.menuTile(1).X
+	for i := 0; i <= 10; i++ {
+		h.frames(1, engine.Input{Pointer: engine.V(800-float64(i)*50, 200), Down: true})
+	}
+	h.frames(30, engine.Input{Pointer: engine.V(300, 200)})
+	if h.menuTile(1).X >= x0-200 {
+		t.Fatalf("swipe should scroll the route: %v -> %v", x0, h.menuTile(1).X)
+	}
+	if selMission != 0 {
+		t.Fatal("a swipe must not pick a stop")
+	}
+	// a player who has finished mission 12 opens on mission 13
+	p := LoadProgress(h.h)
+	for id := 1; id <= 12; id++ {
+		p.Record(id, 1, 30, 100)
+	}
+	p.Save(h.h)
+	h.g.Load(SceneMenu, nil)
+	h.frames(2, engine.Input{})
+	if h.menuTile(13).Hidden || h.menuTile(13).Disabled || !h.menuTile(14).Disabled {
+		t.Fatal("mission 13 should be on screen and open, 14 locked")
+	}
+	h.clickButton("Mission 12")
+	h.frames(40, engine.Input{})
+	if selMission != 12 {
+		t.Fatalf("tapping a stop should pick it, got %d", selMission)
+	}
+	h.clickButton("Build rover")
+	if h.g.Scene().Name != SceneBuild {
+		t.Fatalf("expected build, got %s", h.g.Scene().Name)
 	}
 }

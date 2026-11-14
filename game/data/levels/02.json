@@ -1,18 +1,17 @@
 {
   "id": 2,
-  "name": "Sand Trap",
-  "blurb": "Wind-blown drifts. Grip matters.",
-  "biome": "dunes",
-  "length": 110,
-  "seed": 22,
-  "credits": 13,
-  "par": 24,
-  "hill": 1.5,
+  "name": "Rolling Plains",
+  "blurb": "Long swells of soil. Any sound rover will do.",
+  "biome": "plains",
+  "length": 100,
+  "seed": 116,
+  "credits": 30,
+  "par": 18,
+  "hill": 1.8,
   "traction": 1.0,
   "mix": {
-    "soil": 2,
-    "bedrock": 2,
-    "sand": 4,
-    "big_rock": 1
+    "soil": 3,
+    "bedrock": 3,
+    "sand": 1
   }
 }

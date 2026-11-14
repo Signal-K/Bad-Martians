@@ -1,0 +1,18 @@
+{
+  "id": 10,
+  "name": "Scree Slope",
+  "blurb": "Loose rock on a long climb, and power for three motors.",
+  "biome": "boulders",
+  "length": 130,
+  "seed": 271,
+  "credits": 40,
+  "par": 35,
+  "hill": 3.5,
+  "traction": 0.9,
+  "mix": {
+    "big_rock": 2,
+    "bedrock": 3,
+    "sand": 1
+  },
+  "max_motors": 3
+}

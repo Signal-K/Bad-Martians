@@ -62,10 +62,19 @@ type Run struct {
 	// salvages a part for the next mission.
 	Scrapes  int
 	scraping []bool
+
+	// for Diagnose: the rover's built shape, its length, its speed at each
+	// crevasse edge, and the cause frozen when the run failed
+	built             []engine.Vec2
+	length            float64
+	wheelbase, height float64
+	bottom            int // lowest grid row of the design
+	gapSpeed          []float64
+	cause             Cause
 }
 
 // DriveSpeed is how much faster than real time the drive scene runs the sim.
-const DriveSpeed = 1.5
+const DriveSpeed = 2.25
 
 // physH is the physics substep the levels were tuned with.
 const physH = engine.FixedDT / 10
@@ -84,6 +93,7 @@ func NewRun(l *Level, d Design) *Run {
 	r.scraping = make([]bool, len(r.Rover.Bodies))
 	r.lastC = r.Rover.Center()
 	r.BestX = r.lastC.X
+	r.measure()
 	return r
 }
 
@@ -97,6 +107,7 @@ func (r *Run) Scrap() {
 	if r.Outcome != Running {
 		return
 	}
+	r.cause = r.diagnose() // read the pose before it flies apart
 	r.Outcome = Scrapped
 	c := r.Rover.Center()
 	r.World.Cons = r.World.Cons[:0]
@@ -203,6 +214,7 @@ func (r *Run) Step(dt, throttle float64) {
 	r.lean(dt)
 	r.World.Step(dt)
 	r.stats(dt)
+	r.watchGaps((r.Rover.Center().X - r.lastC.X) / dt)
 	for i, b := range r.Rover.Bodies {
 		hit := b.OnGround && !b.Wheel
 		if hit && !r.scraping[i] {
@@ -228,8 +240,9 @@ func (r *Run) Step(dt, throttle float64) {
 		r.Outcome = Won
 		return
 	}
-	if c.Y < r.Level.Terrain.HeightAt(c.X)-12 {
+	if r.inCrevasse(c) || c.Y < r.Level.Terrain.HeightAt(c.X)-12 {
 		r.Outcome = Fell
+		r.cause = r.diagnose()
 		return
 	}
 	if c.X > r.BestX+0.5 {
@@ -240,7 +253,19 @@ func (r *Run) Step(dt, throttle float64) {
 	r.lastC = c
 	if r.Time > maxSeconds {
 		r.Outcome = TimedOut
+		r.cause = r.diagnose()
 	}
+}
+
+// inCrevasse reports whether the rover has dropped well below the rim of a
+// crevasse it is over.
+func (r *Run) inCrevasse(c engine.Vec2) bool {
+	for _, g := range r.Level.Gaps {
+		if c.X > g[0]-1 && c.X < g[1]+1 && c.Y < r.Level.Terrain.HeightAt(g[0]-terrainDX)-3 {
+			return true
+		}
+	}
+	return false
 }
 
 // Damaged reports whether any part other than a wheel touched the ground.

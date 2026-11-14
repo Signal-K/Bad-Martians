@@ -2,6 +2,9 @@ package game
 
 import (
 	"encoding/json"
+	"fmt"
+	"sort"
+	"strings"
 
 	"github.com/signal-k/haphazard-martians/engine"
 )
@@ -17,6 +20,41 @@ type Session struct {
 	Tut     *Tutorial     // first-time guided build and drive; nil when off
 	Name    string        // the rover's name, given at launch
 	Spare   Kind          // part salvaged on the mission before: its credits add to the budget
+	Lesson  int           // 1-based Shape school lesson; 0 outside the school
+
+	// Last is why the last drive failed, shown in the bay with the parts to
+	// blame (LastCells) until the player changes the design it was about.
+	Last       Cause
+	LastCells  []Cell
+	lastDesign string
+}
+
+// NoteFailure keeps why run failed so the bay can explain it; a win clears it.
+func (s *Session) NoteFailure(r *Run) {
+	s.Last, s.LastCells, s.lastDesign = Cause{}, nil, ""
+	if r.Outcome == Won || (r.Outcome == Running && !r.IsStuck()) {
+		return
+	}
+	s.Last = r.Diagnose()
+	for _, i := range s.Last.Culprits {
+		s.LastCells = append(s.LastCells, r.Rover.Cells[i])
+	}
+	s.lastDesign = designKey(s.Design)
+}
+
+// LastFailure is the last drive's cause while the design is still the one
+// that failed; empty once the player has changed it.
+func (s *Session) LastFailure() (Cause, []Cell) {
+	if s.Last.Empty() || designKey(s.Design) != s.lastDesign {
+		return Cause{}, nil
+	}
+	return s.Last, s.LastCells
+}
+
+func designKey(d Design) string {
+	c := append([]Cell(nil), d.Cells...)
+	sort.Slice(c, func(i, j int) bool { return c[i].Y*GridW+c[i].X < c[j].Y*GridW+c[j].X })
+	return fmt.Sprint(c)
 }
 
 func NewSession(l *Level) *Session {
@@ -73,14 +111,24 @@ func (s *Session) SpareCredits() int {
 	return p.Cost
 }
 
-// CanAdd is how many more of part k fit in the available credits.
-func (s *Session) CanAdd(k Kind) int { return CanAdd(s.Design, k, s.Budget()) }
+// CanAdd enforces both the credit budget and mission part limits.
+func (s *Session) CanAdd(k Kind) int {
+	n := CanAdd(s.Design, k, s.Budget())
+	if m := s.Level.MaxParts; m > 0 {
+		n = min(n, max(0, m-len(s.Design.Cells)))
+	}
+	if m := s.Level.MaxMotor; m > 0 && k == KMotor {
+		n = min(n, max(0, m-KitOf(s.Design)[KMotor]))
+	}
+	return n
+}
 
-// Fits reports whether the rover is within budget.
 func (s *Session) Fits() bool { return s.Design.Cost() <= s.Budget() }
 
-// Problems is what stops this rover launching, for the player.
-func (s *Session) Problems() []string { return s.Design.Validate(s.Budget()) }
+func (s *Session) Problems() []string {
+	errs := s.Design.Validate(s.Budget())
+	return append(errs, RuleProblems(s.Level.LevelDef, s.Design)...)
+}
 
 // SubmitReview sends the labels like SubmitLabels, then one "review" event
 // with every label of the strip, so the host can keep the whole review with
@@ -192,4 +240,66 @@ func (p *Progress) Record(id, stars int, t float64, score int) {
 		cur.Score = score
 	}
 	p.Levels[id] = cur
+}
+
+// Span is how many grid columns a design covers.
+func (d *Design) Span() int {
+	if len(d.Cells) == 0 {
+		return 0
+	}
+	lo, hi := GridW, -1
+	for _, c := range d.Cells {
+		lo, hi = min(lo, c.X), max(hi, c.X)
+	}
+	return hi - lo + 1
+}
+
+// RuleProblems is what breaks a level's lander rules: the bay width and the
+// parts it can carry and the motors its power can drive.
+func RuleProblems(def LevelDef, d Design) []string {
+	var errs []string
+	if w := def.BayWidth(); w < GridW {
+		for _, c := range d.Cells {
+			if c.X >= w {
+				errs = append(errs, fmt.Sprintf("The lander bay is only %d columns wide", w))
+				break
+			}
+		}
+	}
+	if def.MaxParts > 0 && len(d.Cells) > def.MaxParts {
+		errs = append(errs, fmt.Sprintf("The lander carries %d parts; this rover has %d", def.MaxParts, len(d.Cells)))
+	}
+	if n := KitOf(d)[KMotor]; def.MaxMotor > 0 && n > def.MaxMotor {
+		errs = append(errs, fmt.Sprintf("Power for %d %s; this rover has %d", def.MaxMotor, partNoun(KMotor, def.MaxMotor), n))
+	}
+	return errs
+}
+
+// RuleLine is the level's lander rules for the build screen, or "".
+func RuleLine(def LevelDef) string {
+	var p []string
+	if def.MaxParts > 0 {
+		p = append(p, fmt.Sprintf("%d parts at most", def.MaxParts))
+	}
+	if def.MaxMotor > 0 {
+		p = append(p, fmt.Sprintf("power for %d %s", def.MaxMotor, partNoun(KMotor, def.MaxMotor)))
+	}
+	if w := def.BayWidth(); w < GridW {
+		p = append(p, fmt.Sprintf("bay %d columns wide", w))
+	}
+	if def.Gaps > 0 {
+		w := def.GapWidth
+		if w <= 0 {
+			w = 2.5
+		}
+		n := "crevasse"
+		if def.Gaps > 1 {
+			n = "crevasses"
+		}
+		p = append(p, fmt.Sprintf("%d %s %.1f m wide", def.Gaps, n, w))
+	}
+	if len(p) == 0 {
+		return ""
+	}
+	return "Lander: " + strings.Join(p, " · ")
 }

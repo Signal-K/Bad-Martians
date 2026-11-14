@@ -1,0 +1,18 @@
+{
+  "id": 14,
+  "name": "Long Haul",
+  "blurb": "A long sandy drive on two motors.",
+  "biome": "dunes",
+  "length": 140,
+  "seed": 487,
+  "credits": 34,
+  "par": 32,
+  "hill": 2.0,
+  "traction": 1.0,
+  "mix": {
+    "sand": 3,
+    "soil": 2,
+    "bedrock": 1
+  },
+  "max_motors": 2
+}

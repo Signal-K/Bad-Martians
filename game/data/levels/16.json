@@ -1,0 +1,18 @@
+{
+  "id": 16,
+  "name": "Knife Ridge",
+  "blurb": "Steep sandy rock, and a bay four columns wide.",
+  "biome": "ridge",
+  "length": 120,
+  "seed": 536,
+  "credits": 34,
+  "par": 29,
+  "hill": 4.0,
+  "traction": 1.0,
+  "mix": {
+    "bedrock": 2,
+    "sand": 2,
+    "big_rock": 1
+  },
+  "max_width": 4
+}

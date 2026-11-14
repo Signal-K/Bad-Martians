@@ -1,0 +1,18 @@
+{
+  "id": 18,
+  "name": "Crevasse Ridge",
+  "blurb": "Cracks cut across the hills. Long and well powered.",
+  "biome": "ridge",
+  "length": 130,
+  "seed": 302,
+  "credits": 44,
+  "par": 25,
+  "hill": 2.0,
+  "traction": 1.0,
+  "mix": {
+    "bedrock": 3,
+    "soil": 2
+  },
+  "gaps": 2,
+  "gap_width": 3.5
+}

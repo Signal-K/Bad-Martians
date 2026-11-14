@@ -1,0 +1,18 @@
+{
+  "id": 7,
+  "name": "Low Power",
+  "blurb": "The batteries can drive one motor wheel. Let the others roll.",
+  "biome": "plains",
+  "length": 100,
+  "seed": 237,
+  "credits": 28,
+  "par": 23,
+  "hill": 1.5,
+  "traction": 1.0,
+  "mix": {
+    "soil": 3,
+    "bedrock": 3,
+    "sand": 1
+  },
+  "max_motors": 1
+}

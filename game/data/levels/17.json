@@ -1,0 +1,17 @@
+{
+  "id": 17,
+  "name": "Thin Air",
+  "blurb": "Rocky climbs with room for five parts.",
+  "biome": "boulders",
+  "length": 120,
+  "seed": 594,
+  "credits": 30,
+  "par": 29,
+  "hill": 3.0,
+  "traction": 1.0,
+  "mix": {
+    "big_rock": 3,
+    "bedrock": 2
+  },
+  "max_parts": 5
+}

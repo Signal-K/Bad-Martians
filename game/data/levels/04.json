@@ -1,18 +1,17 @@
 {
   "id": 4,
-  "name": "Sharp Foothills",
-  "blurb": "Climb the lower slopes of Mount Sharp.",
-  "biome": "ridge",
-  "length": 150,
-  "seed": 46,
-  "credits": 15,
-  "par": 28,
-  "hill": 3.0,
+  "name": "Boulder Field",
+  "blurb": "Rocks everywhere. Keep the rover short and low.",
+  "biome": "boulders",
+  "length": 100,
+  "seed": 139,
+  "credits": 34,
+  "par": 23,
+  "hill": 2.0,
   "traction": 1.0,
   "mix": {
-    "soil": 3,
-    "bedrock": 3,
-    "sand": 2,
-    "big_rock": 1
+    "big_rock": 3,
+    "bedrock": 2,
+    "soil": 1
   }
 }

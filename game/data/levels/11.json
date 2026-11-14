@@ -1,0 +1,17 @@
+{
+  "id": 11,
+  "name": "Frosted Dunes",
+  "blurb": "Drifts glazed with frost, and a narrow bay. Build short and heavy.",
+  "biome": "ice",
+  "length": 110,
+  "seed": 452,
+  "credits": 40,
+  "par": 32,
+  "hill": 1.5,
+  "traction": 0.7,
+  "max_width": 4,
+  "mix": {
+    "sand": 4,
+    "soil": 1
+  }
+}

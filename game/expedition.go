@@ -96,3 +96,12 @@ func ExpeditionSession(h engine.Host, e *Expedition) *Session {
 	s.Design = Design{Cells: append([]Cell(nil), e.Rover.Cells...)}
 	return s
 }
+
+// KitOf counts parts for mission-specific lander rules.
+func KitOf(d Design) map[Kind]int {
+	counts := map[Kind]int{}
+	for _, c := range d.Cells {
+		counts[c.K]++
+	}
+	return counts
+}

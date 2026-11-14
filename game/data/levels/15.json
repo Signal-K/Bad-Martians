@@ -1,0 +1,18 @@
+{
+  "id": 15,
+  "name": "Low Sun",
+  "blurb": "Frozen hills, weak batteries: two motors only.",
+  "biome": "ice",
+  "length": 120,
+  "seed": 157,
+  "credits": 34,
+  "par": 35,
+  "hill": 3.0,
+  "traction": 0.8,
+  "mix": {
+    "soil": 3,
+    "bedrock": 3,
+    "sand": 1
+  },
+  "max_motors": 2
+}

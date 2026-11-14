@@ -1,0 +1,19 @@
+{
+  "id": 20,
+  "name": "The Summit",
+  "blurb": "The top of Mount Sharp, with one last crevasse.",
+  "biome": "crater",
+  "length": 150,
+  "seed": 364,
+  "credits": 48,
+  "par": 38,
+  "hill": 4.5,
+  "traction": 0.9,
+  "mix": {
+    "bedrock": 3,
+    "soil": 2,
+    "big_rock": 1
+  },
+  "gaps": 1,
+  "gap_width": 3.5
+}

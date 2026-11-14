@@ -1,0 +1,18 @@
+{
+  "id": 19,
+  "name": "Last Light",
+  "blurb": "Steep sand in a four-column bay. Push hard.",
+  "biome": "dunes",
+  "length": 120,
+  "seed": 484,
+  "credits": 40,
+  "par": 33,
+  "hill": 4.0,
+  "traction": 1.0,
+  "mix": {
+    "bedrock": 2,
+    "sand": 2,
+    "big_rock": 1
+  },
+  "max_width": 4
+}
