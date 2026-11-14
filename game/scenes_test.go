@@ -322,3 +322,25 @@ func TestRouteSelect(t *testing.T) {
 		t.Fatalf("expected build, got %s", h.g.Scene().Name)
 	}
 }
+
+func TestRouteShowsSelectedMissionDifficulty(t *testing.T) {
+	defer func() { selMission = 0 }()
+	h := newHarness(t)
+	p := LoadProgress(h.h)
+	for id := 1; id <= 12; id++ {
+		p.Record(id, 1, 30, 100)
+	}
+	p.Save(h.h)
+	for _, index := range []int{1, 12} {
+		selMission = LevelDefs[index].ID
+		h.g.Load(SceneMenu, nil)
+		h.frames(2, engine.Input{})
+		r := &textR{}
+		h.g.Draw(r)
+		d := LevelDefs[index]
+		want := fmt.Sprintf("Obstacles %.0f%% · difficulty %.0f%%", 100*d.Obstacle(), 100*d.Difficulty())
+		if !strings.Contains(strings.Join(r.texts, "\n"), want) {
+			t.Fatalf("mission %d should display %q", d.ID, want)
+		}
+	}
+}

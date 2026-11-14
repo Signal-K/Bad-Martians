@@ -220,11 +220,12 @@ func menuScene(g *engine.Game, _ any) *engine.Scene {
 			total += lp.Score
 		}
 		r.Text(fmt.Sprintf("%d of %d stars · %d points", stars, 3*len(LevelDefs), total), 25, 40, sizeSmall, colMuted, engine.AlignLeft)
+		d := LevelDefs[sel]
+		r.Text(fmt.Sprintf("Obstacles %.0f%% · difficulty %.0f%%", 100*d.Obstacle(), 100*d.Difficulty()), ScreenW-24, 40, sizeSmall, colMuted, engine.AlignRight)
 
 		// the brief
 		r.Rect(0, rtBottom, ScreenW, ScreenH-rtBottom, colTile.Alpha(235), true)
 		r.Rect(0, rtBottom, ScreenW, 2, colInk.Alpha(60), true)
-		d := LevelDefs[sel]
 		lp := prog.Levels[d.ID]
 		r.Text(fmt.Sprintf("Mission %d", d.ID), 24, rtBottom+12, sizeSmall, colNeon, engine.AlignLeft)
 		r.Text(d.Name, 24, rtBottom+30, 24, colInk, engine.AlignLeft)
