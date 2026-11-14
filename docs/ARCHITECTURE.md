@@ -80,16 +80,10 @@ and contact shadows. The drive and the rover bay share every one of these.
 - **Terrain classes** follow AI4Mars (soil, bedrock, sand, big rock); each maps
   to a physics material. Levels are generated deterministically from a seed
   (with multiplication-only maths, so they are bit-identical on every platform).
-- **Flow**: menu, then build, run and result. Players never have to label
-  anything to play. After a mission the result screen offers an optional
-  **review the accuracy** step: in the story, Mission Control wants a second
-  opinion on the navcam's terrain read. That is framing; the activity is
-  AI4Mars labelling. Reviewing earns build credits, which carry into later
-  builds of that mission.
-- **Review scene** is the citizen-science task. Each level has 8 segments;
-  segments flagged `Gold` have known truth and score the labeller (+2 credits
-  for a correct calibration label); the rest are collected for consensus. The
-  procedural "Navcam" panels are a stand-in until real AI4Mars imagery is wired in.
+- **Flow**: menu, then build, run and result. Terrain review is paused while a
+  real source-data flow and its design are developed. The placeholder review
+  scene is not registered or offered after a mission. Previously saved labels
+  and earned standalone-mission credits are retained.
 - **Build scene** (the rover bay) is a 12×5 grid that stands in the world: the
   Mars sky and the mission's real start terrain sit behind and under it, and
   parts and beams use the same art as the drive (one cell = 1 m). A parts tray
@@ -99,8 +93,7 @@ and contact shadows. The drive and the rover bay share every one of these.
   design on the start terrain with live physics and reports its tilt and
   whether the frame bends (`PoseOf`, a best-fit rotation from blueprint to
   bodies). Validation (one mast, a motor, connected, within budget) gates GO.
-  The terrain map under the grid is coloured by the *player's* review, so a
-  bad label misleads their build.
+  The terrain map can still display a player's previously saved labels.
 - **Run** (`game/run.go`) holds win/lose rules headless so tests exercise them.
   Tests assert every level is beatable by a reference rover and that the
   starter rover is not enough for level 4.
