@@ -13,7 +13,7 @@ func menuScene(g *engine.Game, _ any) *engine.Scene {
 	addBackdrop(s)
 	AddDraw(s, 2, func(_ engine.Camera, r engine.Renderer) {
 		r.Text("HAPHAZARD MARTIANS", ScreenW/2, 26, 52, colInk, engine.AlignCenter)
-		r.Text("Build a rover. Cross Mars. Help us read its terrain.", ScreenW/2, 86, sizeBody, colMuted, engine.AlignCenter)
+		r.Text("Build a rover. Cross Mars.", ScreenW/2, 86, sizeBody, colMuted, engine.AlignCenter)
 		drawPanel(r, 56, 150, 848, 290, "Missions")
 		total := 0
 		for _, lp := range prog.Levels {

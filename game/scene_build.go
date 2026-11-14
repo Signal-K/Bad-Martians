@@ -358,16 +358,13 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 			r.Text("Ready. Test to see how it sits, or GO to drive.", 92, 38, sizeSmall, colGood, engine.AlignLeft)
 		}
 		used, budget := ses.Design.Cost(), ses.Budget()
-		if ses.Exp != nil { // expeditions count parts, not credits
-			used, budget = len(ses.Design.Cells), ses.Exp.Inv.Total()+ses.Bonus()
-		}
 		col := colChip
 		if used > budget {
 			col = colWarn
 		}
 		txt := fmt.Sprintf("%d / %d", used, budget)
 		if ses.Exp != nil {
-			txt = fmt.Sprintf("Kit %d / %d", used, budget)
+			txt = fmt.Sprintf("Credits %d / %d", used, budget)
 		}
 		w := textW(txt, sizeBody) + 46
 		drawChip(r, testBtn.X-14-w, 14, IconCredit, txt, col)
@@ -483,9 +480,6 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 					drawPart(r, k, engine.V(cx, b.Y+38), 46, 0)
 				}
 				label, cost = p.Name, fmt.Sprintf("%d cr", p.Cost)
-				if ses.Exp != nil {
-					cost = fmt.Sprintf("%d in kit", ses.Have(k))
-				}
 			}
 			ink := colInk
 			if k != "" && n == 0 && k != KMast {
@@ -530,9 +524,6 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 			drawBlockMini(r, bl, engine.V(b.X+b.W/2, b.Y+28), 16)
 			r.Text(bl.Name, b.X+b.W/2, b.Y+50, sizeSmall, colInk, engine.AlignCenter)
 			cost := fmt.Sprintf("%d cr", bl.Cost())
-			if ses.Exp != nil {
-				cost = fmt.Sprintf("%d parts", len(bl.Cells))
-			}
 			r.Text(cost, b.X+b.W/2, b.Y+66, 12, colMuted, engine.AlignCenter)
 		}
 	}

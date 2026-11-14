@@ -7,3 +7,4 @@ web/wasm_exec.js
 dist/
 node_modules/
 .wrangler/
+test-results/

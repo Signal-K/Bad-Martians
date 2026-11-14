@@ -3,7 +3,6 @@ package game
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/signal-k/haphazard-martians/engine"
@@ -132,50 +131,9 @@ func TestFullFlow(t *testing.T) {
 	if !prog.Unlocked(2) || prog.Levels[1].Score != ev.Score {
 		t.Fatalf("level 2 should unlock and score be saved: %+v", prog.Levels[1])
 	}
-	// the review is offered afterwards and is optional
-	if h.count("label") != 0 {
-		t.Fatal("no labels should be sent before the review")
-	}
-	h.clickButton("Review accuracy")
-	if h.g.Scene().Name != SceneReview {
-		t.Fatalf("expected review, got %s", h.g.Scene().Name)
-	}
-	h.clickButton("Panel 1")
-	h.clickButton("Soil")
-	h.clickButton("Sand") // selection auto-advanced to panel 2
-	h.clickButton("Send review")
-	// The client snaps the two review photos (strip, then strip with labels)
-	// before the review is sent.
-	var photos []string
-	for i := 0; i < 6 && h.g.Scene().Name == SceneReview; i++ {
-		if name := h.g.TakePhotoRequest(); name != "" {
-			photos = append(photos, name)
-		}
-		h.frames(1, engine.Input{})
-	}
-	if len(photos) != 2 || !strings.HasPrefix(photos[0], ReviewPhotoPrefix+"source-1-") || !strings.HasPrefix(photos[1], ReviewPhotoPrefix+"marked-1-") {
-		t.Fatalf("review photos = %v", photos)
-	}
-	if h.count("review") != 1 {
-		t.Fatalf("expected one review event, got %d", h.count("review"))
-	}
-	for _, e := range h.h.Events {
-		if e.Name == "review" && (!strings.Contains(string(e.Payload), `"class":"soil"`) || !strings.Contains(string(e.Payload), `"class":"sand"`)) {
-			t.Fatalf("review should carry every label: %s", e.Payload)
-		}
-	}
-	if h.g.Scene().Name != SceneResult {
-		t.Fatalf("review should return to the result, got %s", h.g.Scene().Name)
-	}
-	if h.count("label") != 2 {
-		t.Fatalf("expected 2 label events, got %d", h.count("label"))
-	}
-	if h.count("run") != 1 {
-		t.Fatalf("returning to the result must not resend the run, got %d", h.count("run"))
-	}
-	// credits earned by the review carry into the next build of that level
-	if NewSessionFor(h.h, GetLevel(1)).Bonus() < 2 {
-		t.Fatal("review credits should persist")
+	// The unfinished review flow is not part of the normal mission path.
+	if h.count("label") != 0 || h.count("review") != 0 {
+		t.Fatal("a mission should not submit terrain reviews")
 	}
 	h.clickButton("Next mission")
 	if h.g.Scene().Name != SceneBuild {

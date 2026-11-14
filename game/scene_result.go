@@ -71,8 +71,8 @@ func resultScene(g *engine.Game, arg any) *engine.Scene {
 			ses.Name = SuccessorName(ses.Name)
 		}
 		if ses.Exp != nil {
-			ses.Exp.Finish(won, ses.Design, ra.Score.Total())
-			if ra.Salvaged != "" {
+			ses.Exp.Finish(won, ses.Design, ra.Score.Total(), ra.Time, lvl.Par)
+			if ra.Salvaged != "" && !ses.Exp.Done {
 				ses.Exp.Salvage(ses.Design)
 			}
 			ses.Exp.Name = ses.Name
@@ -84,7 +84,6 @@ func resultScene(g *engine.Game, arg any) *engine.Scene {
 	}
 	exp := ses.Exp
 	best := prog.Levels[lvl.ID].Score
-	reviewed := len(ses.Labels)
 	grade := GradeFor(lvl, ra)
 	clock := 0.0
 	s.OnUpdate = func(dt float64) { clock += dt }
@@ -106,7 +105,9 @@ func resultScene(g *engine.Game, arg any) *engine.Scene {
 		r.Text(ra.Outcome.Message(), 28, 54, sizeBody, colMuted, engine.AlignLeft)
 		switch {
 		case ra.Salvaged != "" && exp != nil:
-			r.Text(fmt.Sprintf("No damage: salvaged a %s. It goes back in the kit.", partName(ra.Salvaged)), 28, 88, sizeSmall, colGood, engine.AlignLeft)
+			if !exp.Done {
+				r.Text(fmt.Sprintf("No damage: salvaged a %s for credits.", partName(ra.Salvaged)), 28, 88, sizeSmall, colGood, engine.AlignLeft)
+			}
 		case ra.Salvaged != "":
 			r.Text(fmt.Sprintf("No damage: salvaged a %s for the next mission.", partName(ra.Salvaged)), 28, 88, sizeSmall, colGood, engine.AlignLeft)
 		case ra.Outcome == Won:
@@ -155,33 +156,38 @@ func resultScene(g *engine.Game, arg any) *engine.Scene {
 		r.Text(fmt.Sprintf("%.0f", tally(6, float64(ra.Score.Total()))), 520, 336, 24, colNeon, engine.AlignRight)
 		rover := ra.roverName()
 		parts := fmt.Sprintf("%s cost %d credits", rover, ses.Design.Cost())
-		if exp != nil {
-			parts = fmt.Sprintf("%s used %d parts", rover, len(ses.Design.Cells))
-		}
+
 		r.Text(fmt.Sprintf("Best %d   ·   %s", best, parts), 56, 380, sizeSmall, colMuted, engine.AlignLeft)
 
-		drawPanel(r, 572, 124, 360, 310, "Mission Control")
-		r.Text("Second opinion needed.", 596, 150, sizeBody, colInk, engine.AlignLeft)
-		for i, ln := range []string{"Review the accuracy of the navcam's", "terrain read for this mission. Every", "review earns credits for your next", "rover build."} {
-			r.Text(ln, 596, 184+float64(i)*22, sizeSmall, colMuted, engine.AlignLeft)
+		drawPanel(r, 572, 124, 360, 310, "Rover")
+		r.Text(ra.roverName(), 596, 154, 24, colInk, engine.AlignLeft)
+		r.Text(fmt.Sprintf("%d parts · %d credits", len(ses.Design.Cells), ses.Design.Cost()),
+			596, 194, sizeBody, colMuted, engine.AlignLeft)
+		if exp != nil && exp.Done {
+			r.Text("Expedition complete!", 596, 240, sizeSmall, colGood, engine.AlignLeft)
+		} else if exp != nil && exp.Failed {
+			r.Text("Not enough credits to continue.", 596, 240, sizeSmall, colWarn, engine.AlignLeft)
+		} else if ra.Outcome == Won {
+			r.Text("Ready for the next mission.", 596, 240, sizeSmall, colGood, engine.AlignLeft)
+		} else {
+			r.Text("Build another rover and try again.", 596, 240, sizeSmall, colMuted, engine.AlignLeft)
 		}
+
 		if exp != nil {
-			msg := fmt.Sprintf("Kit: %d parts left · expedition score %d", exp.Inv.Total(), exp.Score)
-			if exp.Lost.Total() > 0 {
-				msg = fmt.Sprintf("Lost %s · %d parts left", kitText(exp.Lost), exp.Inv.Total())
+			msg := fmt.Sprintf("Budget: %d credits · expedition score %d", exp.Credits, exp.Score)
+			if exp.Lost > 0 {
+				msg = fmt.Sprintf("Lost %d credits · %d remaining", exp.Lost, exp.Credits)
+			}
+			if exp.ParReward > 0 {
+				msg = fmt.Sprintf("Under par: +%d credits · %d available", exp.ParReward, exp.Credits)
 			}
 			r.Text(msg, 56, 408, sizeSmall, colNeon, engine.AlignLeft)
 		}
-		drawChip(r, 596, 380, IconReview, fmt.Sprintf("%d/%d reviewed", reviewed, len(lvl.Segments)), colChipLt)
 	})
 	addBack(s, func() { g.Load(SceneMenu, nil) })
-	rv := AddButton(s, 596, 290, 312, 64, "Review accuracy", func() {
-		g.Load(SceneReview, &ReviewArg{Session: ses, Return: SceneResult, ReturnArg: ra})
-	})
-	rv.Icon = IconReview
 	if exp != nil {
 		// In an expedition a win moves on; a crash retries with what is left.
-		again := AddButton(s, 100, 470, 220, 60, "Retry", func() { g.Load(SceneBuild, ses) })
+		again := AddButton(s, 100, 470, 220, 60, "Retry", func() { ses.Design = Design{}; g.Load(SceneBuild, ses) })
 		again.Icon = IconRover
 		again.Disabled = ra.Outcome == Won || exp.Over()
 		label := "Next mission"

@@ -6,8 +6,7 @@ import (
 	"github.com/signal-k/haphazard-martians/engine"
 )
 
-// briefingScene opens an expedition: it hands the player the one kit of parts
-// that has to last all three missions, and shows the route ahead.
+// briefingScene shows the budget and route for the three-mission expedition.
 func briefingScene(g *engine.Game, arg any) *engine.Scene {
 	e := arg.(*Expedition)
 	s := newScene()
@@ -15,30 +14,18 @@ func briefingScene(g *engine.Game, arg any) *engine.Scene {
 	addBackdrop(s)
 	AddDraw(s, 2, func(_ engine.Camera, r engine.Renderer) {
 		r.Text("Expedition briefing", 28, 16, sizeTitle, colInk, engine.AlignLeft)
-		r.Text(fmt.Sprintf("%d missions, one kit. Make these parts last the whole way.", len(ExpeditionLevels)),
+		r.Text(fmt.Sprintf("%d missions, one budget. Make your credits last the whole way.", len(ExpeditionLevels)),
 			28, 54, sizeBody, colMuted, engine.AlignLeft)
 
-		drawPanel(r, 28, 116, 500, 330, "Your kit")
-		for i, k := range []Kind{KFrame, KWheel, KMotor, KMast} {
-			// rows arrive one after another, like crates being unloaded
-			t := clamp01((clock - 0.15*float64(i)) / 0.35)
-			if t <= 0 {
-				continue
-			}
-			y := 150 + float64(i)*72
-			x := 28 + 30*(1-t)
-			a := uint8(255 * t)
-			r.Rect(x+20, y, 460, 62, colPanel.Alpha(a), true)
-			if k == KMast {
-				drawPart(r, k, engine.V(x+62, y+42), 30, 0)
-			} else {
-				drawPart(r, k, engine.V(x+62, y+31), 40, 0)
-			}
-			n := e.Inv[k]
-			r.Text(fmt.Sprint(n), x+118, y+12, 34, colNeon.Alpha(a), engine.AlignLeft)
-			p, _ := PartOf(k)
-			name := p.Name + "s"
-			r.Text(name, x+186, y+19, 22, colInk.Alpha(a), engine.AlignLeft)
+		drawPanel(r, 28, 116, 500, 330, "Your budget")
+		r.Text(fmt.Sprintf("%d credits", e.Credits), 52, 158, 38, colNeon, engine.AlignLeft)
+		for i, ln := range []string{
+			"Build and modify your rover with these credits.",
+			"Surviving parts can be reused or swapped.",
+			"Lost rovers cost their full value.",
+			"Finish under par for +2 credits next stage.",
+		} {
+			r.Text(ln, 52, 230+float64(i)*32, sizeSmall, colMuted, engine.AlignLeft)
 		}
 
 		drawPanel(r, 552, 116, 380, 330, "The route")
@@ -57,8 +44,8 @@ func briefingScene(g *engine.Game, arg any) *engine.Scene {
 		for i, ln := range []string{
 			"A finished mission keeps your rover.",
 			"A crash, or scrapping a stuck rover,",
-			"loses every part on it.",
-			"No motor wheel or mast left: it is over.",
+			"costs the rover’s full value.",
+			"No credits for a basic rover: it is over.",
 		} {
 			r.Text(ln, 576, 316+float64(i)*24, sizeSmall, colMuted, engine.AlignLeft)
 		}

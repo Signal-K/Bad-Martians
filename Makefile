@@ -23,3 +23,7 @@ desktop:
 
 clean:
 	rm -rf bin web/game.wasm web/wasm_exec.js pb_data
+
+# Browser-rendered scene coverage; install Playwright and Chromium first.
+visual-test: wasm
+	node tests/visual/scenes.cjs

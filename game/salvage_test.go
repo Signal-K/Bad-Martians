@@ -31,16 +31,16 @@ func TestUndamagedRunsAreDetected(t *testing.T) {
 	}
 }
 
-func TestExpeditionSalvageGoesInTheKit(t *testing.T) {
+func TestExpeditionSalvageAddsCredits(t *testing.T) {
 	e := NewExpedition()
-	motors := e.Inv[KMotor]
-	e.Finish(true, StarterDesign(), 600)
-	if k := e.Salvage(StarterDesign()); k != KMotor || e.Inv[KMotor] != motors+1 || e.Salvaged != KMotor {
-		t.Fatalf("salvage should add a motor wheel to the kit: %+v", e)
+	e.Finish(true, StarterDesign(), 600, 20, 14)
+	before := e.Credits
+	if k := e.Salvage(StarterDesign()); k != KMotor || e.Credits != before+4 || e.Salvaged != KMotor {
+		t.Fatalf("salvage: %+v", e)
 	}
-	e.Finish(false, StarterDesign(), 0)
+	e.Finish(false, StarterDesign(), 0, 20, 14)
 	if e.Salvaged != "" {
-		t.Fatalf("a crash salvages nothing: %+v", e)
+		t.Fatalf("crash salvages nothing: %+v", e)
 	}
 }
 

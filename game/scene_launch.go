@@ -32,11 +32,7 @@ func launchScene(g *engine.Game, arg any) *engine.Scene {
 		drawPanel(r, 96, 124, 768, 300, "Rover")
 		// what is going out with it
 		y := 300.0
-		if ses.Exp != nil {
-			r.Text(fmt.Sprintf("%d parts from the kit: %s", len(ses.Design.Cells), kitText(KitOf(ses.Design))), 120, y, sizeBody, colInk, engine.AlignLeft)
-		} else {
-			r.Text(fmt.Sprintf("%d parts · cost %d of %d credits", len(ses.Design.Cells), ses.Design.Cost(), ses.Budget()), 120, y, sizeBody, colInk, engine.AlignLeft)
-		}
+		r.Text(fmt.Sprintf("%d parts · cost %d of %d credits", len(ses.Design.Cells), ses.Design.Cost(), ses.Budget()), 120, y, sizeBody, colInk, engine.AlignLeft)
 		if ses.Spare != "" {
 			r.Text(fmt.Sprintf("Salvaged %s from last mission: +%d credits", partName(ses.Spare), ses.SpareCredits()), 120, y+28, sizeSmall, colGood, engine.AlignLeft)
 		}

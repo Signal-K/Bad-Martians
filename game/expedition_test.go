@@ -6,59 +6,61 @@ import (
 	"github.com/signal-k/haphazard-martians/engine"
 )
 
-func TestExpeditionRules(t *testing.T) {
+func TestExpeditionBudgetAndCarryover(t *testing.T) {
 	e := NewExpedition()
-	if e.Inv[KWheel] != ExpeditionKit[KWheel] || e.Inv.Total() != ExpeditionKit.Total() {
-		t.Fatalf("start kit %v", e.Inv)
-	}
 	rover := StarterDesign()
-	// A win keeps the parts; there are no supply drops.
-	e.Finish(true, rover, 700)
-	if e.Index != 1 || e.Score != 700 || e.Inv.Total() != ExpeditionKit.Total() {
+	e.Finish(true, rover, 700, 10, 14)
+	if e.Index != 1 || e.Score != 700 || e.Credits != ExpeditionStartingCredits+UnderParCredits {
 		t.Fatalf("after win: %+v", e)
 	}
-	// A crash loses exactly the parts on the rover, kind by kind.
-	before := e.Inv[KFrame]
-	e.Finish(false, rover, 0)
-	if e.Lost[KFrame] != 3 || e.Inv[KFrame] != before-3 || e.Lost.Total() != len(rover.Cells) {
+	ses := ExpeditionSession(engine.NewMemHost(), e)
+	if ses.Design.Cost() != rover.Cost() || !ses.Fits() {
+		t.Fatalf("surviving rover missing: %+v", ses.Design)
+	}
+	before := e.Credits
+	e.Finish(false, rover, 0, 20, 14)
+	if e.Lost != rover.Cost() || e.Credits != before-rover.Cost() || len(e.Rover.Cells) != 0 {
 		t.Fatalf("after crash: %+v", e)
 	}
-	// No mast left ends the expedition.
-	for !e.Over() {
-		e.Finish(false, rover, 0)
-	}
-	if !e.Failed || e.Inv[KMast] != 0 {
-		t.Fatalf("should have failed on masts: %+v", e)
+	e.Credits = MinRover() - 1 + rover.Cost()
+	e.Finish(false, rover, 0, 20, 14)
+	if !e.Failed {
+		t.Fatal("insufficient funds should end expedition")
 	}
 }
 
-func TestExpeditionCompletes(t *testing.T) {
+func TestExpeditionParRewards(t *testing.T) {
+	for _, tc := range []struct {
+		elapsed float64
+		want    int
+	}{{13, UnderParCredits}, {14, 0}, {15, 0}, {0, 0}} {
+		e := NewExpedition()
+		e.Finish(true, StarterDesign(), 500, tc.elapsed, 14)
+		if e.ParReward != tc.want || e.Credits != ExpeditionStartingCredits+tc.want {
+			t.Fatalf("time %v: %+v", tc.elapsed, e)
+		}
+	}
 	e := NewExpedition()
 	for range ExpeditionLevels {
-		e.Finish(true, StarterDesign(), 500)
+		e.Finish(true, StarterDesign(), 500, 10, 14)
 	}
-	if !e.Done || e.Score != 500*len(ExpeditionLevels) {
-		t.Fatalf("not complete: %+v", e)
+	if !e.Done || e.Score != 1500 || e.Credits != ExpeditionStartingCredits+2*UnderParCredits || e.ParReward != 0 {
+		t.Fatalf("completed: %+v", e)
 	}
 }
 
-// The bay counts what is left in the kit, part by part.
-func TestExpeditionBayLimitsByKit(t *testing.T) {
+func TestExpeditionBayLimitsByCredits(t *testing.T) {
 	e := NewExpedition()
-	e.Inv[KWheel] = 2
+	rover := StarterDesign()
+	e.Credits = rover.Cost()
 	s := ExpeditionSession(engine.NewMemHost(), e)
-	s.Design = StarterDesign() // uses 1 wheel
-	if n := s.CanAdd(KWheel); n != 1 {
-		t.Fatalf("can add %d wheels, want 1", n)
-	}
-	s.Design.Set(5, 0, KWheel)
-	s.Design.Set(4, 0, KFrame)
-	if !s.Fits() || len(s.Problems()) != 0 {
-		t.Fatalf("2 of 2 wheels should fit: %v", s.Problems())
+	s.Design = StarterDesign()
+	if !s.Fits() || len(s.Problems()) != 0 || s.CanAdd(KWheel) != 0 {
+		t.Fatalf("budget: %v", s.Problems())
 	}
 	s.Design.Set(6, 0, KWheel)
 	if s.Fits() || len(s.Problems()) == 0 {
-		t.Fatal("a third wheel must not fit a kit of 2")
+		t.Fatal("over-budget rover must not fit")
 	}
 }
 
@@ -80,7 +82,8 @@ func TestExpeditionOpensFromMenuThroughBriefing(t *testing.T) {
 func TestExpeditionResultShowsLossAndEnds(t *testing.T) {
 	h := newHarness(t)
 	e := NewExpedition()
-	e.Inv[KMast] = 1 // one crash will lose the last mast
+	rover := StarterDesign()
+	e.Credits = rover.Cost() // one crash exhausts the budget
 	ses := ExpeditionSession(h.g.Host, e)
 	ses.Design = StarterDesign()
 	h.g.Load(SceneResult, &ResultArg{Session: ses, Outcome: Fell})
@@ -91,5 +94,41 @@ func TestExpeditionResultShowsLossAndEnds(t *testing.T) {
 	h.clickButton("Finish")
 	if h.g.Scene().Name != SceneMenu {
 		t.Fatalf("expected menu, got %s", h.g.Scene().Name)
+	}
+}
+
+func TestExpeditionResultAwardsOnce(t *testing.T) {
+	h := newHarness(t)
+	e := NewExpedition()
+	ses := ExpeditionSession(h.h, e)
+	ses.Design = StarterDesign()
+	result := &ResultArg{Session: ses, Outcome: Won, Time: 10, Score: Score{Finish: 500}, Damaged: true}
+	h.g.Load(SceneResult, result)
+	h.frames(2, engine.Input{})
+	credits := e.Credits
+	if credits != ExpeditionStartingCredits+UnderParCredits {
+		t.Fatalf("credits %d", credits)
+	}
+	h.g.Load(SceneResult, result)
+	h.frames(2, engine.Input{})
+	if e.Credits != credits || e.Index != 1 {
+		t.Fatalf("result paid twice: %+v", e)
+	}
+	h.clickButton("Next mission")
+	if h.g.Scene().Name != SceneBuild || len(e.Rover.Cells) == 0 {
+		t.Fatal("surviving rover should reach the next build")
+	}
+}
+
+func TestExpeditionRetryStartsWithEmptyBay(t *testing.T) {
+	h := newHarness(t)
+	e := NewExpedition()
+	ses := ExpeditionSession(h.h, e)
+	ses.Design = StarterDesign()
+	h.g.Load(SceneResult, &ResultArg{Session: ses, Outcome: Fell})
+	h.frames(2, engine.Input{})
+	h.clickButton("Retry")
+	if h.g.Scene().Name != SceneBuild || len(ses.Design.Cells) != 0 {
+		t.Fatal("lost rover must not return on retry")
 	}
 }

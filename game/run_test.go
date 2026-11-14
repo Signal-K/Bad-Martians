@@ -156,10 +156,10 @@ func TestStuckRoverOffersRestartAndScrapCostsParts(t *testing.T) {
 		t.Fatalf("parts did not fly apart: max %.2f m", spread)
 	}
 	e := NewExpedition()
-	before := e.Inv.Total()
-	e.Finish(false, d, 0)
-	if e.Inv.Total() != before-len(d.Cells) {
-		t.Fatalf("expedition kept the scrapped parts: %d -> %d", before, e.Inv.Total())
+	before := e.Credits
+	e.Finish(false, d, 0, 0, 0)
+	if e.Credits != before-d.Cost() {
+		t.Fatalf("expedition kept the scrapped parts: %d -> %d", before, e.Credits)
 	}
 }
 

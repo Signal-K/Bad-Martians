@@ -52,12 +52,7 @@ func Setup(g *engine.Game) {
 		Name: SceneResult, Title: "Mission debrief", Type: engine.TypeResults, Layout: LayoutCenter,
 		Fixture: func(g *engine.Game) any { return sampleResult(g) },
 	}, resultScene)
-	g.RegisterScene(engine.SceneMeta{
-		Name: SceneReview, Title: "Review the accuracy", Type: engine.TypeActivity, Layout: LayoutCenter,
-		Fixture: func(g *engine.Game) any {
-			return &ReviewArg{Session: NewSessionFor(g.Host, GetLevel(2)), Return: SceneMenu}
-		},
-	}, reviewScene)
+
 	g.RegisterScene(engine.SceneMeta{
 		Name: SceneBriefing, Title: "Expedition briefing", Type: engine.TypeMenu, Layout: LayoutCenter,
 		Fixture: func(*engine.Game) any { return NewExpedition() },
