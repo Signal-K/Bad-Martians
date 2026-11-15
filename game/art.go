@@ -242,7 +242,11 @@ func roverShadows(rd engine.Renderer, cam engine.Camera, t *physics.Terrain, rv 
 // drawSky paints the Martian day: a butterscotch gradient, a small pale sun
 // with its blue halo, Phobos, and three parallax layers of mesas and dunes
 // fading into dust haze.
-func drawSky(r engine.Renderer, camX float64) {
+func drawSky(r engine.Renderer, camX float64, body *Body) {
+	if body != nil && body.Airless {
+		drawMoonSky(r, camX, body)
+		return
+	}
 	top, mid, hor := engine.RGB(96, 62, 70), engine.RGB(170, 108, 92), engine.RGB(240, 192, 148)
 	const bands = 36
 	for i := 0; i < bands; i++ {
@@ -316,8 +320,10 @@ var depthShade = []struct {
 // pebble bed, packed soil and rock (see Ground), a lit rim, and pebbles,
 // ripples, cracks or boulders by class. Decoration is seeded by sample index,
 // so it holds still as you drive.
-func drawTerrain(r engine.Renderer, cam engine.Camera, t *physics.Terrain) {
+func drawTerrain(r engine.Renderer, cam engine.Camera, t *physics.Terrain, body *Body) {
 	g := GroundOf(t)
+	// KES-490: a moon's ground is the same cross-section, tinted to its own colours.
+	pebbleCol, packedCol, rockCol := body.ground(colPebbleBed), body.ground(colPacked), body.ground(colRock)
 	half := cam.Screen.X/2/cam.Zoom + 1
 	i0 := int((cam.Pos.X-half-t.X0)/t.DX) - 1
 	i1 := int((cam.Pos.X+half-t.X0)/t.DX) + 1
@@ -337,11 +343,11 @@ func drawTerrain(r engine.Renderer, cam engine.Camera, t *physics.Terrain) {
 		a := cam.ToScreen(engine.V(t.X0+float64(i)*t.DX, t.H[i]))
 		b := cam.ToScreen(engine.V(t.X0+float64(i+1)*t.DX, t.H[i+1]))
 		ca, cb := g.Crust[i], g.Crust[i+1]
-		crust := lerpColor(ca, cb, 0.5)
+		crust := body.ground(lerpColor(ca, cb, 0.5))
 		band(a, b, 0, 0, g.CrustD[i], g.CrustD[i+1], crust)
-		band(a, b, g.CrustD[i], g.CrustD[i+1], g.PebD[i], g.PebD[i+1], lerpColor(colPebbleBed, crust, 0.2))
-		band(a, b, g.PebD[i], g.PebD[i+1], g.RockD[i], g.RockD[i+1], lerpColor(colPacked, crust, 0.12))
-		band(a, b, g.RockD[i], g.RockD[i+1], 60, 60, colRock)
+		band(a, b, g.CrustD[i], g.CrustD[i+1], g.PebD[i], g.PebD[i+1], lerpColor(pebbleCol, crust, 0.2))
+		band(a, b, g.PebD[i], g.PebD[i+1], g.RockD[i], g.RockD[i+1], lerpColor(packedCol, crust, 0.12))
+		band(a, b, g.RockD[i], g.RockD[i+1], 60, 60, rockCol)
 		band(a, b, 0, 0, 0.22, 0.22, shade(crust, 0.14))
 		for _, s := range depthShade {
 			band(a, b, s.top, s.top, s.bot, s.bot, engine.RGB(16, 10, 14).Alpha(s.alpha))
@@ -351,7 +357,7 @@ func drawTerrain(r engine.Renderer, cam engine.Camera, t *physics.Terrain) {
 		a := cam.ToScreen(engine.V(t.X0+float64(i)*t.DX, t.H[i]))
 		b := cam.ToScreen(engine.V(t.X0+float64(i+1)*t.DX, t.H[i+1]))
 		cls := Class(t.Seg[i])
-		base := lerpColor(g.Crust[i], g.Crust[i+1], 0.5)
+		base := body.ground(lerpColor(g.Crust[i], g.Crust[i+1], 0.5))
 		rg := newRng(uint64(i)*2654435761 + 17)
 		at := func(f, depth float64) engine.Vec2 { return down(a.Add(b.Sub(a).Mul(f)), depth) }
 		lerpD := func(d []float64, f float64) float64 { return d[i] + (d[i+1]-d[i])*f }
@@ -364,8 +370,8 @@ func drawTerrain(r engine.Renderer, cam engine.Camera, t *physics.Terrain) {
 			}
 			p := at(f, rg.rangef(top+0.04, bot-0.04))
 			rad := rg.rangef(0.04, 0.1) * z
-			c := lerpColor(colPebbleBed, engine.RGB(200, 170, 150), rg.rangef(0, 0.5))
-			r.Circle(p.Add(engine.V(rad*0.2, rad*0.25)), rad, shade(colPebbleBed, -0.35), true)
+			c := lerpColor(pebbleCol, engine.RGB(200, 170, 150), rg.rangef(0, 0.5))
+			r.Circle(p.Add(engine.V(rad*0.2, rad*0.25)), rad, shade(pebbleCol, -0.35), true)
 			r.Circle(p, rad, c, true)
 		}
 		// grit in the packed soil, cracks in the rock
@@ -373,12 +379,12 @@ func drawTerrain(r engine.Renderer, cam engine.Camera, t *physics.Terrain) {
 			f := rg.float()
 			top, bot := lerpD(g.PebD, f), lerpD(g.RockD, f)
 			if bot-top > 0.1 {
-				r.Circle(at(f, rg.rangef(top, bot)), rg.rangef(0.03, 0.07)*z, shade(colPacked, -0.25).Alpha(170), true)
+				r.Circle(at(f, rg.rangef(top, bot)), rg.rangef(0.03, 0.07)*z, shade(packedCol, -0.25).Alpha(170), true)
 			}
 			if rg.float() < 0.35 {
 				d := lerpD(g.RockD, f) + rg.rangef(0.3, 2.5)
 				p := at(f, d)
-				r.Line(p, p.Add(engine.V(rg.rangef(-0.2, 0.2)*z, rg.rangef(0.3, 0.8)*z)), 1.4, shade(colRock, -0.3))
+				r.Line(p, p.Add(engine.V(rg.rangef(-0.2, 0.2)*z, rg.rangef(0.3, 0.8)*z)), 1.4, shade(rockCol, -0.3))
 			}
 		}
 		switch cls {
@@ -392,7 +398,7 @@ func drawTerrain(r engine.Renderer, cam engine.Camera, t *physics.Terrain) {
 		case Bedrock:
 			if rg.float() < 0.5 {
 				p := at(rg.float(), 0.06)
-				r.Line(p, p.Add(engine.V(rg.rangef(-0.1, 0.1)*z, rg.rangef(0.2, 0.6)*z)), 2, shade(colRock, -0.32))
+				r.Line(p, p.Add(engine.V(rg.rangef(-0.1, 0.1)*z, rg.rangef(0.2, 0.6)*z)), 2, shade(rockCol, -0.32))
 			}
 		case BigRock:
 			if rg.float() < 0.55 {
@@ -404,7 +410,7 @@ func drawTerrain(r engine.Renderer, cam engine.Camera, t *physics.Terrain) {
 			}
 		}
 		if cls == Sand && rg.float() < 0.08 || cls == Bedrock && rg.float() < 0.15 {
-			drawRock(r, at(rg.float(), 0.02), rg.rangef(0.04, 0.08)*z, shade(Classes[BigRock].Color, 0.2), rg)
+			drawRock(r, at(rg.float(), 0.02), rg.rangef(0.04, 0.08)*z, shade(body.ground(Classes[BigRock].Color), 0.2), rg)
 		}
 		r.Line(a, b, math.Max(2, 0.07*z), shade(base, 0.32))
 	}

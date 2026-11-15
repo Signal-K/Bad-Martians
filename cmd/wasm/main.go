@@ -5,11 +5,13 @@
 package main
 
 import (
+	"strconv"
 	"syscall/js"
 
 	"github.com/hajimehoshi/ebiten/v2"
 
 	"github.com/signal-k/haphazard-martians/client"
+	"github.com/signal-k/haphazard-martians/game"
 )
 
 type jsHost struct{ bridge js.Value }
@@ -39,6 +41,11 @@ func main() {
 	name := ""
 	if !scene.IsNull() {
 		name = scene.String()
+	}
+	if lv := js.Global().Get("URLSearchParams").New(js.Global().Get("location").Get("search")).Call("get", "level"); !lv.IsNull() {
+		if n, err := strconv.Atoi(lv.String()); err == nil && game.GetLevel(n) != nil {
+			game.FixtureLevel = n
+		}
 	}
 	app := client.New(jsHost{bridge}, name)
 	if q := js.Global().Get("URLSearchParams").New(js.Global().Get("location").Get("search")).Call("get", "edit"); !q.IsNull() {

@@ -1,0 +1,18 @@
+{
+  "id": 22,
+  "name": "Deimos Drift",
+  "blurb": "Deimos: smooth pale dust and almost no grip. Keep the wheels on the ground.",
+  "biome": "dunes",
+  "body": "deimos",
+  "length": 150,
+  "seed": 522,
+  "credits": 46,
+  "par": 60,
+  "hill": 2.8,
+  "traction": 0.6,
+  "mix": {
+    "sand": 4,
+    "soil": 2,
+    "bedrock": 1
+  }
+}

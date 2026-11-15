@@ -47,6 +47,9 @@ var biomeGround = map[string]engine.Color{
 }
 
 func groundAt(i int) engine.Color {
+	if b := BodyOf(LevelDefs[i]); b.TintMix > 0 {
+		return b.ground(biomeGround[LevelDefs[i].Biome])
+	}
 	if c, ok := biomeGround[LevelDefs[i].Biome]; ok {
 		return c
 	}
@@ -87,7 +90,7 @@ func menuScene(g *engine.Game, _ any) *engine.Scene {
 
 	// sky, route, stops' ground
 	AddDraw(s, 0, func(_ engine.Camera, r engine.Renderer) {
-		drawSky(r, scroll/40)
+		drawSky(r, scroll/40, nil)
 		// the ground, its colour easing from one mission's terrain to the next
 		lo := math.Max(0, math.Floor(scroll/4)*4)
 		for x := lo; x < scroll+ScreenW+4 && x < routeWidth(); x += 4 {

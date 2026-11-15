@@ -237,7 +237,7 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 		if len(ses.Design.Cells) == 0 {
 			return
 		}
-		testWorld = physics.NewWorld()
+		testWorld = NewWorldFor(lvl.LevelDef)
 		testWorld.Terrain = lvl.Terrain
 		testRover = SpawnRover(testWorld, ses.Design, originX, h0)
 		testing, testT = true, 0
@@ -248,8 +248,8 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 
 	// sky and ground: the same art as the drive
 	AddDraw(s, 0, func(_ engine.Camera, r engine.Renderer) {
-		drawSky(r, 0)
-		drawTerrain(r, cam, lvl.Terrain)
+		drawSky(r, 0, BodyOf(lvl.LevelDef))
+		drawTerrain(r, cam, lvl.Terrain, BodyOf(lvl.LevelDef))
 		drawGantry(r, cam, lvl.Terrain, testing)
 		if !testing { // shadows of the parts on the grid
 			var pos []engine.Vec2

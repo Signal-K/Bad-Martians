@@ -21,6 +21,7 @@ type levelFile struct {
 	Name     string             `json:"name"`
 	Blurb    string             `json:"blurb"`
 	Biome    string             `json:"biome"`
+	Body     string             `json:"body,omitempty"`
 	Length   float64            `json:"length"`
 	Seed     uint64             `json:"seed"`
 	Credits  int                `json:"credits"`
@@ -103,7 +104,7 @@ func strictJSON(data []byte, v any) error {
 }
 
 func (f levelFile) def() (LevelDef, error) {
-	d := LevelDef{ID: f.ID, Name: f.Name, Blurb: f.Blurb, Biome: f.Biome, Length: f.Length,
+	d := LevelDef{ID: f.ID, Name: f.Name, Blurb: f.Blurb, Biome: f.Biome, Body: f.Body, Length: f.Length,
 		Seed: f.Seed, Credits: f.Credits, Par: f.Par, Hill: f.Hill, Traction: f.Traction,
 		Gaps: f.Gaps, GapWidth: f.GapWidth, MaxWidth: f.MaxWidth, MaxParts: f.MaxParts, MaxMotor: f.MaxMotor}
 	switch {
@@ -144,6 +145,9 @@ func (f levelFile) def() (LevelDef, error) {
 	}
 	if !ok {
 		return d, fmt.Errorf("level %d: biome %q not one of %v", f.ID, f.Biome, Biomes)
+	}
+	if _, known := Bodies[f.Body]; f.Body != "" && !known {
+		return d, fmt.Errorf("level %d: body %q not mars, phobos or deimos", f.ID, f.Body)
 	}
 	total := 0.0
 	for k, w := range f.Mix {
