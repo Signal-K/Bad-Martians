@@ -1,6 +1,6 @@
 name: deploy
 # Builds and tests every push. Pull requests and branches get a preview version;
-# main deploys to production. Secrets are repository secrets that Liam adds:
+# the default branch (whatever it is named; this repo has no `main`) deploys to production. Secrets are repository secrets that Liam adds:
 #   CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
 # Optional repository variable HM_API_URL points the build at a backend.
 # HM_CLERK_KEY (Landnam's Clerk publishable key, public) turns on Clerk sign-in.
@@ -39,11 +39,11 @@ jobs:
       - uses: actions/download-artifact@v4
         if: ${{ env.CF_TOKEN != '' }}
         with: { name: dist, path: dist }
-      # The first ever deploy must come from main: `versions upload` needs the Worker to exist.
-      - name: Production (main) or preview version (other branches)
+      # The first ever deploy must come from the default branch: `versions upload` needs the Worker to exist.
+      - name: Production (default branch) or preview version (other branches)
         if: ${{ env.CF_TOKEN != '' }}
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: ${{ github.ref == 'refs/heads/main' && 'deploy' || 'versions upload' }}
+          command: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && 'deploy' || 'versions upload' }}

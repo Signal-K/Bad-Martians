@@ -58,7 +58,7 @@ files), and a browser run of `dist/` showing the Sign in button hidden, the
 service worker registered, no `/api` requests and no console errors.
 Not checked: a real deploy, the workflow on GitHub, and the iPad.
 
-To go live, you add the two secrets, merge or push to `main`, and open the
+To go live, you add the two secrets, merge or push to the default branch, and open the
 `*.workers.dev` URL Wrangler prints.
 
 ### For now: served from Landnam at playlandnam.space/martians/ (KES-495)
@@ -195,7 +195,7 @@ committing to a paid product.
 
 ## Work to do, in order
 
-1. Add the Cloudflare secrets, push to `main`, check the URL on the iPad.
+1. Add the Cloudflare secrets, push to the default branch, check the URL on the iPad.
 2. Add the post-deploy smoke test to the workflow.
 3. Merge the tickets-please branch to `main` so the shared backend gets the
    `hm_` collections, then set `HM_API_URL` and `HM_CLERK_KEY` and redeploy.
