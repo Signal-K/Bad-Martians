@@ -82,7 +82,7 @@ func resultScene(g *engine.Game, arg any) *engine.Scene {
 		g.Host.Emit("run", payload)
 		won := ra.Outcome == Won
 		ra.Name = ses.Name
-		if k, ok := SalvagePart(ses.Design); ok && won && !ra.Damaged {
+		if k, ok := SalvagePart(ses.Design); ok && won && !ra.Damaged && (ses.Exp == nil || ExpeditionSalvage) {
 			ra.Salvaged = k
 		}
 		if !won { // the rover stays out there; the next one is named after it
@@ -135,6 +135,8 @@ func resultScene(g *engine.Game, arg any) *engine.Scene {
 			if !exp.Done {
 				r.Text(fmt.Sprintf("No damage: salvaged a %s for credits.", partName(ra.Salvaged)), 28, 88, sizeSmall, colGood, engine.AlignLeft)
 			}
+		case exp != nil:
+			// KES-518: no salvage credits inside an expedition; the kept rover is the reward.
 		case ra.Salvaged != "":
 			r.Text(fmt.Sprintf("No damage: salvaged a %s for the next mission.", partName(ra.Salvaged)), 28, 88, sizeSmall, colGood, engine.AlignLeft)
 		case ra.Outcome == Won:

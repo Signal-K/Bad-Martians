@@ -205,7 +205,7 @@ type Economy struct {
 }
 
 func ShippedEconomy() Economy {
-	return Economy{StartingCredits: ExpeditionStartingCredits, UnderParCredits: UnderParCredits, Salvage: true}
+	return Economy{StartingCredits: ExpeditionStartingCredits, UnderParCredits: UnderParCredits, Salvage: ExpeditionSalvage}
 }
 
 func (ec Economy) String() string {
