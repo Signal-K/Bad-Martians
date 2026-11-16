@@ -76,6 +76,8 @@ func resultScene(g *engine.Game, arg any) *engine.Scene {
 			"level": lvl.ID, "won": ra.Outcome == Won, "outcome": ra.Outcome.Message(), "stars": ra.Stars,
 			"time": math.Round(ra.Time*10) / 10, "samples": ra.Samples, "score": ra.Score.Total(),
 			"cost": ses.Design.Cost(), "design": design, "rover": ses.Name, "damaged": ra.Damaged,
+			"distance": math.Round(ra.Distance*10) / 10, "progress": math.Round(ra.Distance/math.Max(1, lvl.GoalX-lvl.StartX)*100) / 100,
+			"body": BodyOf(lvl.LevelDef).Key, "par": lvl.Par, "lesson": ses.Lesson, "expedition": ses.Exp != nil,
 		})
 		g.Host.Emit("run", payload)
 		won := ra.Outcome == Won

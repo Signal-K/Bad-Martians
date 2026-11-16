@@ -160,6 +160,7 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 	var testWorld *physics.World
 	var testRover *Rover
 	testT := 0.0
+	tutStep := -1 // the tutorial step last reported to analytics
 
 	// One camera for the grid, the ground and the test drop: grid column 0,
 	// row 0 sits on the terrain at the run's spawn point.
@@ -629,6 +630,11 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 		r.Text(label, b.X+b.W/2, b.Y+12, sizeSmall+1, ink, engine.AlignCenter)
 	}
 	launch := AddButton(s, ScreenW-20-170, bTrayY+22, 170, 72, "GO", func() {
+		p := sessionProps(ses)
+		for k, v := range designProps(ses.Design) {
+			p[k] = v
+		}
+		Track(g.Host, EvBuildLaunched, p)
 		if ses.Lesson > 0 { // lessons drive straight away: the rover is a trainee
 			g.Load(SceneRun, ses)
 			return
@@ -688,6 +694,7 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 		sb := AddButton(s, sk.X, sk.Y, sk.W, sk.H, "Skip", func() {
 			if !tut.Done {
 				FinishTutorial(g.Host, tut)
+				Track(g.Host, EvTutorialDone, map[string]any{"skipped": true, "step": tutStep + 1})
 			}
 		})
 		bayButtons = append(bayButtons, sb)
@@ -748,7 +755,20 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 		testBtn.Disabled = len(ses.Design.Cells) == 0
 		if testing {
 			testWorld.Step(dt)
+			was := testT
 			testT += dt
+			if was < testSettle && testT >= testSettle {
+				_, _, key := testVerdictKey(testRover, lvl.Terrain, testT)
+				p := sessionProps(ses)
+				p["verdict"] = key
+				Track(g.Host, EvTestDrop, p)
+			}
+		}
+		if tut != nil && !tut.Done {
+			if st := tut.BuildStep(ses.Design); st != tutStep {
+				tutStep = st
+				Track(g.Host, EvTutorialStep, map[string]any{"step": st + 1, "name": tutStepNames[st]})
+			}
 		}
 		for _, b := range bayButtons {
 			b.Hidden = guide
@@ -875,8 +895,17 @@ func liftedMotors(rv *Rover, ter *physics.Terrain) []int {
 
 // testVerdict is the one-line result of a test drop for the status line.
 func testVerdict(rv *Rover, ter *physics.Terrain, t float64) (string, engine.Color) {
-	if t < 1.2 {
-		return "Test drop: settling…", colChipLt
+	msg, col, _ := testVerdictKey(rv, ter, t)
+	return msg, col
+}
+
+// testSettle is how long a test drop settles before it has a verdict.
+const testSettle = 1.2
+
+// testVerdictKey is testVerdict plus a short key for analytics.
+func testVerdictKey(rv *Rover, ter *physics.Terrain, t float64) (string, engine.Color, string) {
+	if t < testSettle {
+		return "Test drop: settling…", colChipLt, "settling"
 	}
 	motors := 0
 	for _, b := range rv.Bodies {
@@ -886,24 +915,24 @@ func testVerdict(rv *Rover, ter *physics.Terrain, t float64) (string, engine.Col
 	}
 	switch lifted := len(liftedMotors(rv, ter)); {
 	case motors > 0 && lifted == motors:
-		return "Test drop: no motor wheel touches the ground. Move one down.", colWarn
+		return "Test drop: no motor wheel touches the ground. Move one down.", colWarn, "no_motor_grounded"
 	case lifted == 1:
-		return "Test drop: a motor wheel is off the ground and does nothing.", colWarn
+		return "Test drop: a motor wheel is off the ground and does nothing.", colWarn, "motor_lifted"
 	case lifted > 1:
-		return fmt.Sprintf("Test drop: %d motor wheels are off the ground and do nothing.", lifted), colWarn
+		return fmt.Sprintf("Test drop: %d motor wheels are off the ground and do nothing.", lifted), colWarn, "motors_lifted"
 	}
 	pose := PoseOf(rv)
 	if pose.Bend > bendLimit {
-		return "Test drop: the frame bends. Add a diagonal brace.", colWarn
+		return "Test drop: the frame bends. Add a diagonal brace.", colWarn, "bends"
 	}
 	if deg := pose.Tilt * 180 / math.Pi; math.Abs(deg) >= 2 {
 		dir := "nose up"
 		if deg < 0 {
 			dir = "nose down"
 		}
-		return fmt.Sprintf("Test drop: tilts %.0f° %s.", math.Abs(deg), dir), colWarn
+		return fmt.Sprintf("Test drop: tilts %.0f° %s.", math.Abs(deg), dir), colWarn, "tilts"
 	}
-	return "Test drop: sits level and holds its shape.", colGood
+	return "Test drop: sits level and holds its shape.", colGood, "level"
 }
 
 var colBlueprint = engine.RGB(150, 226, 255)

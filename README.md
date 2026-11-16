@@ -51,6 +51,13 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for design decisions and [docs/
 is a demo: progress stays in the browser and sign-in is hidden. Set `HM_API_URL` to
 connect it to a backend. See `docs/DEPLOY_CLOUDFLARE.md`.
 
+Analytics: the built site sends anonymous gameplay events (`hm_*`, tagged
+`game = haphazard-martians`) to PostHog, plus a one-time "what was confusing?"
+survey after the first run. No identify call, no session recording, no player
+details. `HM_POSTHOG_KEY=off` builds without it; local `web/config.js` has none.
+The events come from `game/analytics.go`; the playtest dashboard is "Haphazard
+Martians playtest" in PostHog.
+
 Browser scene smoke tests: install Node.js, Playwright (`npm install --no-save playwright`)
 and Chromium, then run `make visual-test`. Set `CHROMIUM_PATH` if Chromium is not
 at `/usr/bin/chromium`. The suite opens each scene at desktop and phone sizes,

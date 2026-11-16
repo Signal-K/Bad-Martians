@@ -3,6 +3,9 @@
 #   HM_API_URL   public URL of the backend; empty (default) builds the no-backend demo
 #   HM_CLERK_KEY Clerk publishable key (public, pk_live_/pk_test_); with it, sign-in
 #                goes through Clerk and the backend's /auth/clerk-exchange
+#   HM_POSTHOG_KEY  PostHog project key (public, phc_) for analytics and surveys;
+#                defaults to the shared Star Sailors project, "off" disables it
+#   HM_POSTHOG_HOST PostHog ingestion host, default https://us.i.posthog.com
 #   HM_BUILD_ID  cache version for the service worker; defaults to the git short sha
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -10,6 +13,9 @@ cd "$(dirname "$0")/.."
 BUILD_ID="${HM_BUILD_ID:-$(git rev-parse --short HEAD 2>/dev/null || date +%s)}"
 API_URL="${HM_API_URL:-}"
 CLERK_KEY="${HM_CLERK_KEY:-}"
+POSTHOG_KEY="${HM_POSTHOG_KEY:-phc_65umDftbbTkrm1V6azue6OeU4u5c8iJcaHm4JtJ95di}"
+POSTHOG_HOST="${HM_POSTHOG_HOST:-https://us.i.posthog.com}"
+[ "$POSTHOG_KEY" = off ] && POSTHOG_KEY=""
 MAX_WASM_BYTES=$((23 * 1024 * 1024)) # Cloudflare allows 25 MiB per static file
 
 make wasm >/dev/null
@@ -19,7 +25,8 @@ rm -f dist/embed.go
 
 # Static hosting config: the backend URL is public; secrets never go in here.
 json() { printf '%s' "$1" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))'; }
-printf 'window.HM_CONFIG = { api: %s, clerk: %s };\n' "$(json "$API_URL")" "$(json "$CLERK_KEY")" > dist/config.js
+printf 'window.HM_CONFIG = { api: %s, clerk: %s, build: %s, posthog: { key: %s, host: %s } };\n' \
+  "$(json "$API_URL")" "$(json "$CLERK_KEY")" "$(json "$BUILD_ID")" "$(json "$POSTHOG_KEY")" "$(json "$POSTHOG_HOST")" > dist/config.js
 # A new build id makes returning players refetch the shell instead of keeping the old game.
 sed -i "s/haphazard-martians-v1/haphazard-martians-${BUILD_ID}/" dist/sw.js
 cp deploy/_headers dist/_headers
