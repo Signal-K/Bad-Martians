@@ -85,7 +85,7 @@ const (
 )
 
 func NewRun(l *Level, d Design) *Run {
-	w := physics.NewWorld()
+	w := NewWorldFor(l.LevelDef)
 	w.Terrain = l.Terrain
 	x := l.StartX + 2
 	r := &Run{Level: l, World: w, Got: make([]bool, len(l.Samples))}

@@ -353,12 +353,56 @@
     input.select();
   }
 
+  // ---- analytics (KES-505) ----
+  // With cfg.posthog = { key, host } the game's events go to PostHog, so we
+  // can see how players build and where they quit. Players stay anonymous:
+  // no identify call, no person profiles, no session recording, and events
+  // carry only game facts. The SDK loads after the game so it never slows boot.
+  const PH = cfg && cfg.posthog && cfg.posthog.key ? cfg.posthog : null;
+  const phQueue = [];
+  let ph = null;
+  function track(event, props) {
+    if (!PH) return;
+    if (ph) ph.capture(event, props); else if (phQueue.length < 200) phQueue.push([event, props]);
+  }
+  if (PH) {
+    const host = PH.host || 'https://us.i.posthog.com';
+    const s = document.createElement('script');
+    s.async = true;
+    s.src = host.replace('.i.posthog.com', '-assets.i.posthog.com') + '/static/array.js';
+    s.onload = () => {
+      if (!window.posthog || !window.posthog.init) return;
+      window.posthog.init(PH.key, {
+        api_host: host,
+        persistence: 'localStorage',
+        person_profiles: 'identified_only',
+        disable_session_recording: true,
+        autocapture: false,
+        capture_pageview: true,
+        loaded: (p) => {
+          p.register({ game: 'haphazard-martians', build: cfg.build || 'dev' });
+          ph = p;
+          while (phQueue.length) { const [e, pr] = phQueue.shift(); p.capture(e, pr); }
+        },
+      });
+    };
+    document.head.appendChild(s);
+  }
+  // The run event already says how a drive ended; analytics gets a lean copy
+  // without the design grid.
+  const runProps = (p) => ({ level: p.level, won: p.won, outcome: p.outcome, stars: p.stars, time: p.time, samples: p.samples,
+    score: p.score, cost: p.cost, cells: (p.design || []).length, damaged: p.damaged, distance: p.distance, progress: p.progress,
+    body: p.body, par: p.par, lesson: p.lesson, expedition: p.expedition });
+
   window.haphazard = {
     photo: (name, bytes) => { photo(name, bytes); },
     load: (k) => LS.get('hm.' + k),
     save: (k, v) => LS.set('hm.' + k, v),
     emit: (ev, json) => {
       let p; try { p = JSON.parse(json); } catch { return; }
+      if (ev === 'track') { track(p.event, p.props || {}); return; }
+      if (ev === 'run') track('hm_run_finished', runProps(p));
+      if (ev === 'scene') track('hm_scene', { name: p.name });
       if (ev === 'scene') { btn.hidden = DEMO || p.name !== 'menu'; return; } // keep the HTML chrome off the in-game HUD
       if (ev === 'prompt') { setTimeout(() => askText(p), 0); return; } // a text field in the game
       if (DEMO) return; // nothing to send to: progress is already saved locally

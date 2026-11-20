@@ -6,6 +6,9 @@ score depends on finishing, samples and time. The three-mission expedition
 challenges you to make one credit budget last across the whole route. Surviving
 rovers can be rebuilt at full part value; crashes lose their cost. An under-par
 finish earns two credits for the next stage.
+The campaign ends on Mars's moons: Phobos (level 21) and Deimos (level 22) run
+under their own low gravity, with black skies, Mars on the horizon and their own
+ground colours. Open one alone with `?scene=run&level=21` (or `-level 21`).
 The lander hops between completed expedition stages; continue when ready to
 enter the next rover bay with the surviving design and budget.
 The terrain
@@ -47,6 +50,13 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for design decisions and [docs/
 `scripts/build-dist.sh` builds `dist/` for Cloudflare or any static host. By default it
 is a demo: progress stays in the browser and sign-in is hidden. Set `HM_API_URL` to
 connect it to a backend. See `docs/DEPLOY_CLOUDFLARE.md`.
+
+Analytics: the built site sends anonymous gameplay events (`hm_*`, tagged
+`game = haphazard-martians`) to PostHog, plus a one-time "what was confusing?"
+survey after the first run. No identify call, no session recording, no player
+details. `HM_POSTHOG_KEY=off` builds without it; local `web/config.js` has none.
+The events come from `game/analytics.go`; the playtest dashboard is "Haphazard
+Martians playtest" in PostHog.
 
 Browser scene smoke tests: install Node.js, Playwright (`npm install --no-save playwright`)
 and Chromium, then run `make visual-test`. Set `CHROMIUM_PATH` if Chromium is not

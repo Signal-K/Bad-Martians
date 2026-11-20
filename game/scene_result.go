@@ -76,11 +76,13 @@ func resultScene(g *engine.Game, arg any) *engine.Scene {
 			"level": lvl.ID, "won": ra.Outcome == Won, "outcome": ra.Outcome.Message(), "stars": ra.Stars,
 			"time": math.Round(ra.Time*10) / 10, "samples": ra.Samples, "score": ra.Score.Total(),
 			"cost": ses.Design.Cost(), "design": design, "rover": ses.Name, "damaged": ra.Damaged,
+			"distance": math.Round(ra.Distance*10) / 10, "progress": math.Round(ra.Distance/math.Max(1, lvl.GoalX-lvl.StartX)*100) / 100,
+			"body": BodyOf(lvl.LevelDef).Key, "par": lvl.Par, "lesson": ses.Lesson, "expedition": ses.Exp != nil,
 		})
 		g.Host.Emit("run", payload)
 		won := ra.Outcome == Won
 		ra.Name = ses.Name
-		if k, ok := SalvagePart(ses.Design); ok && won && !ra.Damaged {
+		if k, ok := SalvagePart(ses.Design); ok && won && !ra.Damaged && (ses.Exp == nil || ExpeditionSalvage) {
 			ra.Salvaged = k
 		}
 		if !won { // the rover stays out there; the next one is named after it
@@ -133,6 +135,8 @@ func resultScene(g *engine.Game, arg any) *engine.Scene {
 			if !exp.Done {
 				r.Text(fmt.Sprintf("No damage: salvaged a %s for credits.", partName(ra.Salvaged)), 28, 88, sizeSmall, colGood, engine.AlignLeft)
 			}
+		case exp != nil:
+			// KES-518: no salvage credits inside an expedition; the kept rover is the reward.
 		case ra.Salvaged != "":
 			r.Text(fmt.Sprintf("No damage: salvaged a %s for the next mission.", partName(ra.Salvaged)), 28, 88, sizeSmall, colGood, engine.AlignLeft)
 		case ra.Outcome == Won:

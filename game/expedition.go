@@ -9,8 +9,15 @@ import (
 // ExpeditionLevels are the missions in one expedition, in order.
 var ExpeditionLevels = []int{1, 2, 3}
 
-// ExpeditionStartingCredits funds builds and retries across all three missions.
-const ExpeditionStartingCredits = 36
+// ExpeditionStartingCredits funds builds and retries across all three missions. KES-517 (Liam, 16 Nov): 24, set
+// from the playtest sweep (docs/playtest/expedition-economy.md): at 36 a random builder still finished 95% of
+// expeditions and the cheapest-rover player ended richer than it started; at 24 that random builder finishes ~80%.
+const ExpeditionStartingCredits = 24
+
+// ExpeditionSalvage says whether an undamaged win pays the salvaged part's credits inside an expedition. Off since
+// KES-518 (Liam, 16 Nov): salvage paid 3-4x the par reward and kept every budget topped up. Single missions still
+// carry the part to the next mission.
+const ExpeditionSalvage = false
 
 // UnderParCredits is awarded only when a non-final stage is finished faster than par.
 const UnderParCredits = 2

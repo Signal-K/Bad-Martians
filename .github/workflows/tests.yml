@@ -78,6 +78,7 @@ jobs:
       - run: scripts/build-dist.sh
         env:
           HM_BUILD_ID: ci-test
+          HM_POSTHOG_KEY: "off" # CI browser runs stay out of analytics
       - name: Backend smoke test
         if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
         run: |

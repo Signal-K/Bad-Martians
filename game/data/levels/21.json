@@ -1,0 +1,20 @@
+{
+  "id": 21,
+  "name": "Stickney Rim",
+  "blurb": "Phobos: dark grooved ground at a third of Mars's pull. Every bump is a long hop.",
+  "biome": "crater",
+  "body": "phobos",
+  "length": 140,
+  "seed": 421,
+  "credits": 44,
+  "par": 40,
+  "hill": 3.0,
+  "traction": 1.0,
+  "mix": {
+    "bedrock": 3,
+    "soil": 2,
+    "big_rock": 2
+  },
+  "gaps": 1,
+  "gap_width": 3.5
+}
