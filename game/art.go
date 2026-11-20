@@ -321,8 +321,11 @@ func drawTerrain(r engine.Renderer, cam engine.Camera, t *physics.Terrain) {
 	half := cam.Screen.X/2/cam.Zoom + 1
 	i0 := int((cam.Pos.X-half-t.X0)/t.DX) - 1
 	i1 := int((cam.Pos.X+half-t.X0)/t.DX) + 1
-	i0 = max(i0, 0)
-	i1 = min(i1, t.Len()-2)
+	// Physics holds the ground flat at its edge height past either end, so draw
+	// it that way too: columns outside the heightfield repeat the edge sample,
+	// and the camera never shows a void beyond the finish flag.
+	last := t.Len() - 1
+	ix := func(i int) int { return max(0, min(i, last)) }
 	z := cam.Zoom
 	down := func(p engine.Vec2, m float64) engine.Vec2 { return engine.V(p.X, p.Y+m*z) }
 	band := func(a, b engine.Vec2, ta, tb, ba, bb float64, c engine.Color) {
@@ -334,27 +337,29 @@ func drawTerrain(r engine.Renderer, cam engine.Camera, t *physics.Terrain) {
 		r.Poly([]engine.Vec2{engine.V(a0.X-0.5, a0.Y), engine.V(b0.X+0.5, b0.Y), engine.V(b1.X+0.5, b1.Y), engine.V(a1.X-0.5, a1.Y)}, c)
 	}
 	for i := i0; i <= i1; i++ {
-		a := cam.ToScreen(engine.V(t.X0+float64(i)*t.DX, t.H[i]))
-		b := cam.ToScreen(engine.V(t.X0+float64(i+1)*t.DX, t.H[i+1]))
-		ca, cb := g.Crust[i], g.Crust[i+1]
+		ja, jb := ix(i), ix(i+1)
+		a := cam.ToScreen(engine.V(t.X0+float64(i)*t.DX, t.H[ja]))
+		b := cam.ToScreen(engine.V(t.X0+float64(i+1)*t.DX, t.H[jb]))
+		ca, cb := g.Crust[ja], g.Crust[jb]
 		crust := lerpColor(ca, cb, 0.5)
-		band(a, b, 0, 0, g.CrustD[i], g.CrustD[i+1], crust)
-		band(a, b, g.CrustD[i], g.CrustD[i+1], g.PebD[i], g.PebD[i+1], lerpColor(colPebbleBed, crust, 0.2))
-		band(a, b, g.PebD[i], g.PebD[i+1], g.RockD[i], g.RockD[i+1], lerpColor(colPacked, crust, 0.12))
-		band(a, b, g.RockD[i], g.RockD[i+1], 60, 60, colRock)
+		band(a, b, 0, 0, g.CrustD[ja], g.CrustD[jb], crust)
+		band(a, b, g.CrustD[ja], g.CrustD[jb], g.PebD[ja], g.PebD[jb], lerpColor(colPebbleBed, crust, 0.2))
+		band(a, b, g.PebD[ja], g.PebD[jb], g.RockD[ja], g.RockD[jb], lerpColor(colPacked, crust, 0.12))
+		band(a, b, g.RockD[ja], g.RockD[jb], 60, 60, colRock)
 		band(a, b, 0, 0, 0.22, 0.22, shade(crust, 0.14))
 		for _, s := range depthShade {
 			band(a, b, s.top, s.top, s.bot, s.bot, engine.RGB(16, 10, 14).Alpha(s.alpha))
 		}
 	}
 	for i := i0; i <= i1; i++ {
-		a := cam.ToScreen(engine.V(t.X0+float64(i)*t.DX, t.H[i]))
-		b := cam.ToScreen(engine.V(t.X0+float64(i+1)*t.DX, t.H[i+1]))
-		cls := Class(t.Seg[i])
-		base := lerpColor(g.Crust[i], g.Crust[i+1], 0.5)
+		ja, jb := ix(i), ix(i+1)
+		a := cam.ToScreen(engine.V(t.X0+float64(i)*t.DX, t.H[ja]))
+		b := cam.ToScreen(engine.V(t.X0+float64(i+1)*t.DX, t.H[jb]))
+		cls := Class(t.Seg[min(ja, len(t.Seg)-1)])
+		base := lerpColor(g.Crust[ja], g.Crust[jb], 0.5)
 		rg := newRng(uint64(i)*2654435761 + 17)
 		at := func(f, depth float64) engine.Vec2 { return down(a.Add(b.Sub(a).Mul(f)), depth) }
-		lerpD := func(d []float64, f float64) float64 { return d[i] + (d[i+1]-d[i])*f }
+		lerpD := func(d []float64, f float64) float64 { return d[ja] + (d[jb]-d[ja])*f }
 		// the pebble bed: rounded stones of mixed tone
 		for k := 0; k < 3; k++ {
 			f := rg.float()
