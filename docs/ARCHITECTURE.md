@@ -107,8 +107,10 @@ and contact shadows. The drive and the rover bay share every one of these.
 - **Salvage** (`game/salvage.go`): a drive is damaged when a frame or the mast
   touches the ground (`Run.Scrapes`; the HUD shows it live). An undamaged
   finish gives back one extra part, the rover's priciest other than the mast:
-  in an expedition it goes into the kit (`Expedition.Salvage`), in a single
-  mission its credits add to the next mission's budget (`Session.Spare`).
+  in a single mission its credits add to the next mission's budget
+  (`Session.Spare`). Inside an expedition salvage pays nothing since KES-518
+  (`ExpeditionSalvage = false`); the kept rover and the par reward are the
+  rewards, from a 24-credit start (KES-517, see `docs/playtest/`).
 - **Score** (`game/score.go`): finish 500, +150 per sample, plus up to 500 for
   speed (full at 0.6 x par, none at 2 x par, linear between). Stars are
   unchanged (finish, all samples, under par). Best score is saved per level and

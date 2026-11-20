@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/signal-k/haphazard-martians/engine"
 )
@@ -21,9 +22,9 @@ func runScene(g *engine.Game, arg any) *engine.Scene {
 	ro.Add(run.Rover)
 
 	AddDraw(s, 0, func(cam engine.Camera, r engine.Renderer) {
-		drawSky(r, cam.Pos.X)
+		drawSky(r, cam.Pos.X, BodyOf(lvl.LevelDef))
 		t := lvl.Terrain
-		drawTerrain(r, cam, t)
+		drawTerrain(r, cam, t, BodyOf(lvl.LevelDef))
 		roverShadows(r, cam, t, run.Rover)
 		gb := cam.ToScreen(engine.V(lvl.GoalX, t.HeightAt(lvl.GoalX)))
 		r.Line(gb, gb.Add(engine.V(0, -4*cam.Zoom)), 4, colInk)
@@ -82,7 +83,15 @@ func runScene(g *engine.Game, arg any) *engine.Scene {
 			}
 		}
 	})
+	abandoned := func(how string) {
+		p := sessionProps(ses)
+		p["how"], p["progress"], p["time"] = how, math.Round(run.Progress()*100)/100, math.Round(run.Time*10)/10
+		Track(g.Host, EvRunAbandoned, p)
+	}
 	ab := AddButton(s, 24, 10, 90, 44, "Abort", func() {
+		if run.Outcome == Running {
+			abandoned("abort")
+		}
 		ses.NoteFailure(run)
 		g.Load(SceneBuild, ses)
 	})
@@ -126,6 +135,7 @@ func runScene(g *engine.Game, arg any) *engine.Scene {
 	// Stuck: offer to scrap the rover and start again, at the cost of its parts.
 	boom := -1.0 // seconds since the rover was scrapped; <0 before
 	restart := AddButton(s, ScreenW/2-130, ScreenH-104, 260, 74, "Restart", func() {
+		abandoned("restart")
 		run.Scrap()
 		boom = 0
 	})
@@ -214,6 +224,7 @@ func runScene(g *engine.Game, arg any) *engine.Scene {
 		if tut := ses.Tut; tut != nil && !tut.Done && th > 0.5 {
 			if tut.Gas += dt; tut.Gas >= tutGasSeconds {
 				FinishTutorial(g.Host, tut)
+				Track(g.Host, EvTutorialDone, map[string]any{"skipped": false})
 			}
 		}
 		flash = max(0, flash-dt/1.6)

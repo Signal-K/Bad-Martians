@@ -18,6 +18,10 @@ const (
 	SceneBriefing = "briefing"
 )
 
+// FixtureLevel is the level the build, launch and drive fixtures open on. Hosts set it from
+// ?level= (web) or -level (desktop) so any level, such as the moons (KES-490), can be opened alone.
+var FixtureLevel = 1
+
 // Setup registers every scene. Opening the menu is left to the host so any
 // scene can be opened first (see OpenStandalone).
 func Setup(g *engine.Game) {
@@ -27,12 +31,12 @@ func Setup(g *engine.Game) {
 	}, menuScene)
 	g.RegisterScene(engine.SceneMeta{
 		Name: SceneBuild, Title: "Rover bay", Type: engine.TypeBuild, Layout: LayoutBay,
-		Fixture: func(g *engine.Game) any { return NewSessionFor(g.Host, GetLevel(1)) },
+		Fixture: func(g *engine.Game) any { return NewSessionFor(g.Host, GetLevel(FixtureLevel)) },
 	}, buildScene)
 	g.RegisterScene(engine.SceneMeta{
 		Name: SceneLaunch, Title: "Name your rover", Type: engine.TypeBuild, Layout: LayoutCenter,
 		Fixture: func(g *engine.Game) any {
-			s := NewSessionFor(g.Host, GetLevel(1))
+			s := NewSessionFor(g.Host, GetLevel(FixtureLevel))
 			if len(s.Design.Cells) == 0 { // bays start empty; launching needs a rover
 				s.Design = StarterDesign()
 			}
@@ -42,7 +46,7 @@ func Setup(g *engine.Game) {
 	g.RegisterScene(engine.SceneMeta{
 		Name: SceneRun, Title: "Drive", Type: engine.TypePlay, Layout: LayoutHUD,
 		Fixture: func(g *engine.Game) any {
-			s := NewSessionFor(g.Host, GetLevel(1))
+			s := NewSessionFor(g.Host, GetLevel(FixtureLevel))
 			if len(s.Design.Cells) == 0 { // bays start empty; the standalone drive needs a rover
 				s.Design = StarterDesign()
 			}

@@ -1,4 +1,4 @@
-.PHONY: all wasm server run test desktop clean
+.PHONY: all wasm server run test desktop clean playtest
 GOROOT_DIR := $(shell go env GOROOT)
 
 all: wasm server
@@ -27,3 +27,8 @@ clean:
 # Browser-rendered scene coverage; install Playwright and Chromium first.
 visual-test: wasm
 	node tests/visual/scenes.cjs
+
+# Headless balance playtest of the expedition economy (KES-517, KES-518).
+# Override numbers to compare: make playtest ARGS="-start 20,24,36 -par 0,2,4"
+playtest:
+	go run ./cmd/playtest -out docs/playtest/expedition-economy.md $(ARGS)
