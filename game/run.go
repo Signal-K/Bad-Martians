@@ -18,8 +18,18 @@ const (
 	Scrapped
 )
 
+// Message is the outcome in fixed words, for analytics and logs. Keep these
+// strings stable: dashboards group runs by them.
 func (o Outcome) Message() string {
 	return [...]string{"", "Navcam reached the finish!", "Rover lost in a crevasse.", "Rover is stuck.", "Out of time.", "Rover scrapped. Its parts are gone."}[o]
+}
+
+// MessageFor is the outcome as the player reads it, naming their rover.
+func (o Outcome) MessageFor(name string) string {
+	if name == "" {
+		name = "Rover"
+	}
+	return [...]string{"", name + " reached the finish!", name + " was lost in a crevasse.", name + " is stuck.", "Out of time.", name + " was scrapped. Its parts are gone."}[o]
 }
 
 const (

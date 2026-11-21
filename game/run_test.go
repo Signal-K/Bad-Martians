@@ -243,3 +243,15 @@ func TestJumbleIsOfferedRestartQuickly(t *testing.T) {
 		t.Logf("rocking=%v: Restart offered at %.1fs", rock, r.Time)
 	}
 }
+
+func TestOutcomeNamesTheRover(t *testing.T) {
+	if got := Won.MessageFor("Dusty"); got != "Dusty reached the finish!" {
+		t.Errorf("won: %q", got)
+	}
+	if got := Fell.MessageFor(""); got != "Rover was lost in a crevasse." {
+		t.Errorf("unnamed: %q", got)
+	}
+	if Won.Message() != "Navcam reached the finish!" {
+		t.Error("analytics wording changed")
+	}
+}
