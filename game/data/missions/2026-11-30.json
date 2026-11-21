@@ -1,0 +1,27 @@
+{
+  "date": "2026-11-30",
+  "title": "Gully crossing",
+  "story": "A flash-melt carved a gully across the survey route.",
+  "reward": {
+    "credits": 4,
+    "free_retry": 1
+  },
+  "level": {
+    "id": 111,
+    "name": "Gully",
+    "blurb": "One gap. Keep your wheelbase long.",
+    "biome": "plains",
+    "length": 100,
+    "seed": 820,
+    "credits": 24,
+    "par": 18,
+    "hill": 1.4,
+    "traction": 1.0,
+    "mix": {
+      "soil": 3,
+      "bedrock": 2
+    },
+    "gaps": 1,
+    "gap_width": 2.5
+  }
+}

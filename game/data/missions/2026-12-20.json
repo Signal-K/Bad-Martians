@@ -1,0 +1,26 @@
+{
+  "date": "2026-12-20",
+  "title": "Year's end",
+  "story": "Plant the flag on the highest ridge we've reached.",
+  "reward": {
+    "credits": 4,
+    "free_retry": 1
+  },
+  "level": {
+    "id": 131,
+    "name": "Year's End",
+    "blurb": "The steepest ridge of the month.",
+    "biome": "ridge",
+    "length": 130,
+    "seed": 840,
+    "credits": 40,
+    "par": 28,
+    "hill": 3.8,
+    "traction": 1.0,
+    "mix": {
+      "bedrock": 3,
+      "sand": 1,
+      "big_rock": 1
+    }
+  }
+}

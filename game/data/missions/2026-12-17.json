@@ -1,0 +1,26 @@
+{
+  "date": "2026-12-17",
+  "title": "Rock field",
+  "story": "The field team needs a cleared path through the rocks.",
+  "reward": {
+    "credits": 4,
+    "free_retry": 1
+  },
+  "level": {
+    "id": 128,
+    "name": "Rock Field",
+    "blurb": "Dense boulders. Big wheels help.",
+    "biome": "boulders",
+    "length": 120,
+    "seed": 837,
+    "credits": 34,
+    "par": 27,
+    "hill": 2.0,
+    "traction": 1.0,
+    "mix": {
+      "bedrock": 2,
+      "big_rock": 3,
+      "soil": 1
+    }
+  }
+}

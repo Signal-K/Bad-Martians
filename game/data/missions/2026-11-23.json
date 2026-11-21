@@ -1,0 +1,25 @@
+{
+  "date": "2026-11-23",
+  "title": "Frost run",
+  "story": "Ice samples melt fast. Get them to the lab before noon.",
+  "reward": {
+    "credits": 4,
+    "free_retry": 1
+  },
+  "level": {
+    "id": 104,
+    "name": "Frost Run",
+    "blurb": "Slick ground. Spread your weight.",
+    "biome": "ice",
+    "length": 95,
+    "seed": 813,
+    "credits": 20,
+    "par": 19,
+    "hill": 1.2,
+    "traction": 0.6,
+    "mix": {
+      "soil": 3,
+      "bedrock": 2
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "date": "2026-11-22",
+  "title": "Lost antenna",
+  "story": "A relay mast blew off in the night. It landed past the boulders.",
+  "reward": {
+    "credits": 4,
+    "free_retry": 1
+  },
+  "level": {
+    "id": 103,
+    "name": "Antenna Hunt",
+    "blurb": "Scattered rocks. Keep the mast high and steady.",
+    "biome": "boulders",
+    "length": 100,
+    "seed": 812,
+    "credits": 22,
+    "par": 18,
+    "hill": 1.6,
+    "traction": 1.0,
+    "mix": {
+      "soil": 3,
+      "bedrock": 2,
+      "big_rock": 2
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "date": "2026-12-16",
+  "title": "Crater chain",
+  "story": "Three small craters in a row. Sample each one.",
+  "reward": {
+    "credits": 4,
+    "free_retry": 1
+  },
+  "level": {
+    "id": 127,
+    "name": "Crater Chain",
+    "blurb": "Repeated climbs and drops.",
+    "biome": "crater",
+    "length": 130,
+    "seed": 836,
+    "credits": 34,
+    "par": 26,
+    "hill": 2.8,
+    "traction": 1.0,
+    "mix": {
+      "bedrock": 3,
+      "soil": 2,
+      "big_rock": 1
+    }
+  }
+}

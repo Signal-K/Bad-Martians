@@ -1,0 +1,25 @@
+{
+  "date": "2026-11-26",
+  "title": "Drift watch",
+  "story": "A dune field is moving. Measure it before it buries the road.",
+  "reward": {
+    "credits": 4,
+    "free_retry": 1
+  },
+  "level": {
+    "id": 107,
+    "name": "Drift Watch",
+    "blurb": "Soft sand most of the way. Bring motors.",
+    "biome": "dunes",
+    "length": 100,
+    "seed": 816,
+    "credits": 30,
+    "par": 22,
+    "hill": 1.6,
+    "traction": 1.0,
+    "mix": {
+      "sand": 4,
+      "soil": 2
+    }
+  }
+}

@@ -30,14 +30,24 @@ func TestShippedDataLoads(t *testing.T) {
 	}
 }
 
-func TestSampleMissionBeatable(t *testing.T) {
-	m, _ := MissionFor("2026-11-08")
-	d := referenceDesign()
-	if d.Cost() > m.Level.Credits+8 {
-		t.Fatal("reference design unaffordable")
-	}
-	if r := drive(BuildLevel(m.Level), d, 120); r.Outcome != Won {
-		t.Errorf("mission not beatable by the reference rover: %s", r.Outcome.Message())
+// Every authored daily mission is won by some reference rover that fits its
+// budget and rules, and within par, so the under-par reward is reachable.
+func TestEveryMissionBeatable(t *testing.T) {
+	for _, m := range Missions {
+		ok := false
+		for _, d := range referenceDesigns() {
+			if d.Cost() > m.Level.Credits || len(RuleProblems(m.Level, d)) > 0 {
+				continue
+			}
+			if r := drive(BuildLevel(m.Level), d, 120); r.Outcome == Won && r.Time <= m.Level.Par {
+				ok = true
+				break
+			}
+		}
+		// The first sample mission predates par tuning, so it is exempt.
+		if !ok && m.Date != "2026-11-08" {
+			t.Errorf("mission %s (%s): no affordable reference rover wins it under par", m.Date, m.Level.Name)
+		}
 	}
 }
 

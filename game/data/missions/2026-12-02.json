@@ -1,0 +1,26 @@
+{
+  "date": "2026-12-02",
+  "title": "Glaze",
+  "story": "Overnight frost turned the plain to glass.",
+  "reward": {
+    "credits": 4,
+    "free_retry": 1
+  },
+  "level": {
+    "id": 113,
+    "name": "Glaze",
+    "blurb": "Very little grip. Light and low.",
+    "biome": "ice",
+    "length": 100,
+    "seed": 822,
+    "credits": 22,
+    "par": 21,
+    "hill": 1.4,
+    "traction": 0.5,
+    "mix": {
+      "soil": 3,
+      "bedrock": 2
+    },
+    "max_parts": 6
+  }
+}

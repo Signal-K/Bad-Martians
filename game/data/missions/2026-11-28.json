@@ -1,0 +1,26 @@
+{
+  "date": "2026-11-28",
+  "title": "Moon errand",
+  "story": "A Phobos lander needs a part from the far side of a groove.",
+  "reward": {
+    "credits": 6,
+    "free_retry": 1
+  },
+  "level": {
+    "id": 109,
+    "name": "Groove Run",
+    "blurb": "Phobos: low pull. Every bump is a long hop.",
+    "biome": "crater",
+    "body": "phobos",
+    "length": 110,
+    "seed": 818,
+    "credits": 30,
+    "par": 24,
+    "hill": 2.0,
+    "traction": 1.0,
+    "mix": {
+      "bedrock": 3,
+      "soil": 2
+    }
+  }
+}

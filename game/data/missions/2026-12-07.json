@@ -1,0 +1,26 @@
+{
+  "date": "2026-12-07",
+  "title": "Storm front",
+  "story": "A dust storm is due at noon. Move the weather station first.",
+  "reward": {
+    "credits": 4,
+    "free_retry": 1
+  },
+  "level": {
+    "id": 118,
+    "name": "Storm Front",
+    "blurb": "Sand and rock, and the clock is ticking.",
+    "biome": "dunes",
+    "length": 110,
+    "seed": 827,
+    "credits": 34,
+    "par": 25,
+    "hill": 2.0,
+    "traction": 1.0,
+    "mix": {
+      "sand": 3,
+      "bedrock": 2,
+      "big_rock": 1
+    }
+  }
+}

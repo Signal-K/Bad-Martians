@@ -1,0 +1,25 @@
+{
+  "date": "2026-12-10",
+  "title": "Ice shelf",
+  "story": "A shelf of buried ice is breaking through the soil.",
+  "reward": {
+    "credits": 4,
+    "free_retry": 1
+  },
+  "level": {
+    "id": 121,
+    "name": "Ice Shelf",
+    "blurb": "Slippery climbs.",
+    "biome": "ice",
+    "length": 110,
+    "seed": 830,
+    "credits": 28,
+    "par": 21,
+    "hill": 2.2,
+    "traction": 0.6,
+    "mix": {
+      "bedrock": 3,
+      "soil": 2
+    }
+  }
+}

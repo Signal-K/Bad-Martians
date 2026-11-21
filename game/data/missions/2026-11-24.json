@@ -1,0 +1,25 @@
+{
+  "date": "2026-11-24",
+  "title": "Crater hop",
+  "story": "The lab wants dust from both rims of a small crater.",
+  "reward": {
+    "credits": 4,
+    "free_retry": 1
+  },
+  "level": {
+    "id": 105,
+    "name": "Rim to Rim",
+    "blurb": "Up, down, up again.",
+    "biome": "crater",
+    "length": 110,
+    "seed": 814,
+    "credits": 26,
+    "par": 19,
+    "hill": 2.6,
+    "traction": 1.0,
+    "mix": {
+      "bedrock": 3,
+      "soil": 2
+    }
+  }
+}
