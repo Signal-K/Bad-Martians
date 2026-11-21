@@ -71,7 +71,7 @@ func runScene(g *engine.Game, arg any) *engine.Scene {
 			if run.Outcome != Won {
 				col, head = colWarn, "Mission failed"
 			}
-			msg := run.Outcome.Message()
+			msg := run.Outcome.MessageFor(name)
 			if run.Outcome != Won {
 				msg = run.Diagnose().What
 			}

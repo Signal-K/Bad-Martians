@@ -161,7 +161,7 @@ func lessonResult(g *engine.Game, ra *ResultArg) *engine.Scene {
 		r.Text(fmt.Sprintf("Shape school %d/%d · %s", ses.Lesson, len(Lessons), l.Title), 28, 54, sizeBody, colMuted, engine.AlignLeft)
 
 		drawPanel(r, 28, 124, 904, 310, "Your rover")
-		out := ra.Outcome.Message()
+		out := ra.Outcome.MessageFor(ra.Name)
 		if ra.Outcome == Scrapped { // the lesson rover is a trainee: nothing is lost
 			out = "It got stuck, so it was scrapped."
 		}

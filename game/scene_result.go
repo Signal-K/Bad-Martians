@@ -126,7 +126,7 @@ func resultScene(g *engine.Game, arg any) *engine.Scene {
 			head = "Expedition lost"
 		}
 		r.Text(head, 28, 16, sizeTitle, col, engine.AlignLeft)
-		r.Text(ra.Outcome.Message(), 28, 54, sizeBody, colMuted, engine.AlignLeft)
+		r.Text(ra.Outcome.MessageFor(ra.Name), 28, 54, sizeBody, colMuted, engine.AlignLeft)
 		if ra.AwardedRetries > 0 {
 			r.Text(fmt.Sprintf("Earned %d free expedition retry", ra.AwardedRetries), 596, 88, sizeSmall, colGood, engine.AlignLeft)
 		}
