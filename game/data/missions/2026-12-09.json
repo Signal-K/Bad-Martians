@@ -1,0 +1,27 @@
+{
+  "date": "2026-12-09",
+  "title": "Twin gullies",
+  "story": "Two meltwater channels cross the plain this week.",
+  "reward": {
+    "credits": 4,
+    "free_retry": 1
+  },
+  "level": {
+    "id": 120,
+    "name": "Twin Gullies",
+    "blurb": "Two gaps. Long and level wins.",
+    "biome": "plains",
+    "length": 120,
+    "seed": 829,
+    "credits": 30,
+    "par": 21,
+    "hill": 1.4,
+    "traction": 1.0,
+    "mix": {
+      "soil": 3,
+      "bedrock": 2
+    },
+    "gaps": 2,
+    "gap_width": 2.5
+  }
+}

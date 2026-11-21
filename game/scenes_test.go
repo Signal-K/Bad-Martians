@@ -300,8 +300,12 @@ func TestCurrentMissionByDate(t *testing.T) {
 		t.Fatalf("before the first mission: ok=%v next=%v", ok, next)
 	}
 	Today = func() string { return "2030-01-01" }
-	if m, ok, _ := CurrentMission(); !ok || m.Date != "2026-11-08" {
+	if m, ok, _ := CurrentMission(); !ok || m.Date != Missions[len(Missions)-1].Date {
 		t.Fatalf("later date should show the latest mission, got %v %v", m.Date, ok)
+	}
+	Today = func() string { return "2026-11-22" }
+	if m, ok, _ := CurrentMission(); !ok || m.Date != "2026-11-22" {
+		t.Fatalf("a dated mission should be picked on its day, got %v %v", m.Date, ok)
 	}
 }
 

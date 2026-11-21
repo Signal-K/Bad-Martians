@@ -1,0 +1,26 @@
+{
+  "date": "2026-12-03",
+  "title": "Deimos dawn",
+  "story": "Sunrise on Deimos lasts minutes. Catch it from the ridge.",
+  "reward": {
+    "credits": 4,
+    "free_retry": 1
+  },
+  "level": {
+    "id": 114,
+    "name": "Deimos Dawn",
+    "blurb": "Deimos: barely any pull. Stay on the ground.",
+    "biome": "ridge",
+    "body": "deimos",
+    "length": 110,
+    "seed": 823,
+    "credits": 32,
+    "par": 29,
+    "hill": 2.0,
+    "traction": 1.0,
+    "mix": {
+      "bedrock": 3,
+      "soil": 2
+    }
+  }
+}

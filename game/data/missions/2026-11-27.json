@@ -1,0 +1,26 @@
+{
+  "date": "2026-11-27",
+  "title": "Ridge mail",
+  "story": "Supplies for the ridge outpost. The direct road is steep.",
+  "reward": {
+    "credits": 4,
+    "free_retry": 1
+  },
+  "level": {
+    "id": 108,
+    "name": "Ridge Mail",
+    "blurb": "Steep rock but good grip.",
+    "biome": "ridge",
+    "length": 110,
+    "seed": 817,
+    "credits": 30,
+    "par": 20,
+    "hill": 3.2,
+    "traction": 1.0,
+    "mix": {
+      "bedrock": 3,
+      "soil": 1,
+      "big_rock": 1
+    }
+  }
+}

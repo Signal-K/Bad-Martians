@@ -1,0 +1,26 @@
+{
+  "date": "2026-12-01",
+  "title": "Boulder garden",
+  "story": "The geologists marked twenty rocks. Bring back one photo of each.",
+  "reward": {
+    "credits": 4,
+    "free_retry": 1
+  },
+  "level": {
+    "id": 112,
+    "name": "Boulder Garden",
+    "blurb": "Big rocks close together.",
+    "biome": "boulders",
+    "length": 110,
+    "seed": 821,
+    "credits": 30,
+    "par": 24,
+    "hill": 1.8,
+    "traction": 1.0,
+    "mix": {
+      "soil": 2,
+      "bedrock": 2,
+      "big_rock": 3
+    }
+  }
+}

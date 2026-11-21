@@ -1,0 +1,27 @@
+{
+  "date": "2026-12-18",
+  "title": "Frozen gully",
+  "story": "The gully has frozen over and slick ice lines both banks.",
+  "reward": {
+    "credits": 4,
+    "free_retry": 1
+  },
+  "level": {
+    "id": 129,
+    "name": "Frozen Gully",
+    "blurb": "A gap and slick ice.",
+    "biome": "ice",
+    "length": 110,
+    "seed": 838,
+    "credits": 28,
+    "par": 21,
+    "hill": 1.6,
+    "traction": 0.7,
+    "mix": {
+      "soil": 3,
+      "bedrock": 2
+    },
+    "gaps": 1,
+    "gap_width": 2.5
+  }
+}

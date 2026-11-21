@@ -1,0 +1,26 @@
+{
+  "date": "2026-12-06",
+  "title": "Crater floor",
+  "story": "Something shiny is on the crater floor.",
+  "reward": {
+    "credits": 4,
+    "free_retry": 1
+  },
+  "level": {
+    "id": 117,
+    "name": "Floor Sample",
+    "blurb": "Drop in, climb out.",
+    "biome": "crater",
+    "length": 115,
+    "seed": 826,
+    "credits": 30,
+    "par": 22,
+    "hill": 3.0,
+    "traction": 1.0,
+    "mix": {
+      "bedrock": 2,
+      "soil": 2,
+      "big_rock": 1
+    }
+  }
+}

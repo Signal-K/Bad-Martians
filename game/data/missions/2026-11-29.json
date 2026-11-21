@@ -1,0 +1,27 @@
+{
+  "date": "2026-11-29",
+  "title": "Five parts",
+  "story": "The parts bin is nearly empty. Make five count.",
+  "reward": {
+    "credits": 4,
+    "free_retry": 1
+  },
+  "level": {
+    "id": 110,
+    "name": "Short Bin",
+    "blurb": "Five parts only. Rocky in the middle.",
+    "biome": "plains",
+    "length": 95,
+    "seed": 819,
+    "credits": 24,
+    "par": 23,
+    "hill": 1.6,
+    "traction": 1.0,
+    "mix": {
+      "soil": 3,
+      "bedrock": 2,
+      "big_rock": 1
+    },
+    "max_parts": 5
+  }
+}

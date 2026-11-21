@@ -1,0 +1,26 @@
+{
+  "date": "2026-12-15",
+  "title": "Solstice",
+  "story": "The longest night. Bring the lamps out to the ridge.",
+  "reward": {
+    "credits": 4,
+    "free_retry": 1
+  },
+  "level": {
+    "id": 126,
+    "name": "Solstice Lamps",
+    "blurb": "Steep ridge. Six parts only.",
+    "biome": "ridge",
+    "length": 110,
+    "seed": 835,
+    "credits": 30,
+    "par": 20,
+    "hill": 3.0,
+    "traction": 1.0,
+    "mix": {
+      "bedrock": 3,
+      "soil": 2
+    },
+    "max_parts": 6
+  }
+}

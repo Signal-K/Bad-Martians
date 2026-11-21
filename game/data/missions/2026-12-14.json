@@ -1,0 +1,25 @@
+{
+  "date": "2026-12-14",
+  "title": "Sand ramp",
+  "story": "Survey the face of the biggest dune.",
+  "reward": {
+    "credits": 4,
+    "free_retry": 1
+  },
+  "level": {
+    "id": 125,
+    "name": "Sand Ramp",
+    "blurb": "Steep soft sand.",
+    "biome": "dunes",
+    "length": 105,
+    "seed": 834,
+    "credits": 38,
+    "par": 20,
+    "hill": 3.0,
+    "traction": 1.0,
+    "mix": {
+      "sand": 3,
+      "bedrock": 2
+    }
+  }
+}

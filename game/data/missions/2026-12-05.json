@@ -1,0 +1,26 @@
+{
+  "date": "2026-12-05",
+  "title": "Steep delivery",
+  "story": "Fuel cells for the ridge camp. Their heaters are failing.",
+  "reward": {
+    "credits": 6,
+    "free_retry": 1
+  },
+  "level": {
+    "id": 116,
+    "name": "Fuel Climb",
+    "blurb": "A long steep ridge.",
+    "biome": "ridge",
+    "length": 120,
+    "seed": 825,
+    "credits": 34,
+    "par": 28,
+    "hill": 3.6,
+    "traction": 1.0,
+    "mix": {
+      "bedrock": 3,
+      "sand": 1,
+      "big_rock": 1
+    }
+  }
+}

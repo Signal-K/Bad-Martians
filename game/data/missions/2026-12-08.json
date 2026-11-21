@@ -1,0 +1,27 @@
+{
+  "date": "2026-12-08",
+  "title": "Small crate",
+  "story": "The only crate left is four columns wide.",
+  "reward": {
+    "credits": 4,
+    "free_retry": 1
+  },
+  "level": {
+    "id": 119,
+    "name": "Small Crate",
+    "blurb": "Four columns of bay. Rocky ground.",
+    "biome": "boulders",
+    "length": 100,
+    "seed": 828,
+    "credits": 26,
+    "par": 21,
+    "hill": 1.8,
+    "traction": 1.0,
+    "mix": {
+      "soil": 2,
+      "bedrock": 2,
+      "big_rock": 2
+    },
+    "max_width": 4
+  }
+}

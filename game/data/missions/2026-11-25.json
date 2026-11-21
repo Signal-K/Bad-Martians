@@ -1,0 +1,26 @@
+{
+  "date": "2026-11-25",
+  "title": "Tight hatch",
+  "story": "Only a narrow cargo lander is free today.",
+  "reward": {
+    "credits": 4,
+    "free_retry": 1
+  },
+  "level": {
+    "id": 106,
+    "name": "Narrow Hatch",
+    "blurb": "Three columns of bay. Build tall or build clever.",
+    "biome": "plains",
+    "length": 90,
+    "seed": 815,
+    "credits": 20,
+    "par": 16,
+    "hill": 1.4,
+    "traction": 1.0,
+    "mix": {
+      "soil": 3,
+      "bedrock": 2
+    },
+    "max_width": 3
+  }
+}

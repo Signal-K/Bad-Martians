@@ -1,0 +1,26 @@
+{
+  "date": "2026-12-13",
+  "title": "Long haul",
+  "story": "The new base is further than any road so far.",
+  "reward": {
+    "credits": 4,
+    "free_retry": 1
+  },
+  "level": {
+    "id": 124,
+    "name": "Long Haul",
+    "blurb": "Long, mixed ground. Pace yourself.",
+    "biome": "plains",
+    "length": 150,
+    "seed": 833,
+    "credits": 30,
+    "par": 30,
+    "hill": 1.6,
+    "traction": 1.0,
+    "mix": {
+      "soil": 3,
+      "bedrock": 2,
+      "sand": 1
+    }
+  }
+}

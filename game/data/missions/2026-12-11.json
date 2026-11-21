@@ -1,0 +1,26 @@
+{
+  "date": "2026-12-11",
+  "title": "Rescue",
+  "story": "A survey rover flipped on a rock. Tow it home.",
+  "reward": {
+    "credits": 4,
+    "free_retry": 1
+  },
+  "level": {
+    "id": 122,
+    "name": "Flipped Rover",
+    "blurb": "Rocky and uneven.",
+    "biome": "boulders",
+    "length": 115,
+    "seed": 831,
+    "credits": 32,
+    "par": 21,
+    "hill": 2.2,
+    "traction": 1.0,
+    "mix": {
+      "bedrock": 2,
+      "soil": 2,
+      "big_rock": 2
+    }
+  }
+}

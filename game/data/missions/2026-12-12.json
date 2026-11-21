@@ -1,0 +1,27 @@
+{
+  "date": "2026-12-12",
+  "title": "Phobos loop",
+  "story": "Check every seismometer around a Phobos crater.",
+  "reward": {
+    "credits": 6,
+    "free_retry": 1
+  },
+  "level": {
+    "id": 123,
+    "name": "Seismo Loop",
+    "blurb": "Phobos: long hops over rough rock.",
+    "biome": "crater",
+    "body": "phobos",
+    "length": 120,
+    "seed": 832,
+    "credits": 36,
+    "par": 32,
+    "hill": 2.6,
+    "traction": 1.0,
+    "mix": {
+      "bedrock": 3,
+      "big_rock": 1,
+      "soil": 2
+    }
+  }
+}

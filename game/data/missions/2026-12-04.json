@@ -1,0 +1,26 @@
+{
+  "date": "2026-12-04",
+  "title": "Two motors",
+  "story": "Spare motors are rationed: two per rover today.",
+  "reward": {
+    "credits": 4,
+    "free_retry": 1
+  },
+  "level": {
+    "id": 115,
+    "name": "Ration Day",
+    "blurb": "Two motors at most. Sandy patches.",
+    "biome": "dunes",
+    "length": 95,
+    "seed": 824,
+    "credits": 24,
+    "par": 24,
+    "hill": 1.4,
+    "traction": 1.0,
+    "mix": {
+      "soil": 3,
+      "sand": 2
+    },
+    "max_motors": 2
+  }
+}

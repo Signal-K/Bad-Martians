@@ -1,0 +1,26 @@
+{
+  "date": "2026-12-19",
+  "title": "Deimos drift",
+  "story": "Fetch a sample from a dust drift on Deimos.",
+  "reward": {
+    "credits": 6,
+    "free_retry": 1
+  },
+  "level": {
+    "id": 130,
+    "name": "Drift Sample",
+    "blurb": "Deimos: low pull and loose dust.",
+    "biome": "dunes",
+    "body": "deimos",
+    "length": 115,
+    "seed": 839,
+    "credits": 34,
+    "par": 34,
+    "hill": 2.0,
+    "traction": 1.0,
+    "mix": {
+      "sand": 2,
+      "bedrock": 3
+    }
+  }
+}

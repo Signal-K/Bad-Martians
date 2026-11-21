@@ -1,0 +1,25 @@
+{
+  "date": "2026-11-21",
+  "title": "Survey stakes",
+  "story": "Mark the route for tomorrow's convoy across the plains.",
+  "reward": {
+    "credits": 6,
+    "free_retry": 1
+  },
+  "level": {
+    "id": 102,
+    "name": "Stake Line",
+    "blurb": "Gentle soil with a few hard patches.",
+    "biome": "plains",
+    "length": 90,
+    "seed": 811,
+    "credits": 14,
+    "par": 16,
+    "hill": 1.2,
+    "traction": 1.0,
+    "mix": {
+      "soil": 4,
+      "bedrock": 1
+    }
+  }
+}
