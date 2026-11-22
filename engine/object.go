@@ -16,16 +16,16 @@ type Drawer interface {
 
 // GameObject is a named entity with a transform and components.
 type GameObject struct {
-	Name      string
-	Tag       string
-	Pos       Vec2
-	Rot       float64
-	Layer     int // draw order, low first
+	Name  string
+	Tag   string
+	Pos   Vec2
+	Rot   float64
+	Layer int // draw order, low first
 	// AX and AY pin the object to an edge of the display: -1 left/top, +1
 	// right/bottom, 0 stays with the centred design area. The object is laid out
 	// in design coordinates; the engine shifts drawing and the pointer by the
 	// display's overscan so it follows its edge on any aspect ratio.
-	AX, AY int
+	AX, AY    int
 	Active    bool
 	Scene     *Scene
 	comps     []Component
