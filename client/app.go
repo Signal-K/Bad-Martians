@@ -39,7 +39,7 @@ func New(host engine.Host, scene string) *App {
 	g := engine.NewGame(game.ScreenW, game.ScreenH, host)
 	game.Setup(g)
 	if scene == "" || !g.OpenStandalone(scene) {
-		g.Load(game.SceneMenu, nil)
+		g.Load(game.SceneMap, nil)
 	}
 	return &App{G: g, r: newRenderer()}
 }

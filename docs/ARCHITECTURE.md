@@ -212,3 +212,22 @@ sides on a wide phone). The client sets it whenever the window changes shape.
   spare space. Logic that reads the raw pointer (`g.In.Pointer`) must convert
   it into the space of whatever it tests (see the tray and sidebar in
   `scene_build.go`).
+
+## Chapters and the Mars map
+
+The 22 missions are grouped into chapters (`game/chapters.go`): Gale Crater (1–10),
+Polar Ice Caps (11–15), Mount Sharp (16–20), Phobos (21) and Deimos (22). Missions keep
+their numbers and still unlock in order, so a chapter is a contiguous ID range; a test
+checks the ranges tile the campaign and that moon chapters hold only moon missions.
+To add missions, extend a chapter's `Last` or append a chapter, then give it a `Pin`.
+
+Two scenes sit on top:
+
+- `map` (`scene_map.go`) is the home scene: Mars, with a pin per chapter, the rover's
+  journey drawn between them (driven in neon, dashed beyond), a progress ring per pin and
+  the distance travelled. Tapping a pin selects it; tapping it again, or Enter chapter,
+  opens it. Locked chapters can be read about but not entered. The expedition, daily
+  mission, shape school and style sheet buttons live here.
+- `menu` (`scene_select.go`) is one chapter's route of stops. It takes a `*Chapter`
+  as its argument; with none it opens on the chapter of the last mission picked, else the
+  furthest reached. Moon chapters get the airless sky. Its back button returns to the map.

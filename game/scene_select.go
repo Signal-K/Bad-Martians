@@ -7,16 +7,17 @@ import (
 	"github.com/signal-k/haphazard-martians/engine"
 )
 
-// Mission select is a traverse across Mars: the campaign's missions are stops
-// along one route, left to right. Swipe the route to look along it, tap a
-// stop to read its brief, then build a rover for it.
+// Mission select is one chapter's traverse: its missions are stops along a
+// route, left to right. Swipe the route to look along it, tap a stop to read
+// its brief, then build a rover for it. The Mars map (scene_map.go) is where
+// chapters are picked.
 
 // Route geometry, in route pixels (the route scrolls under the screen).
 const (
-	rtStart  = 150.0 // route x of mission 1
+	rtStart  = 150.0 // route x of a chapter's first stop, when it fills the screen
 	rtStep   = 140.0 // between stops
 	rtTop    = 64.0  // the map sits between the top bar and the brief
-	rtBottom = 352.0
+	rtBottom = 392.0
 	rtBadge  = 30.0 // stop badge radius
 	rtPost   = 58.0 // badge centre above the ground
 )
@@ -25,16 +26,34 @@ const (
 // unlocked one. It outlives the scene so Back from the bay returns to it.
 var selMission = 0
 
-func routeWidth() float64 { return 2*rtStart + rtStep*float64(len(LevelDefs)-1) }
+// route is a chapter's geometry. A short chapter is centred rather than
+// pinned to the left edge.
+type route struct {
+	ch    *Chapter
+	defs  []LevelDef
+	start float64
+}
 
-func stopX(i int) float64 { return rtStart + rtStep*float64(i) }
+func newRoute(ch *Chapter) route {
+	defs := ch.Levels()
+	span := rtStep * float64(len(defs)-1)
+	return route{ch: ch, defs: defs, start: math.Max(rtStart, (ScreenW-span)/2)}
+}
 
-// routeGround is the screen y of the ground at route x: rolling plains that
-// climb towards Mount Sharp over the last missions.
-func routeGround(x float64) float64 {
-	n := float64(len(LevelDefs))
-	climb := smooth((x - stopX(int(n*0.7))) / (stopX(int(n)-1) - stopX(int(n*0.7))))
-	return 268 + 12*math.Sin(x*0.011) + 7*math.Sin(x*0.029+1) - 96*climb
+func (rt route) width() float64 {
+	return rt.start + rtStep*float64(len(rt.defs)-1) + math.Min(rt.start, rtStart)
+}
+
+func (rt route) stopX(i int) float64 { return rt.start + rtStep*float64(i) }
+
+// ground is the screen y of the ground at route x: rolling plains, rising
+// towards the last stop when the chapter climbs.
+func (rt route) ground(x float64) float64 {
+	climb := 0.0
+	if rt.ch.Climb && len(rt.defs) > 1 {
+		climb = smooth((x - rt.stopX(0)) / (rt.stopX(len(rt.defs)-1) - rt.stopX(0)))
+	}
+	return 290 + 12*math.Sin(x*0.011) + 7*math.Sin(x*0.029+1) - 110*climb
 }
 
 var biomeGround = map[string]engine.Color{
@@ -46,79 +65,83 @@ var biomeGround = map[string]engine.Color{
 	"ice":      engine.RGB(196, 196, 206),
 }
 
-func groundAt(i int) engine.Color {
-	if b := BodyOf(LevelDefs[i]); b.TintMix > 0 {
-		return b.ground(biomeGround[LevelDefs[i].Biome])
+func groundAt(d LevelDef) engine.Color {
+	if b := BodyOf(d); b.TintMix > 0 {
+		return b.ground(biomeGround[d.Biome])
 	}
-	if c, ok := biomeGround[LevelDefs[i].Biome]; ok {
+	if c, ok := biomeGround[d.Biome]; ok {
 		return c
 	}
 	return biomeGround["plains"]
 }
 
-// furthest is the index of the furthest unlocked mission.
-func furthest(prog *Progress) int {
-	last := 0
-	for i, d := range LevelDefs {
-		if prog.Unlocked(d.ID) {
-			last = i
-		}
+// chapterFor is the chapter the route opens on: the one asked for, else the
+// one holding the mission last picked, else the furthest the player has reached.
+func chapterFor(arg any, prog *Progress) *Chapter {
+	if c, ok := arg.(*Chapter); ok && c != nil {
+		return c
 	}
-	return last
+	if selMission != 0 {
+		return &Chapters[ChapterIndex(selMission)]
+	}
+	return &Chapters[CurrentChapter(prog)]
 }
 
-func menuScene(g *engine.Game, _ any) *engine.Scene {
+func menuScene(g *engine.Game, arg any) *engine.Scene {
 	s := newScene()
 	prog := LoadProgress(g.Host)
-	sel := furthest(prog)
-	for i, d := range LevelDefs {
+	ch := chapterFor(arg, prog)
+	rt := newRoute(ch)
+	defs := rt.defs
+	sel := max(0, ch.Furthest(prog))
+	for i, d := range defs {
 		if d.ID == selMission && prog.Unlocked(d.ID) {
 			sel = i
 		}
 	}
-	maxScroll := math.Max(0, routeWidth()-ScreenW)
+	maxScroll := math.Max(0, rt.width()-ScreenW)
 	clampScroll := func(v float64) float64 { return math.Max(0, math.Min(maxScroll, v)) }
-	scroll := clampScroll(stopX(sel) - ScreenW/2)
+	scroll := clampScroll(rt.stopX(sel) - ScreenW/2)
 	target := scroll // eases towards a picked stop
 	var vel, grabX, grabScroll, lastX float64
 	grabbing, dragged := false, false
 	clock := 0.0
-	reached := furthest(prog)
+	reached := max(0, ch.Furthest(prog))
 
-	stops := make([]*Button, len(LevelDefs))
+	stops := make([]*Button, len(defs))
 	var drawStop func(r engine.Renderer, i int, b *Button)
 
 	// sky, route, stops' ground
 	AddDraw(s, 0, func(_ engine.Camera, r engine.Renderer) {
-		drawSky(r, scroll/40, nil)
+		drawSky(r, scroll/40, ch.Sky())
 		// the ground, its colour easing from one mission's terrain to the next
 		lo := math.Floor((scroll+viewL())/4) * 4
 		for x := lo; x < scroll+viewR()+4; x += 4 {
-			f := (x + 5 - rtStart) / rtStep
-			i := int(math.Max(0, math.Min(float64(len(LevelDefs)-1), math.Floor(f))))
-			j := min(i+1, len(LevelDefs)-1)
-			col := lerpColor(groundAt(i), groundAt(j), smooth((f-float64(i)-0.3)/0.4))
-			a, b := engine.V(x-scroll, routeGround(x)), engine.V(x+4-scroll, routeGround(x+4))
+			f := (x + 5 - rt.start) / rtStep
+			i := int(math.Max(0, math.Min(float64(len(defs)-1), math.Floor(f))))
+			j := min(i+1, len(defs)-1)
+			col := lerpColor(groundAt(defs[i]), groundAt(defs[j]), smooth((f-float64(i)-0.3)/0.4))
+			a, b := engine.V(x-scroll, rt.ground(x)), engine.V(x+4-scroll, rt.ground(x+4))
 			r.Poly([]engine.Vec2{a, engine.V(b.X+1, b.Y), engine.V(b.X+1, viewB()), engine.V(a.X, viewB())}, col)
 			r.Line(a, b, 2, shade(col, 0.22))
 		}
 		for _, band := range []float64{34, 64} { // deeper rock reads darker
 			pts := []engine.Vec2{engine.V(viewL()-10, viewB())}
 			for x := viewL() - 10; x <= viewR()+10; x += 10 {
-				pts = append(pts, engine.V(x, routeGround(x+scroll)+band+6*math.Sin((x+scroll)*0.023)))
+				pts = append(pts, engine.V(x, rt.ground(x+scroll)+band+6*math.Sin((x+scroll)*0.023)))
 			}
 			pts = append(pts, engine.V(viewR()+10, viewB()))
 			r.Poly(pts, engine.RGB(40, 14, 10).Alpha(46))
 		}
 		// the traverse track: driven up to the furthest unlock, dashed beyond
-		for i := 0; i < len(LevelDefs)-1; i++ {
-			a, b := stopX(i), stopX(i+1)
+		for i := 0; i < len(defs)-1; i++ {
+			a, b := rt.stopX(i), rt.stopX(i+1)
 			if b-scroll < viewL()-10 || a-scroll > viewR()+10 {
 				continue
 			}
 			for x := a; x < b; x += 14 {
-				p := engine.V(x-scroll, routeGround(x)+10)
-				q := engine.V(math.Min(x+8, b)-scroll, routeGround(math.Min(x+8, b))+10)
+				p := engine.V(x-scroll, rt.ground(x)+10)
+				q := engine.V(math.Min(x+8, b)-scroll, rt.ground(math.Min(x+8, b))+10)
 				if i < reached {
 					r.Line(p, q, 4, colNeon.Alpha(220))
 				} else {
@@ -127,12 +150,12 @@ func menuScene(g *engine.Game, _ any) *engine.Scene {
 			}
 		}
 		// posts under the badges; names under the ground line
-		for i, d := range LevelDefs {
-			x := stopX(i) - scroll
+		for i, d := range defs {
+			x := rt.stopX(i) - scroll
 			if x < viewL()-80 || x > viewR()+80 {
 				continue
 			}
-			gy := routeGround(stopX(i))
+			gy := rt.ground(rt.stopX(i))
 			locked := !prog.Unlocked(d.ID)
 			post := colInk
 			if locked {
@@ -152,15 +175,15 @@ func menuScene(g *engine.Game, _ any) *engine.Scene {
 			}
 		}
 		// the rover parked at the picked stop
-		rx := stopX(sel) - scroll + rtBadge + 18
-		drawIcon(r, IconRover, rx, routeGround(stopX(sel)+rtBadge+18)-12, 30, colInk)
+		rx := rt.stopX(sel) - scroll + rtBadge + 18
+		drawIcon(r, IconRover, rx, rt.ground(rt.stopX(sel)+rtBadge+18)-12, 30, colInk)
 	})
 
 	// stops: one button per mission, moved with the route every frame. A stop
 	// only half on screen is hidden (it cannot be tapped) and the map layer
 	// draws its badge instead, so stops slide in and out smoothly.
 	drawStop = func(r engine.Renderer, i int, b *Button) {
-		d, lp := LevelDefs[i], prog.Levels[LevelDefs[i].ID]
+		d, lp := defs[i], prog.Levels[defs[i].ID]
 		c := engine.V(b.X+b.W/2, b.Y+b.H/2)
 		fill, ink, line := colTile, colInk, colInk
 		switch {
@@ -190,14 +213,14 @@ func menuScene(g *engine.Game, _ any) *engine.Scene {
 		}
 	}
 
-	for i, d := range LevelDefs {
+	for i, d := range defs {
 		i, d := i, d
 		b := AddButton(s, 0, 0, rtBadge*2+8, rtBadge*2+8, fmt.Sprintf("Mission %d", d.ID), func() {
 			if dragged {
 				return
 			}
 			sel, selMission = i, d.ID
-			target = clampScroll(stopX(i) - ScreenW/2)
+			target = clampScroll(rt.stopX(i) - ScreenW/2)
 		})
 		b.Disabled = !prog.Unlocked(d.ID)
 		b.Custom = func(b *Button, r engine.Renderer) { drawStop(r, i, b) }
@@ -205,34 +228,37 @@ func menuScene(g *engine.Game, _ any) *engine.Scene {
 	}
 	place := func() {
 		for i, b := range stops {
-			x := stopX(i) - scroll
-			b.X, b.Y = x-b.W/2, routeGround(stopX(i))-rtPost-b.H/2
+			x := rt.stopX(i) - scroll
+			b.X, b.Y = x-b.W/2, rt.ground(rt.stopX(i))-rtPost-b.H/2
 			b.Hidden = b.X < viewL() || b.X+b.W > viewR()
 		}
 	}
 	place()
 
-	// top bar and the brief for the picked mission
+	// top bar: the chapter, and the way back to the Mars map
 	AddDrawAt(s, 9, 0, -1, func(_ engine.Camera, r engine.Renderer) {
 		r.Rect(viewL(), 0, viewR()-viewL(), rtTop, colTile.Alpha(215), true)
 		r.Rect(viewL(), rtTop-1, viewR()-viewL(), 2, colInk.Alpha(60), true)
-		r.Text("HAPHAZARD MARTIANS", 24, 8, 26, colInk, engine.AlignLeft)
-		stars, total := 0, 0
-		for _, lp := range prog.Levels {
-			stars += lp.Stars
-			total += lp.Score
+		r.Text(ch.Name, 92, 6, 26, colInk, engine.AlignLeft)
+		got, most := ch.Stars(prog)
+		span := fmt.Sprintf("Missions %d–%d", ch.First, ch.Last)
+		if ch.First == ch.Last {
+			span = fmt.Sprintf("Mission %d", ch.First)
 		}
-		r.Text(fmt.Sprintf("%d of %d stars · %d points", stars, 3*len(LevelDefs), total), 25, 40, sizeSmall, colMuted, engine.AlignLeft)
+		r.Text(fmt.Sprintf("%s · %d of %d stars", span, got, most), 93, 40, sizeSmall, colMuted, engine.AlignLeft)
 		if prog.FreeRetries > 0 {
 			r.Text(fmt.Sprintf("Free retries: %d", prog.FreeRetries), ScreenW-24, 10, sizeSmall, colGood, engine.AlignRight)
 		}
-		d := LevelDefs[sel]
+		d := defs[sel]
 		r.Text(fmt.Sprintf("Obstacles %.0f%% · difficulty %.0f%%", 100*d.Obstacle(), 100*d.Difficulty()), ScreenW-24, 40, sizeSmall, colMuted, engine.AlignRight)
 	})
-	// the brief, on the bottom edge with its buttons
+	mapBack := AddButton(s, 16, 10, 60, 44, "Mars map", func() { g.Load(SceneMap, nil) }).Pin(0, -1)
+	mapBack.Icon, mapBack.HideLabel = IconBack, true
+
+	// the brief, on the bottom edge with its button
 	AddDrawAt(s, 9, 0, 1, func(_ engine.Camera, r engine.Renderer) {
-		d := LevelDefs[sel]
-		r.Rect(viewL(), rtBottom, viewR()-viewL(), ScreenH-rtBottom, colTile.Alpha(235), true)
+		d := defs[sel]
+		r.Rect(viewL(), rtBottom, viewR()-viewL(), viewB()-rtBottom, colTile.Alpha(235), true)
 		r.Rect(viewL(), rtBottom, viewR()-viewL(), 2, colInk.Alpha(60), true)
 		lp := prog.Levels[d.ID]
 		r.Text(fmt.Sprintf("Mission %d", d.ID), 24, rtBottom+12, sizeSmall, colNeon, engine.AlignLeft)
@@ -251,60 +277,10 @@ func menuScene(g *engine.Game, _ any) *engine.Scene {
 		r.Text(best, 640, rtBottom+60, sizeSmall, colMuted, engine.AlignCenter)
 	})
 
-	build := AddButton(s, ScreenW-24-200, rtBottom+18, 200, 64, "Build rover", func() {
-		g.Load(SceneBuild, NewSessionFor(g.Host, BuildLevel(LevelDefs[sel])))
+	build := AddButton(s, ScreenW-24-200, rtBottom+24, 200, 64, "Build rover", func() {
+		g.Load(SceneBuild, NewSessionFor(g.Host, BuildLevel(defs[sel])))
 	}).Pin(0, 1)
 	build.Primary, build.Icon = true, IconRight
-
-	// other ways to play, along the bottom
-	savedExpedition := LoadExpedition(g.Host)
-	expeditionLabel := fmt.Sprintf("Expedition · %d missions", len(ExpeditionLevels))
-	if savedExpedition != nil {
-		expeditionLabel = "Resume expedition"
-	}
-	ex := AddButton(s, 24, 466, 284, 60, expeditionLabel, func() {
-		if savedExpedition != nil {
-			g.Load(SceneBriefing, savedExpedition)
-		} else {
-			g.Load(SceneBriefing, NewExpedition())
-		}
-	}).Pin(0, 1)
-	ex.Icon = IconRover
-	if m, ok, next := CurrentMission(); ok || next != nil {
-		label := "Daily mission"
-		if !ok {
-			m, label = *next, "Coming "+next.Date
-		}
-		dm := AddButton(s, 320, 466, 316, 60, label, func() {
-			g.Load(SceneBuild, NewSessionFor(g.Host, BuildLevel(m.Level)))
-		}).Pin(0, 1)
-		dm.Disabled = !ok
-		dm.Custom = func(b *Button, r engine.Renderer) {
-			fill, ink, sub, line := colTile, colInk, colMuted, colInk
-			switch {
-			case b.Disabled:
-				line, ink, sub = colMuted.Alpha(90), colMuted.Alpha(120), colMuted.Alpha(100)
-			case b.Held:
-				fill, ink, sub = colInk, colTile, colTile
-			}
-			r.Rect(b.X, b.Y, b.W, b.H, fill, true)
-			outline(r, b.X, b.Y, b.W, b.H, line)
-			r.Text(label, b.X+14, b.Y+8, sizeSmall, colNeon, engine.AlignLeft)
-			r.Text(m.Title, b.X+14, b.Y+28, 18, ink, engine.AlignLeft)
-			r.Text(fmt.Sprintf("+%d build credits", m.Reward.Credits), b.X+b.W-14, b.Y+8, sizeSmall, sub, engine.AlignRight)
-			if m.FreeRetry > 0 && !prog.ClaimedMissions[m.Date] {
-				r.Text(fmt.Sprintf("+%d free retry on win", m.FreeRetry), b.X+b.W-14, b.Y+34, 11, sub, engine.AlignRight)
-			}
-		}
-	}
-	sl := "Shape school"
-	if n := SchoolDone(g.Host); n > 0 && n < len(Lessons) {
-		sl = fmt.Sprintf("Shape school %d/%d", n, len(Lessons))
-	}
-	sc := AddButton(s, 648, 466, 216, 60, sl, func() { g.Load(SceneBuild, LessonSession(NextLesson(g.Host))) }).Pin(0, 1)
-	sc.Icon = IconRover
-	st := AddButton(s, ScreenW-84, 466, 60, 60, "Style sheet", func() { g.Load(SceneStyle, nil) }).Pin(0, 1)
-	st.Icon, st.HideLabel = IconGear, true
 
 	// swiping the route: drag anywhere on the map, with a little fling
 	s.OnUpdate = func(dt float64) {

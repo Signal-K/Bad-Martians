@@ -51,7 +51,7 @@ func briefingScene(g *engine.Game, arg any) *engine.Scene {
 			r.Text(ln, 576, 316+float64(i)*24, sizeSmall, colMuted, engine.AlignLeft)
 		}
 	})
-	addBack(s, func() { g.Load(SceneMenu, nil) })
+	addBack(s, func() { g.Load(SceneMap, nil) })
 	start := AddButton(s, ScreenW-284, 470, 260, 60, fmt.Sprintf("Start Mission %d", ExpeditionLevels[e.Index]), func() {
 		SaveExpedition(g.Host, e)
 		g.Load(SceneBuild, ExpeditionSession(g.Host, e))

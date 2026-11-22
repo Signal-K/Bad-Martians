@@ -236,7 +236,7 @@ func TestLegacyReviewCreditsSurviveChangedTerrain(t *testing.T) {
 
 func TestDailyMissionOpensWithReward(t *testing.T) {
 	h := newHarness(t)
-	h.g.Load(SceneMenu, nil)
+	h.g.Load(SceneMap, nil)
 	h.frames(2, engine.Input{})
 	h.clickButton("Daily mission") // not locked behind the campaign
 	if h.g.Scene().Name != SceneBuild {
@@ -251,7 +251,7 @@ func TestDailyMissionOpensWithReward(t *testing.T) {
 
 func TestDailyMissionOnlyAdvertisesAvailableRewards(t *testing.T) {
 	h := newHarness(t)
-	h.g.Load(SceneMenu, nil)
+	h.g.Load(SceneMap, nil)
 	h.frames(2, engine.Input{})
 	r := &textR{}
 	h.g.Draw(r)
@@ -321,7 +321,7 @@ func TestRouteSelect(t *testing.T) {
 	if h.menuTile(1).Disabled || !h.menuTile(2).Disabled {
 		t.Fatal("a new player has mission 1 open and mission 2 locked")
 	}
-	if !h.menuTile(20).Hidden {
+	if !h.menuTile(10).Hidden {
 		t.Fatal("the far end of the route starts off screen")
 	}
 	// swipe left along the map: the route scrolls and nothing is picked
