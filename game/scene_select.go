@@ -92,28 +92,28 @@ func menuScene(g *engine.Game, _ any) *engine.Scene {
 	AddDraw(s, 0, func(_ engine.Camera, r engine.Renderer) {
 		drawSky(r, scroll/40, nil)
 		// the ground, its colour easing from one mission's terrain to the next
-		lo := math.Max(0, math.Floor(scroll/4)*4)
-		for x := lo; x < scroll+ScreenW+4 && x < routeWidth(); x += 4 {
+		lo := math.Floor((scroll+viewL())/4) * 4
+		for x := lo; x < scroll+viewR()+4; x += 4 {
 			f := (x + 5 - rtStart) / rtStep
 			i := int(math.Max(0, math.Min(float64(len(LevelDefs)-1), math.Floor(f))))
 			j := min(i+1, len(LevelDefs)-1)
 			col := lerpColor(groundAt(i), groundAt(j), smooth((f-float64(i)-0.3)/0.4))
 			a, b := engine.V(x-scroll, routeGround(x)), engine.V(x+4-scroll, routeGround(x+4))
-			r.Poly([]engine.Vec2{a, engine.V(b.X+1, b.Y), engine.V(b.X+1, rtBottom), engine.V(a.X, rtBottom)}, col)
+			r.Poly([]engine.Vec2{a, engine.V(b.X+1, b.Y), engine.V(b.X+1, viewB()), engine.V(a.X, viewB())}, col)
 			r.Line(a, b, 2, shade(col, 0.22))
 		}
 		for _, band := range []float64{34, 64} { // deeper rock reads darker
-			pts := []engine.Vec2{engine.V(-10, rtBottom)}
-			for x := -10.0; x <= ScreenW+10; x += 10 {
+			pts := []engine.Vec2{engine.V(viewL()-10, viewB())}
+			for x := viewL() - 10; x <= viewR()+10; x += 10 {
 				pts = append(pts, engine.V(x, routeGround(x+scroll)+band+6*math.Sin((x+scroll)*0.023)))
 			}
-			pts = append(pts, engine.V(ScreenW+10, rtBottom))
+			pts = append(pts, engine.V(viewR()+10, viewB()))
 			r.Poly(pts, engine.RGB(40, 14, 10).Alpha(46))
 		}
 		// the traverse track: driven up to the furthest unlock, dashed beyond
 		for i := 0; i < len(LevelDefs)-1; i++ {
 			a, b := stopX(i), stopX(i+1)
-			if b-scroll < -10 || a-scroll > ScreenW+10 {
+			if b-scroll < viewL()-10 || a-scroll > viewR()+10 {
 				continue
 			}
 			for x := a; x < b; x += 14 {
@@ -129,7 +129,7 @@ func menuScene(g *engine.Game, _ any) *engine.Scene {
 		// posts under the badges; names under the ground line
 		for i, d := range LevelDefs {
 			x := stopX(i) - scroll
-			if x < -80 || x > ScreenW+80 {
+			if x < viewL()-80 || x > viewR()+80 {
 				continue
 			}
 			gy := routeGround(stopX(i))
@@ -147,7 +147,7 @@ func menuScene(g *engine.Game, _ any) *engine.Scene {
 			r.Text(d.Name, x, gy+22, sizeSmall, name, engine.AlignCenter)
 		}
 		for i, b := range stops { // badges of stops at the screen edges
-			if b.Hidden && b.X+b.W > 0 && b.X < ScreenW {
+			if b.Hidden && b.X+b.W > viewL() && b.X < viewR() {
 				drawStop(r, i, b)
 			}
 		}
@@ -207,15 +207,15 @@ func menuScene(g *engine.Game, _ any) *engine.Scene {
 		for i, b := range stops {
 			x := stopX(i) - scroll
 			b.X, b.Y = x-b.W/2, routeGround(stopX(i))-rtPost-b.H/2
-			b.Hidden = b.X < 0 || b.X+b.W > ScreenW
+			b.Hidden = b.X < viewL() || b.X+b.W > viewR()
 		}
 	}
 	place()
 
 	// top bar and the brief for the picked mission
-	AddDraw(s, 9, func(_ engine.Camera, r engine.Renderer) {
-		r.Rect(0, 0, ScreenW, rtTop, colTile.Alpha(215), true)
-		r.Rect(0, rtTop-1, ScreenW, 2, colInk.Alpha(60), true)
+	AddDrawAt(s, 9, 0, -1, func(_ engine.Camera, r engine.Renderer) {
+		r.Rect(viewL(), 0, viewR()-viewL(), rtTop, colTile.Alpha(215), true)
+		r.Rect(viewL(), rtTop-1, viewR()-viewL(), 2, colInk.Alpha(60), true)
 		r.Text("HAPHAZARD MARTIANS", 24, 8, 26, colInk, engine.AlignLeft)
 		stars, total := 0, 0
 		for _, lp := range prog.Levels {
@@ -228,10 +228,12 @@ func menuScene(g *engine.Game, _ any) *engine.Scene {
 		}
 		d := LevelDefs[sel]
 		r.Text(fmt.Sprintf("Obstacles %.0f%% · difficulty %.0f%%", 100*d.Obstacle(), 100*d.Difficulty()), ScreenW-24, 40, sizeSmall, colMuted, engine.AlignRight)
-
-		// the brief
-		r.Rect(0, rtBottom, ScreenW, ScreenH-rtBottom, colTile.Alpha(235), true)
-		r.Rect(0, rtBottom, ScreenW, 2, colInk.Alpha(60), true)
+	})
+	// the brief, on the bottom edge with its buttons
+	AddDrawAt(s, 9, 0, 1, func(_ engine.Camera, r engine.Renderer) {
+		d := LevelDefs[sel]
+		r.Rect(viewL(), rtBottom, viewR()-viewL(), ScreenH-rtBottom, colTile.Alpha(235), true)
+		r.Rect(viewL(), rtBottom, viewR()-viewL(), 2, colInk.Alpha(60), true)
 		lp := prog.Levels[d.ID]
 		r.Text(fmt.Sprintf("Mission %d", d.ID), 24, rtBottom+12, sizeSmall, colNeon, engine.AlignLeft)
 		r.Text(d.Name, 24, rtBottom+30, 24, colInk, engine.AlignLeft)
@@ -251,7 +253,7 @@ func menuScene(g *engine.Game, _ any) *engine.Scene {
 
 	build := AddButton(s, ScreenW-24-200, rtBottom+18, 200, 64, "Build rover", func() {
 		g.Load(SceneBuild, NewSessionFor(g.Host, BuildLevel(LevelDefs[sel])))
-	})
+	}).Pin(0, 1)
 	build.Primary, build.Icon = true, IconRight
 
 	// other ways to play, along the bottom
@@ -266,7 +268,7 @@ func menuScene(g *engine.Game, _ any) *engine.Scene {
 		} else {
 			g.Load(SceneBriefing, NewExpedition())
 		}
-	})
+	}).Pin(0, 1)
 	ex.Icon = IconRover
 	if m, ok, next := CurrentMission(); ok || next != nil {
 		label := "Daily mission"
@@ -275,7 +277,7 @@ func menuScene(g *engine.Game, _ any) *engine.Scene {
 		}
 		dm := AddButton(s, 320, 466, 316, 60, label, func() {
 			g.Load(SceneBuild, NewSessionFor(g.Host, BuildLevel(m.Level)))
-		})
+		}).Pin(0, 1)
 		dm.Disabled = !ok
 		dm.Custom = func(b *Button, r engine.Renderer) {
 			fill, ink, sub, line := colTile, colInk, colMuted, colInk
@@ -299,9 +301,9 @@ func menuScene(g *engine.Game, _ any) *engine.Scene {
 	if n := SchoolDone(g.Host); n > 0 && n < len(Lessons) {
 		sl = fmt.Sprintf("Shape school %d/%d", n, len(Lessons))
 	}
-	sc := AddButton(s, 648, 466, 216, 60, sl, func() { g.Load(SceneBuild, LessonSession(NextLesson(g.Host))) })
+	sc := AddButton(s, 648, 466, 216, 60, sl, func() { g.Load(SceneBuild, LessonSession(NextLesson(g.Host))) }).Pin(0, 1)
 	sc.Icon = IconRover
-	st := AddButton(s, ScreenW-84, 466, 60, 60, "Style sheet", func() { g.Load(SceneStyle, nil) })
+	st := AddButton(s, ScreenW-84, 466, 60, 60, "Style sheet", func() { g.Load(SceneStyle, nil) }).Pin(0, 1)
 	st.Icon, st.HideLabel = IconGear, true
 
 	// swiping the route: drag anywhere on the map, with a little fling
@@ -309,7 +311,12 @@ func menuScene(g *engine.Game, _ any) *engine.Scene {
 		clock += dt
 		in := g.In
 		p := in.Pointer
-		if in.Pressed && p.Y > rtTop && p.Y < rtBottom {
+		// the map is what lies between the top bar and the brief, which hang
+		// from the display's edges
+		inMap := func(p engine.Vec2) bool {
+			return p.Y > rtTop-engine.Overscan.Y && p.Y < rtBottom+engine.Overscan.Y
+		}
+		if in.Pressed && inMap(p) {
 			grabbing, dragged = true, false
 			grabX, grabScroll, lastX, vel = p.X, scroll, p.X, 0
 		}
@@ -342,7 +349,7 @@ func menuScene(g *engine.Game, _ any) *engine.Scene {
 				scroll += (target - scroll) * math.Min(1, dt*8)
 			}
 		}
-		if in.Pressed && !(p.Y > rtTop && p.Y < rtBottom) {
+		if in.Pressed && !inMap(p) {
 			dragged = false
 		}
 		place()

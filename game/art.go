@@ -255,8 +255,9 @@ func drawSky(r engine.Renderer, camX float64, body *Body) {
 		if t > 0.6 {
 			col = lerpColor(mid, hor, (t-0.6)/0.4)
 		}
-		r.Rect(0, ScreenH*float64(i)/bands, ScreenW, ScreenH/bands+1, col, true)
+		r.Rect(viewL(), ScreenH*float64(i)/bands, viewR()-viewL(), ScreenH/bands+1, col, true)
 	}
+	r.Rect(viewL(), viewT(), viewR()-viewL(), -viewT()+1, top, true) // sky above the design area
 	sun := engine.V(892-camX*0.4, 132)
 	for i := 6; i >= 1; i-- {
 		r.Circle(sun, 14+float64(i)*11, engine.RGB(196, 214, 236).Alpha(uint8(8+i)), true)
@@ -287,16 +288,16 @@ func haze(r engine.Renderer, y0, y1 float64, a uint8) {
 	const n = 10
 	h := (y1 - y0) / n
 	for i := 0; i < n; i++ {
-		r.Rect(0, y0+float64(i)*h, ScreenW, h+1, engine.RGB(240, 192, 148).Alpha(uint8(float64(a)*float64(i+1)/n)), true)
+		r.Rect(viewL(), y0+float64(i)*h, viewR()-viewL(), h+1, engine.RGB(240, 192, 148).Alpha(uint8(float64(a)*float64(i+1)/n)), true)
 	}
 }
 
 func ridge(r engine.Renderer, camX, par float64, y func(float64) float64, col engine.Color) {
-	pts := []engine.Vec2{engine.V(0, ScreenH)}
-	for x := 0.0; x <= ScreenW+12; x += 12 {
+	pts := []engine.Vec2{engine.V(viewL(), viewB())}
+	for x := viewL(); x <= viewR()+12; x += 12 {
 		pts = append(pts, engine.V(x, y(x+camX*par*40)))
 	}
-	pts = append(pts, engine.V(ScreenW+12, ScreenH))
+	pts = append(pts, engine.V(viewR()+12, viewB()))
 	r.Poly(pts, col)
 	// a lit crest line
 	for i := 2; i < len(pts)-1; i++ {
@@ -324,7 +325,7 @@ func drawTerrain(r engine.Renderer, cam engine.Camera, t *physics.Terrain, body 
 	g := GroundOf(t)
 	// KES-490: a moon's ground is the same cross-section, tinted to its own colours.
 	pebbleCol, packedCol, rockCol := body.ground(colPebbleBed), body.ground(colPacked), body.ground(colRock)
-	half := cam.Screen.X/2/cam.Zoom + 1
+	half := (cam.Screen.X/2+engine.Overscan.X)/cam.Zoom + 1
 	i0 := int((cam.Pos.X-half-t.X0)/t.DX) - 1
 	i1 := int((cam.Pos.X+half-t.X0)/t.DX) + 1
 	// Physics holds the ground flat at its edge height past either end, so draw
@@ -336,7 +337,7 @@ func drawTerrain(r engine.Renderer, cam engine.Camera, t *physics.Terrain, body 
 	down := func(p engine.Vec2, m float64) engine.Vec2 { return engine.V(p.X, p.Y+m*z) }
 	band := func(a, b engine.Vec2, ta, tb, ba, bb float64, c engine.Color) {
 		a0, b0 := down(a, ta), down(b, tb)
-		if a0.Y > ScreenH && b0.Y > ScreenH {
+		if a0.Y > viewB() && b0.Y > viewB() {
 			return
 		}
 		a1, b1 := down(a, ba), down(b, bb)

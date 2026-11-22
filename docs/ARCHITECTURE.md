@@ -191,3 +191,24 @@ so taps select instead of pressing buttons.
   position are picked at that point.
 
 Edits are live only: they are not saved to the level or scene data.
+
+## Screen layout and aspect ratio
+
+Scenes are laid out in a 960×540 *design area* (`ScreenW`, `ScreenH`) that is
+always shown whole and centred. The display is never letterboxed: whatever the
+window's aspect ratio, the renderer draws on the whole framebuffer and the
+extra area is **overscan** (`engine.Overscan`, in design units per side: extra
+height above and below on a squarer screen such as an iPad, extra width at the
+sides on a wide phone). The client sets it whenever the window changes shape.
+
+- Backgrounds (sky, ground, nebula, the route map) paint to the display edge
+  with `viewL/R/T/B()` and `fillView`, never to `0..ScreenW`.
+- Chrome pins to an edge. `GameObject.AX/AY` (and `Button.Pin`,
+  `AddDrawAt`) take -1 (left/top), +1 (right/bottom) or 0 (stay centred). The
+  object is still authored in design coordinates; the engine shifts its drawing
+  and the pointer/touches it sees by the overscan. A button at or below
+  `actionStripY` sits on the bottom edge automatically.
+- The middle of a scene (the bay grid, the world) stays centred and receives the
+  spare space. Logic that reads the raw pointer (`g.In.Pointer`) must convert
+  it into the space of whatever it tests (see the tray and sidebar in
+  `scene_build.go`).

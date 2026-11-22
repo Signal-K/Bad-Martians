@@ -106,7 +106,7 @@ func drawMeter(r engine.Renderer, x, y, w float64, segs, filled int, col engine.
 
 // drawBackdrop paints the dark nebula behind menu-style scenes.
 func drawBackdrop(r engine.Renderer) {
-	r.Rect(0, 0, ScreenW, ScreenH, colSpace, true)
+	fillView(r, colSpace)
 	// Nebulae are clusters of soft, overlapping puffs of different sizes, so no
 	// cloud reads as a perfect circle.
 	blobs := []struct {

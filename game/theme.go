@@ -49,3 +49,17 @@ const (
 	ScreenW = 960.0
 	ScreenH = 540.0
 )
+
+// The design area is ScreenW x ScreenH, centred in the display. On any other
+// aspect ratio the display shows more: extra height above and below, or extra
+// width at the sides. These are the visible edges in design coordinates, for
+// backgrounds that must run to the edge of the screen.
+func viewL() float64 { return -engine.Overscan.X }
+func viewR() float64 { return ScreenW + engine.Overscan.X }
+func viewT() float64 { return -engine.Overscan.Y }
+func viewB() float64 { return ScreenH + engine.Overscan.Y }
+
+// fillView paints the whole visible display.
+func fillView(r engine.Renderer, c engine.Color) {
+	r.Rect(viewL(), viewT(), viewR()-viewL(), viewB()-viewT(), c, true)
+}

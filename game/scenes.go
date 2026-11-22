@@ -85,7 +85,7 @@ func addBackdrop(s *engine.Scene) {
 
 // addTitle draws the scene title (and a one-line subtitle) in the title region.
 func addTitle(s *engine.Scene, text, sub string) {
-	AddDraw(s, 9, func(_ engine.Camera, r engine.Renderer) {
+	AddDrawAt(s, 9, 0, -1, func(_ engine.Camera, r engine.Renderer) {
 		r.Text(text, 28, 16, sizeTitle, colInk, engine.AlignLeft)
 		if sub != "" {
 			r.Text(sub, 28, 54, sizeBody, colMuted, engine.AlignLeft)

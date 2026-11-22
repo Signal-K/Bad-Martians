@@ -11,6 +11,10 @@ type DrawFunc func(cam engine.Camera, r engine.Renderer)
 
 func (d DrawFunc) Draw(_ *engine.GameObject, cam engine.Camera, r engine.Renderer) { d(cam, r) }
 
+// actionStripY is where a scene's bottom action strip (Back, Retry, Next...)
+// starts; buttons at or below it hang from the bottom edge of the display.
+const actionStripY = 440.0
+
 // Button is a clickable (or holdable) rectangle in screen space.
 type Button struct {
 	X, Y, W, H float64
@@ -26,7 +30,18 @@ type Button struct {
 
 	Held  bool // pointer is down inside
 	armed bool
+	obj   *engine.GameObject
 }
+
+// Pin anchors the button to a display edge (-1 left/top, +1 right/bottom, 0
+// centred); X and Y stay in design coordinates.
+func (b *Button) Pin(ax, ay int) *Button {
+	b.obj.AX, b.obj.AY = ax, ay
+	return b
+}
+
+// Offset is how far the button's anchor currently moves it.
+func (b *Button) Offset() engine.Vec2 { return b.obj.Offset() }
 
 func (b *Button) inside(p engine.Vec2) bool {
 	return p.X >= b.X && p.X <= b.X+b.W && p.Y >= b.Y && p.Y <= b.Y+b.H
@@ -94,14 +109,24 @@ func (b *Button) MoveBy(_ *engine.GameObject, _ engine.Camera, dx, dy float64) {
 func AddButton(s *engine.Scene, x, y, w, h float64, label string, onClick func()) *Button {
 	b := &Button{X: x, Y: y, W: w, H: h, Label: label, OnClick: onClick}
 	o := s.Spawn("btn:" + label)
+	if y >= actionStripY { // the bottom action strip sits on the bottom edge
+		o.AY = 1
+	}
+	b.obj = o
 	o.Layer = 20
 	o.Add(b)
 	return b
 }
 
 func AddDraw(s *engine.Scene, layer int, f DrawFunc) {
+	AddDrawAt(s, layer, 0, 0, f)
+}
+
+// AddDrawAt is AddDraw for chrome pinned to a display edge (see Button.Pin).
+func AddDrawAt(s *engine.Scene, layer, ax, ay int, f DrawFunc) {
 	o := s.Spawn("draw")
 	o.Layer = layer
+	o.AX, o.AY = ax, ay
 	o.Add(f)
 }
 

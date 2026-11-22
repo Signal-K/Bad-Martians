@@ -82,9 +82,9 @@ func (a *App) SceneList() string {
 }
 
 // toVirtual maps a framebuffer pixel to the game's virtual screen, undoing the
-// letterbox the renderer applies.
+// offset the renderer applies (the design area sits centred in the display).
 func (a *App) toVirtual(x, y int) engine.Vec2 {
-	s, ox, oy := fit(float64(a.fbW), float64(a.fbH), game.ScreenW, game.ScreenH)
+	s, ox, oy := fit(float64(a.fbW), float64(a.fbH))
 	if s <= 0 {
 		return engine.V(float64(x), float64(y))
 	}
@@ -182,57 +182,22 @@ func (a *App) Draw(screen *ebiten.Image) {
 }
 
 func (a *App) frame(screen *ebiten.Image) {
-	screen.Fill(color.NRGBA{20, 12, 14, 255}) // letterbox bars
-	a.r.begin(screen, game.ScreenW, game.ScreenH)
+	screen.Fill(color.NRGBA{20, 12, 14, 255})
+	a.r.begin(screen)
 	a.G.Draw(a.r)
 	a.r.end()
-	a.extendEdges(screen)
-}
-
-// extendEdges replaces the letterbox bars with the game's own outermost
-// pixels, stretched outwards, so the scene appears to run to the display's
-// edge instead of sitting in a black frame.
-func (a *App) extendEdges(screen *ebiten.Image) {
-	b := screen.Bounds()
-	s, ox, oy := fit(float64(b.Dx()), float64(b.Dy()), game.ScreenW, game.ScreenH)
-	gw, gh := int(game.ScreenW*s), int(game.ScreenH*s)
-	x0, y0 := int(math.Round(ox)), int(math.Round(oy))
-	if x0 < 1 && y0 < 1 || gw < 2 || gh < 2 {
-		return
-	}
-	stretch := func(src image.Rectangle, dst image.Rectangle) {
-		if dst.Empty() || src.Empty() {
-			return
-		}
-		tmp := ebiten.NewImage(src.Dx(), src.Dy())
-		tmp.DrawImage(screen.SubImage(src).(*ebiten.Image), nil)
-		op := &ebiten.DrawImageOptions{}
-		op.GeoM.Scale(float64(dst.Dx())/float64(src.Dx()), float64(dst.Dy())/float64(src.Dy()))
-		op.GeoM.Translate(float64(dst.Min.X), float64(dst.Min.Y))
-		screen.SubImage(dst).(*ebiten.Image).DrawImage(tmp, op)
-		tmp.Deallocate()
-	}
-	if y0 > 0 { // bars above and below
-		stretch(image.Rect(x0, y0, x0+gw, y0+1), image.Rect(0, 0, b.Dx(), y0))
-		stretch(image.Rect(x0, y0+gh-1, x0+gw, y0+gh), image.Rect(0, y0+gh, b.Dx(), b.Dy()))
-	}
-	if x0 > 0 { // bars left and right
-		stretch(image.Rect(x0, 0, x0+1, b.Dy()), image.Rect(0, 0, x0, b.Dy()))
-		stretch(image.Rect(x0+gw-1, 0, x0+gw, b.Dy()), image.Rect(x0+gw, 0, b.Dx(), b.Dy()))
-	}
 }
 
 // photoMaxW caps a photo's width: plenty for sharing, quick to encode.
 const photoMaxW = 1920
 
-// photo encodes the game area of the screen (without letterbox bars) as PNG.
+// photo encodes the whole screen as PNG.
 func (a *App) photo(screen *ebiten.Image) ([]byte, error) {
 	b := screen.Bounds()
 	pix := make([]byte, 4*b.Dx()*b.Dy())
 	screen.ReadPixels(pix)
 	full := &image.RGBA{Pix: pix, Stride: 4 * b.Dx(), Rect: image.Rect(0, 0, b.Dx(), b.Dy())}
-	s, ox, oy := fit(float64(b.Dx()), float64(b.Dy()), game.ScreenW, game.ScreenH)
-	area := image.Rect(int(ox+0.5), int(oy+0.5), int(ox+game.ScreenW*s), int(oy+game.ScreenH*s))
+	area := image.Rect(0, 0, b.Dx(), b.Dy())
 	src := full.SubImage(area).(*image.RGBA)
 	out := image.Image(src)
 	if w := area.Dx(); w > photoMaxW { // nearest-neighbour downscale
@@ -264,5 +229,9 @@ func (a *App) Layout(w, h int) (int, int) {
 		fw, fh = fw*maxFB/m, fh*maxFB/m
 	}
 	a.fbW, a.fbH = max(1, int(fw)), max(1, int(fh))
+	// The design area (960x540) is centred and the rest of the display is the
+	// scene's to fill: extra height above and below on a squarer screen, extra
+	// width at the sides on a wider one.
+	engine.Overscan = overscan(float64(a.fbW), float64(a.fbH))
 	return a.fbW, a.fbH
 }

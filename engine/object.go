@@ -21,11 +21,21 @@ type GameObject struct {
 	Pos       Vec2
 	Rot       float64
 	Layer     int // draw order, low first
+	// AX and AY pin the object to an edge of the display: -1 left/top, +1
+	// right/bottom, 0 stays with the centred design area. The object is laid out
+	// in design coordinates; the engine shifts drawing and the pointer by the
+	// display's overscan so it follows its edge on any aspect ratio.
+	AX, AY int
 	Active    bool
 	Scene     *Scene
 	comps     []Component
 	started   int
 	destroyed bool
+}
+
+// Offset is how far the object's anchor moves it from its design position.
+func (g *GameObject) Offset() Vec2 {
+	return Vec2{float64(g.AX) * Overscan.X, float64(g.AY) * Overscan.Y}
 }
 
 func (g *GameObject) Add(c Component) Component {
@@ -107,10 +117,30 @@ func (s *Scene) update(dt float64) {
 				st.Start(o)
 			}
 		}
+		off := o.Offset()
+		var game *Game
+		var saved Input
+		if off != (Vec2{}) {
+			game = s.Game
+		}
+		if game != nil { // the object sees touches in its own design space
+			saved = game.In
+			game.In.Pointer = saved.Pointer.Sub(off)
+			if len(saved.Touches) > 0 {
+				game.In.Touches = make([]Touch, len(saved.Touches))
+				for i, t := range saved.Touches {
+					t.Pos = t.Pos.Sub(off)
+					game.In.Touches[i] = t
+				}
+			}
+		}
 		for _, c := range o.comps {
 			if u, ok := c.(Updater); ok {
 				u.Update(o, dt)
 			}
+		}
+		if game != nil {
+			game.In.Pointer, game.In.Touches = saved.Pointer, saved.Touches
 		}
 	}
 	live := s.Objects[:0]
@@ -139,13 +169,48 @@ func (s *Scene) draw(r Renderer) {
 		if snap && o.Layer >= hideFrom {
 			continue
 		}
+		rr := r
+		if off := o.Offset(); off != (Vec2{}) {
+			rr = &shiftRenderer{r, off}
+		}
 		for _, c := range o.comps {
 			if d, ok := c.(Drawer); ok {
-				d.Draw(o, s.Cam, r)
+				d.Draw(o, s.Cam, rr)
 			}
 		}
 	}
 	if snap && s.OnPhoto != nil {
 		s.OnPhoto(r)
 	}
+}
+
+// Overscan is how far the visible area extends past the design area on each
+// side, in design units: the display's extra width on the left and right, and
+// extra height above and below. Hosts set it when the window changes shape.
+var Overscan Vec2
+
+// shiftRenderer draws everything displaced by off.
+type shiftRenderer struct {
+	Renderer
+	off Vec2
+}
+
+func (s *shiftRenderer) Line(a, b Vec2, w float64, c Color) {
+	s.Renderer.Line(a.Add(s.off), b.Add(s.off), w, c)
+}
+func (s *shiftRenderer) Circle(p Vec2, r float64, c Color, fill bool) {
+	s.Renderer.Circle(p.Add(s.off), r, c, fill)
+}
+func (s *shiftRenderer) Rect(x, y, w, h float64, c Color, fill bool) {
+	s.Renderer.Rect(x+s.off.X, y+s.off.Y, w, h, c, fill)
+}
+func (s *shiftRenderer) Poly(pts []Vec2, c Color) {
+	q := make([]Vec2, len(pts))
+	for i, p := range pts {
+		q[i] = p.Add(s.off)
+	}
+	s.Renderer.Poly(q, c)
+}
+func (s *shiftRenderer) Text(t string, x, y, size float64, c Color, a Align) {
+	s.Renderer.Text(t, x+s.off.X, y+s.off.Y, size, c, a)
 }

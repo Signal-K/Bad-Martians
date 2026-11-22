@@ -40,7 +40,13 @@ func runScene(g *engine.Game, arg any) *engine.Scene {
 		}
 	})
 	// HUD: progress, clock, samples, and the live score
-	AddDraw(s, 10, func(_ engine.Camera, r engine.Renderer) {
+	runName := func() string {
+		if ses.Name == "" {
+			return "Rover"
+		}
+		return ses.Name
+	}
+	AddDrawAt(s, 10, 0, -1, func(_ engine.Camera, r engine.Renderer) {
 		drawPanel(r, 130, 8, 700, 48, "")
 		r.Rect(146, 22, 300, 14, colPanel2, true)
 		r.Rect(146, 22, 300*run.Progress(), 14, colNeon, true)
@@ -60,12 +66,13 @@ func runScene(g *engine.Game, arg any) *engine.Scene {
 		if run.Damaged() {
 			state, sc = "scraped: no salvage", colWarn
 		}
-		name := ses.Name
-		if name == "" {
-			name = "Rover"
-		}
+		name := runName()
 		r.Text(name, 146, 62, sizeSmall, colInk, engine.AlignLeft)
 		r.Text(state, 146+textW(name, sizeSmall)+14, 62, sizeSmall, sc, engine.AlignLeft)
+	})
+	// the verdict, over the middle of the world
+	AddDraw(s, 10, func(_ engine.Camera, r engine.Renderer) {
+		name := runName()
 		if run.Outcome != Running && (run.Outcome != Scrapped || endTimer > 1.1) {
 			col, head := colGood, "Mission complete"
 			if run.Outcome != Won {
@@ -95,7 +102,7 @@ func runScene(g *engine.Game, arg any) *engine.Scene {
 		ses.NoteFailure(run)
 		g.Load(SceneBuild, ses)
 	})
-	ab.Icon = IconBack
+	ab.Pin(-1, -1).Icon = IconBack
 	ab.Label, ab.HideLabel = "Abort", true
 	// Photo: snap the world without the HUD, with a caption, to share.
 	flash := 0.0
@@ -105,7 +112,7 @@ func runScene(g *engine.Game, arg any) *engine.Scene {
 		g.RequestPhoto(fmt.Sprintf("haphazard-martians-mission-%d-%d.png", lvl.ID, shots))
 		flash = 1
 	})
-	cam.Icon, cam.HideLabel = IconCamera, true
+	cam.Pin(1, -1).Icon, cam.HideLabel = IconCamera, true
 	s.OnPhoto = func(r engine.Renderer) {
 		line := fmt.Sprintf("Mission %d · %s · %.0f m", lvl.ID, lvl.Name, run.Progress()*(lvl.GoalX-lvl.StartX))
 		if ses.Lesson > 0 {
@@ -115,15 +122,21 @@ func runScene(g *engine.Game, arg any) *engine.Scene {
 			line = ses.Name + " · " + line
 		}
 		w := textW(line, sizeSmall) + 206
-		r.Rect(16, ScreenH-46, w, 32, colTile.Alpha(200), true)
-		r.Text("HAPHAZARD MARTIANS", 28, ScreenH-40, 13, colNeon, engine.AlignLeft)
-		r.Text(line, 198, ScreenH-41, sizeSmall, colInk, engine.AlignLeft)
+		x, y := viewL()+16, viewB()-46
+		r.Rect(x, y, w, 32, colTile.Alpha(200), true)
+		r.Text("HAPHAZARD MARTIANS", x+12, y+6, 13, colNeon, engine.AlignLeft)
+		r.Text(line, x+182, y+5, sizeSmall, colInk, engine.AlignLeft)
 	}
 	AddDraw(s, 40, func(_ engine.Camera, r engine.Renderer) {
 		if flash <= 0 {
 			return
 		}
-		r.Rect(0, 0, ScreenW, ScreenH, engine.Color{R: 255, G: 255, B: 255, A: uint8(200 * flash * flash)}, true)
+		fillView(r, engine.Color{R: 255, G: 255, B: 255, A: uint8(200 * flash * flash)})
+	})
+	AddDrawAt(s, 40, 1, -1, func(_ engine.Camera, r engine.Renderer) {
+		if flash <= 0 {
+			return
+		}
 		if flash < 0.85 {
 			msg := "Photo saved"
 			w := textW(msg, sizeBody) + 32
@@ -138,21 +151,33 @@ func runScene(g *engine.Game, arg any) *engine.Scene {
 		abandoned("restart")
 		run.Scrap()
 		boom = 0
-	})
+	}).Pin(0, 1)
 	restart.Icon, restart.Primary, restart.Hidden = IconRetry, true, true
 	// Stuck: say why, mark the parts to blame, and what to change next time.
+	var stuckCause Cause
 	AddDraw(s, 15, func(cam engine.Camera, r engine.Renderer) {
 		if restart.Hidden {
 			return
 		}
 		c := run.Diagnose()
+		stuckCause = c
 		p := 0.5 + 0.5*sinf(run.Time*6)
 		for _, i := range c.Culprits {
 			b := run.Rover.Bodies[i]
 			r.Circle(cam.ToScreen(b.Pos), (b.Radius+0.25)*cam.Zoom+3*p, colWarn.Alpha(uint8(150+100*p)), false)
 			r.Circle(cam.ToScreen(b.Pos), (b.Radius+0.25)*cam.Zoom+1+3*p, colWarn.Alpha(uint8(150+100*p)), false)
 		}
-		drawCause(r, c, ScreenW-24-500, 104, 500)
+	})
+	AddDrawAt(s, 15, 1, -1, func(_ engine.Camera, r engine.Renderer) {
+		if !restart.Hidden {
+			drawCause(r, stuckCause, ScreenW-24-500, 104, 500)
+		}
+	})
+	AddDrawAt(s, 15, 0, 1, func(_ engine.Camera, r engine.Renderer) {
+		if restart.Hidden {
+			return
+		}
+		p := 0.5 + 0.5*sinf(run.Time*6)
 		msg := "Restart scraps this rover."
 		if ses.Exp != nil {
 			msg = fmt.Sprintf("Restart scraps this rover: %d parts lost.", ses.Design.Cost())
@@ -179,14 +204,16 @@ func runScene(g *engine.Game, arg any) *engine.Scene {
 	})
 	// The stick: right drives, left reverses, up and down lean the rover.
 	// It sits bottom-left, under the left thumb.
+	so := s.Spawn("stick")
+	so.AX, so.AY = -1, 1
+	so.Layer = 20
 	stick := &Stick{Home: engine.V(120, ScreenH-112), R: 62, Grab: 150}
 	stick.Block = func(p engine.Vec2) bool { // the Restart button takes its own taps
+		p = p.Add(so.Offset()).Sub(restart.Offset()) // from the stick's space to the button's
 		return !restart.Hidden && p.X >= restart.X && p.X <= restart.X+restart.W && p.Y >= restart.Y && p.Y <= restart.Y+restart.H
 	}
-	so := s.Spawn("stick")
-	so.Layer = 20
 	so.Add(stick)
-	AddDraw(s, 19, func(_ engine.Camera, r engine.Renderer) {
+	AddDrawAt(s, 19, -1, 1, func(_ engine.Camera, r engine.Renderer) {
 		if !stick.Held() {
 			r.Text("drive", stick.Home.X, stick.Home.Y+stick.R+18, 12, colMuted, engine.AlignCenter)
 		}
@@ -202,8 +229,11 @@ func runScene(g *engine.Game, arg any) *engine.Scene {
 				return
 			}
 			clock += 1.0 / 60
-			drawCoach(r, clock, engine.Rect{X: ScreenW/2 - 190, Y: 76, W: 380, H: 48},
-				"Push the stick right to drive.", stick.Box())
+			ov := engine.Overscan
+			box := stick.Box()
+			box.X, box.Y = box.X-ov.X, box.Y+ov.Y // the stick sits at the bottom-left edge
+			drawCoach(r, clock, engine.Rect{X: ScreenW/2 - 190, Y: 76 - ov.Y, W: 380, H: 48},
+				"Push the stick right to drive.", box)
 		}))
 	}
 
