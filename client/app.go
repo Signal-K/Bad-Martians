@@ -186,6 +186,40 @@ func (a *App) frame(screen *ebiten.Image) {
 	a.r.begin(screen, game.ScreenW, game.ScreenH)
 	a.G.Draw(a.r)
 	a.r.end()
+	a.extendEdges(screen)
+}
+
+// extendEdges replaces the letterbox bars with the game's own outermost
+// pixels, stretched outwards, so the scene appears to run to the display's
+// edge instead of sitting in a black frame.
+func (a *App) extendEdges(screen *ebiten.Image) {
+	b := screen.Bounds()
+	s, ox, oy := fit(float64(b.Dx()), float64(b.Dy()), game.ScreenW, game.ScreenH)
+	gw, gh := int(game.ScreenW*s), int(game.ScreenH*s)
+	x0, y0 := int(math.Round(ox)), int(math.Round(oy))
+	if x0 < 1 && y0 < 1 || gw < 2 || gh < 2 {
+		return
+	}
+	stretch := func(src image.Rectangle, dst image.Rectangle) {
+		if dst.Empty() || src.Empty() {
+			return
+		}
+		tmp := ebiten.NewImage(src.Dx(), src.Dy())
+		tmp.DrawImage(screen.SubImage(src).(*ebiten.Image), nil)
+		op := &ebiten.DrawImageOptions{}
+		op.GeoM.Scale(float64(dst.Dx())/float64(src.Dx()), float64(dst.Dy())/float64(src.Dy()))
+		op.GeoM.Translate(float64(dst.Min.X), float64(dst.Min.Y))
+		screen.SubImage(dst).(*ebiten.Image).DrawImage(tmp, op)
+		tmp.Deallocate()
+	}
+	if y0 > 0 { // bars above and below
+		stretch(image.Rect(x0, y0, x0+gw, y0+1), image.Rect(0, 0, b.Dx(), y0))
+		stretch(image.Rect(x0, y0+gh-1, x0+gw, y0+gh), image.Rect(0, y0+gh, b.Dx(), b.Dy()))
+	}
+	if x0 > 0 { // bars left and right
+		stretch(image.Rect(x0, 0, x0+1, b.Dy()), image.Rect(0, 0, x0, b.Dy()))
+		stretch(image.Rect(x0+gw-1, 0, x0+gw, b.Dy()), image.Rect(x0+gw, 0, b.Dx(), b.Dy()))
+	}
 }
 
 // photoMaxW caps a photo's width: plenty for sharing, quick to encode.

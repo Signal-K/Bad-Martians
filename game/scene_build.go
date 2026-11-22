@@ -153,6 +153,9 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 	var bayButtons []*Button   // hidden while the guide is open
 	tut := ses.Tut
 	lesson := LessonOf(ses)
+	// The shapes sidebar is a crutch for the first two missions and the shape
+	// school; after that players build from the parts tray.
+	showShapes := lvl.ID <= 2 || lesson != nil
 	var skip *engine.Rect // the tutorial's skip button, to keep taps off the grid
 
 	// test drop: live physics on the real start terrain
@@ -210,6 +213,9 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 		}
 	}
 	cardAt := func(p engine.Vec2) int {
+		if !showShapes {
+			return -1
+		}
 		for i := range Blocks {
 			if p.X >= bSideX && p.X <= bSideX+bSideW && p.Y >= cardY(i) && p.Y <= cardY(i)+bCardH {
 				return i
@@ -396,6 +402,10 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 		}
 	})
 
+	emptyHint := "Drag a shape or a part onto the grid."
+	if !showShapes {
+		emptyHint = "Drag parts up from the tray below onto the grid."
+	}
 	// chrome: top bar, terrain map, tray backing, specs
 	AddDraw(s, 9, func(_ engine.Camera, r engine.Renderer) {
 		r.Rect(0, 0, ScreenW, 64, colTile.Alpha(215), true)
@@ -422,7 +432,7 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 		case !lastWhy.Empty():
 			r.Text("Last drive: "+lastWhy.What, 92, 38, sizeSmall, colWarn, engine.AlignLeft)
 		case len(ses.Design.Cells) == 0:
-			r.Text("Drag a shape or a part onto the grid.", 92, 38, sizeSmall, colChipLt, engine.AlignLeft)
+			r.Text(emptyHint, 92, 38, sizeSmall, colChipLt, engine.AlignLeft)
 		case len(errs) > 0:
 			r.Text(errs[0], 92, 38, sizeSmall, colWarn, engine.AlignLeft)
 		case lesson != nil: // the lesson's one instruction stays up while fixing
@@ -489,10 +499,12 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 		r.Rect(0, bTrayY, ScreenW, ScreenH-bTrayY, colTile.Alpha(225), true)
 		r.Rect(0, bTrayY, ScreenW, 2, colInk.Alpha(60), true)
 		// shapes sidebar backing
-		sideB := cardY(len(Blocks)) + 2 // stop above the course map's label
-		r.Rect(0, 64, bSideX+bSideW+8, sideB-64, colTile.Alpha(205), true)
-		r.Rect(bSideX+bSideW+7, 64, 2, sideB-64, colInk.Alpha(60), true)
-		r.Text("Shapes", bSideX+bSideW/2, 74, sizeSmall+1, colNeon, engine.AlignCenter)
+		if showShapes {
+			sideB := cardY(len(Blocks)) + 2 // stop above the course map's label
+			r.Rect(0, 64, bSideX+bSideW+8, sideB-64, colTile.Alpha(205), true)
+			r.Rect(bSideX+bSideW+7, 64, 2, sideB-64, colInk.Alpha(60), true)
+			r.Text("Shapes", bSideX+bSideW/2, 74, sizeSmall+1, colNeon, engine.AlignCenter)
+		}
 		// a block being dragged from the sidebar follows the pointer
 		if dragBlock >= 0 && dragging {
 			drawBlockMini(r, Blocks[dragBlock], g.In.Pointer, bCell*0.6)
@@ -577,6 +589,9 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 
 	// shapes cards: ready-made frame blocks with the idea each one teaches
 	for i, bl := range Blocks {
+		if !showShapes {
+			break
+		}
 		i, bl := i, bl
 		b := AddButton(s, bSideX, cardY(i), bSideW, bCardH, bl.Name, func() {
 			if !swiped {
