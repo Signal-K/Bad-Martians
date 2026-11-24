@@ -29,7 +29,9 @@ make desktop        # native window (needs Ebitengine's platform deps)
 Go 1.27 (the PocketBase dependency pins it; the Go tool fetches it automatically).
 Controls: hold the **Gas** / **Reverse** buttons (touch) or →/← (keyboard).
 Sign-in is optional: without it, progress stays in the browser and events queue
-until you sign in.
+until you sign in. Once signed in, campaign progress, tutorial and school
+completion, and expedition checkpoints sync across devices. Existing browser
+progress is adopted when you sign in; reconnecting retries an offline sync.
 
 ## Layout
 
