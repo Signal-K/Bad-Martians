@@ -14,7 +14,7 @@ cd "$(dirname "$0")/.."
 
 make wasm >/dev/null
 rm -rf "$OUT" && mkdir -p "$OUT"
-cp web/index.html web/host.js web/wasm_exec.js web/manifest.webmanifest "$OUT"/
+cp web/index.html web/host.js web/progress-sync.js web/wasm_exec.js web/manifest.webmanifest "$OUT"/
 cp -r web/icons "$OUT"/
 gzip -9 -n -c web/game.wasm > "$OUT/game.wasm.gz"
 cat > "$OUT/config.js" <<'JS'

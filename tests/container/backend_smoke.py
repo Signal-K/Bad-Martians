@@ -5,6 +5,7 @@ import subprocess
 import tempfile
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 
 BASE = 'http://127.0.0.1:18090'
@@ -47,12 +48,14 @@ with tempfile.TemporaryDirectory(prefix='haphazard-pb-') as data:
             users.append((user['id'], auth['token']))
         uid, token = users[0]
         uid2, token2 = users[1]
-        run = {'user': uid, 'level': 1, 'won': True, 'stars': 2, 'score': 700}
+        run = {'user': uid, 'level': 1, 'won': True, 'stars': 2, 'time': 42, 'score': 700}
         request('/api/collections/hm_runs/records', 'POST', run, expected=400)
         request('/api/collections/hm_runs/records', 'POST', run, token=token2, expected=400)
         created = request('/api/collections/hm_runs/records', 'POST', run, token=token)
         assert created['user'] == uid
         assert any(row['id'] == created['id'] for row in request('/api/collections/hm_runs/records')['items'])
+        filtered = request('/api/collections/hm_runs/records?filter=' + urllib.parse.quote(f'user = "{uid}"') + '&fields=level,won,stars,time,score')
+        assert filtered['totalItems'] == 1 and filtered['items'][0]['stars'] == 2 and filtered['items'][0]['time'] == 42
         label = {'user': uid, 'level': 1, 'segment': 1, 'class': 'soil'}
         created_label = request('/api/collections/hm_labels/records', 'POST', label, token=token)
         assert created_label['user'] == uid

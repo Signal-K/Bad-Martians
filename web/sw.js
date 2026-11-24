@@ -2,7 +2,7 @@
 // background), network-only for the PocketBase API.
 const CACHE = 'haphazard-martians-v1'; // scripts/build-dist.sh stamps the build id here
 // No 'index.html': Cloudflare's static assets 307 it to '/', and './' is the same page.
-const SHELL = ['./', 'config.js', 'host.js', 'wasm_exec.js', 'game.wasm', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
+const SHELL = ['./', 'config.js', 'host.js', 'progress-sync.js', 'wasm_exec.js', 'game.wasm', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 // A navigation must never be answered with a response that followed a redirect:
 // WebKit (every iOS browser and installed PWA) refuses it with "Response served

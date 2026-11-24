@@ -15,6 +15,7 @@
 
   let auth = null;
   try { auth = JSON.parse(LS.get('hm.auth') || 'null'); } catch {}
+  let ready = Promise.resolve();
   let queue = [];
   try { queue = JSON.parse(LS.get('hm.queue') || '[]'); } catch {}
   const saveQueue = () => LS.set('hm.queue', JSON.stringify(queue.slice(-500)));
@@ -26,6 +27,29 @@
     const body = await res.json().catch(() => ({}));
     if (!res.ok) { const e = new Error(body.message || res.statusText); e.status = res.status; e.body = body; throw e; }
     return body;
+  }
+
+  async function syncProgress() {
+    if (DEMO || !auth || !auth.token || !auth.record || !auth.record.id) return false;
+    const userID = auth.record.id;
+    try {
+      const result = await HMProgressSync.hydrateProgress(async (page, perPage) => {
+        const query = new URLSearchParams({
+          filter: `user = "${userID}"`, page: String(page), perPage: String(perPage),
+          sort: 'created', fields: 'level,won,stars,time,score',
+        });
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
+        try { return await pb(`/api/collections/hm_runs/records?${query}`, { signal: controller.signal }); }
+        finally { clearTimeout(timeout); }
+      }, LS.get('hm.progress'));
+      if (!auth || auth.record.id !== userID) return false;
+      if (result.changed) LS.set('hm.progress', JSON.stringify(result.progress));
+      return result.changed;
+    } catch (e) {
+      console.warn('[Haphazard] Could not restore saved progress from PocketBase:', e.message || e);
+      return false;
+    }
   }
 
   const toRecord = (ev, p) => {
@@ -137,9 +161,17 @@
     if (CLERK_KEY || (cfg && cfg.shareAuth)) LS.set('hm.signedOut', '1');
     render();
   }
-  async function setAuth(r) { auth = { token: r.token, record: r.record }; LS.set('hm.auth', JSON.stringify(auth)); LS.del('hm.signedOut'); render(); flush(); flushCaptures(); }
+  async function setAuth(r, reloadOnRestore = false) {
+    auth = { token: r.token, record: r.record };
+    LS.set('hm.auth', JSON.stringify(auth)); LS.del('hm.signedOut'); render();
+    const restored = await syncProgress();
+    flush(); flushCaptures();
+    // Sign-in is available from the menu. Reboot so Go reads the merged save
+    // before it constructs the mission-select scene.
+    if (restored && reloadOnRestore) location.reload();
+  }
   async function login(email, password) {
-    await setAuth(await pb('/api/collections/users/auth-with-password', { method: 'POST', body: JSON.stringify({ identity: email, password }) }));
+    await setAuth(await pb('/api/collections/users/auth-with-password', { method: 'POST', body: JSON.stringify({ identity: email, password }) }), true);
   }
 
   // Clerk is loaded from the instance's own Frontend API, whose host is
@@ -173,10 +205,10 @@
     clerkReady.catch(() => { clerkReady = null; }); // allow a retry
     return clerkReady;
   }
-  async function exchange(clerk) {
+  async function exchange(clerk, reloadOnRestore = false) {
     const token = await clerk.session.getToken();
     if (!token) throw new Error('Sign-in did not finish. Try again.');
-    await setAuth(await pb('/auth/clerk-exchange', { method: 'POST', body: JSON.stringify({ token }) }));
+    await setAuth(await pb('/auth/clerk-exchange', { method: 'POST', body: JSON.stringify({ token }) }), reloadOnRestore);
   }
   async function activate(clerk, res, what) {
     if (res.status !== 'complete') {
@@ -229,7 +261,7 @@
     if (auth) { signOut(); return; }
     if (CLERK_KEY) {
       // already signed in to Landnam on this domain: no form needed
-      try { const clerk = await loadClerk(); if (clerk.session) { await exchange(clerk); return; } } catch {}
+      try { const clerk = await loadClerk(); if (clerk.session) { await exchange(clerk, true); return; } } catch {}
     }
     showStep('password'); dlg.showModal();
   });
@@ -292,10 +324,18 @@
   }
   render();
   if (auth && !DEMO) {
-    pb('/api/collections/users/auth-refresh', { method: 'POST' }).then(setAuth).catch((e) => { if (e.status === 401 || e.status === 403) signOut(); });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    ready = pb('/api/collections/users/auth-refresh', { method: 'POST', signal: controller.signal })
+      .then((record) => setAuth(record))
+      .catch((e) => { if (e.status === 401 || e.status === 403) signOut(); })
+      .finally(() => clearTimeout(timeout));
   } else if (CLERK_KEY && !LS.get('hm.signedOut')) {
-    // signed in to Landnam already? then this game is signed in too
-    loadClerk().then((clerk) => clerk.session && exchange(clerk)).catch(() => {});
+    // If this origin already has a Clerk session, restore account progress
+    // before WASM builds the menu. With no session this is a harmless no-op.
+    ready = loadClerk()
+      .then((clerk) => clerk.session && exchange(clerk))
+      .catch(() => {});
   }
   addEventListener('online', flush);
   addEventListener('online', flushCaptures);
@@ -395,6 +435,7 @@
     body: p.body, par: p.par, lesson: p.lesson, expedition: p.expedition });
 
   window.haphazard = {
+    ready,
     photo: (name, bytes) => { photo(name, bytes); },
     load: (k) => LS.get('hm.' + k),
     save: (k, v) => LS.set('hm.' + k, v),
