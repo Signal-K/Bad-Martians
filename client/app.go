@@ -39,7 +39,7 @@ func New(host engine.Host, scene string) *App {
 	g := engine.NewGame(game.ScreenW, game.ScreenH, host)
 	game.Setup(g)
 	if scene == "" || !g.OpenStandalone(scene) {
-		g.Load(game.SceneMenu, nil)
+		g.Load(game.SceneMap, nil)
 	}
 	return &App{G: g, r: newRenderer()}
 }
@@ -82,9 +82,9 @@ func (a *App) SceneList() string {
 }
 
 // toVirtual maps a framebuffer pixel to the game's virtual screen, undoing the
-// letterbox the renderer applies.
+// offset the renderer applies (the design area sits centred in the display).
 func (a *App) toVirtual(x, y int) engine.Vec2 {
-	s, ox, oy := fit(float64(a.fbW), float64(a.fbH), game.ScreenW, game.ScreenH)
+	s, ox, oy := fit(float64(a.fbW), float64(a.fbH))
 	if s <= 0 {
 		return engine.V(float64(x), float64(y))
 	}
@@ -182,8 +182,8 @@ func (a *App) Draw(screen *ebiten.Image) {
 }
 
 func (a *App) frame(screen *ebiten.Image) {
-	screen.Fill(color.NRGBA{20, 12, 14, 255}) // letterbox bars
-	a.r.begin(screen, game.ScreenW, game.ScreenH)
+	screen.Fill(color.NRGBA{20, 12, 14, 255})
+	a.r.begin(screen)
 	a.G.Draw(a.r)
 	a.r.end()
 }
@@ -191,14 +191,13 @@ func (a *App) frame(screen *ebiten.Image) {
 // photoMaxW caps a photo's width: plenty for sharing, quick to encode.
 const photoMaxW = 1920
 
-// photo encodes the game area of the screen (without letterbox bars) as PNG.
+// photo encodes the whole screen as PNG.
 func (a *App) photo(screen *ebiten.Image) ([]byte, error) {
 	b := screen.Bounds()
 	pix := make([]byte, 4*b.Dx()*b.Dy())
 	screen.ReadPixels(pix)
 	full := &image.RGBA{Pix: pix, Stride: 4 * b.Dx(), Rect: image.Rect(0, 0, b.Dx(), b.Dy())}
-	s, ox, oy := fit(float64(b.Dx()), float64(b.Dy()), game.ScreenW, game.ScreenH)
-	area := image.Rect(int(ox+0.5), int(oy+0.5), int(ox+game.ScreenW*s), int(oy+game.ScreenH*s))
+	area := image.Rect(0, 0, b.Dx(), b.Dy())
 	src := full.SubImage(area).(*image.RGBA)
 	out := image.Image(src)
 	if w := area.Dx(); w > photoMaxW { // nearest-neighbour downscale
@@ -230,5 +229,9 @@ func (a *App) Layout(w, h int) (int, int) {
 		fw, fh = fw*maxFB/m, fh*maxFB/m
 	}
 	a.fbW, a.fbH = max(1, int(fw)), max(1, int(fh))
+	// The design area (960x540) is centred and the rest of the display is the
+	// scene's to fill: extra height above and below on a squarer screen, extra
+	// width at the sides on a wider one.
+	engine.Overscan = overscan(float64(a.fbW), float64(a.fbH))
 	return a.fbW, a.fbH
 }

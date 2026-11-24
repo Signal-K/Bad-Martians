@@ -60,7 +60,7 @@ func TestSchoolProgress(t *testing.T) {
 // leave mission progress and the survey's run records alone.
 func TestShapeSchoolFlow(t *testing.T) {
 	h := newHarness(t)
-	h.g.Load(SceneMenu, nil)
+	h.g.Load(SceneMap, nil)
 	h.frames(2, engine.Input{})
 	h.clickButton("Shape school")
 	if h.g.Scene().Name != SceneBuild {

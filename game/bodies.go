@@ -62,11 +62,12 @@ func (b *Body) ground(c engine.Color) engine.Color {
 // drawMoonSky paints an airless sky: black, a field of fixed stars, a hard
 // white sun, Mars hanging large over the horizon, and grey ridges with no haze.
 func drawMoonSky(r engine.Renderer, camX float64, b *Body) {
-	r.Rect(0, 0, ScreenW, ScreenH, engine.RGB(8, 8, 14), true)
+	fillView(r, engine.RGB(8, 8, 14))
 	rg := newRng(4909)
-	for i := 0; i < 90; i++ {
-		x := math.Mod(rg.float()*ScreenW*1.5-camX*0.05+ScreenW*3, ScreenW*1.5)
-		r.Circle(engine.V(x, rg.float()*ScreenH*0.6), 0.6+rg.float()*1.1, engine.RGB(230, 232, 244).Alpha(uint8(110+rg.intn(140))), true)
+	span := viewR() - viewL()
+	for i := 0; i < 90+int(span-ScreenW)/12; i++ {
+		x := viewL() + math.Mod(rg.float()*span*1.5-camX*0.05+span*3, span*1.5)
+		r.Circle(engine.V(x, viewT()+rg.float()*(viewB()-viewT())*0.6), 0.6+rg.float()*1.1, engine.RGB(230, 232, 244).Alpha(uint8(110+rg.intn(140))), true)
 	}
 	sun := engine.V(880-camX*0.4, 96)
 	r.Circle(sun, 18, engine.RGB(255, 254, 246).Alpha(60), true)

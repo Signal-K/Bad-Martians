@@ -16,6 +16,13 @@ var (
 		"title": {X: 0, Y: 0, W: ScreenW, H: 100},
 		"main":  {X: 0, Y: 100, W: ScreenW, H: 440},
 	}}
+	// LayoutMap: the Mars map. A slim top bar, the planet and its places, and a
+	// panel along the bottom that describes the chosen place.
+	LayoutMap = engine.Layout{Name: "map", Regions: map[string]engine.Rect{
+		"title": {X: 0, Y: 0, W: ScreenW, H: 64},
+		"map":   {X: 0, Y: 64, W: ScreenW, H: 294},
+		"panel": {X: 0, Y: 358, W: ScreenW, H: 182},
+	}}
 	// LayoutBay: the rover bay. A slim top bar, the build grid standing in the
 	// world over the mission's real terrain, and a parts tray along the bottom.
 	LayoutBay = engine.Layout{Name: "bay", Regions: map[string]engine.Rect{

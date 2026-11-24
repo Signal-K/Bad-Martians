@@ -47,7 +47,7 @@ func styleScene(g *engine.Game, _ any) *engine.Scene {
 		drawPanel(r, 668, 312, 264, 144, "Buttons")
 		r.Text(fmt.Sprintf("line %.0fpx · chamfer %.0f · touch ≥ %.0f", lineW, cutC, touchMin), 684, 438, 11, colMuted, engine.AlignLeft)
 	})
-	addBack(s, func() { g.Load(SceneMenu, nil) })
+	addBack(s, func() { g.Load(SceneMap, nil) })
 	AddButton(s, 684, 336, 112, 44, "Default", nil)
 	p := AddButton(s, 804, 336, 112, 44, "Primary", nil)
 	p.Primary = true

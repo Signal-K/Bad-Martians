@@ -6,6 +6,7 @@ import (
 
 // Scene names. Every scene below registers a type, a layout and a fixture.
 const (
+	SceneMap    = "map"
 	SceneMenu   = "menu"
 	SceneBuild  = "build"
 	SceneLaunch = "launch"
@@ -25,6 +26,10 @@ var FixtureLevel = 1
 // Setup registers every scene. Opening the menu is left to the host so any
 // scene can be opened first (see OpenStandalone).
 func Setup(g *engine.Game) {
+	g.RegisterScene(engine.SceneMeta{
+		Name: SceneMap, Title: "Mars map", Type: engine.TypeMenu, Layout: LayoutMap,
+		Fixture: func(*engine.Game) any { return nil },
+	}, mapScene)
 	g.RegisterScene(engine.SceneMeta{
 		Name: SceneMenu, Title: "Mission select", Type: engine.TypeMenu, Layout: LayoutCenter,
 		Fixture: func(*engine.Game) any { return nil },
@@ -85,7 +90,7 @@ func addBackdrop(s *engine.Scene) {
 
 // addTitle draws the scene title (and a one-line subtitle) in the title region.
 func addTitle(s *engine.Scene, text, sub string) {
-	AddDraw(s, 9, func(_ engine.Camera, r engine.Renderer) {
+	AddDrawAt(s, 9, 0, -1, func(_ engine.Camera, r engine.Renderer) {
 		r.Text(text, 28, 16, sizeTitle, colInk, engine.AlignLeft)
 		if sub != "" {
 			r.Text(sub, 28, 54, sizeBody, colMuted, engine.AlignLeft)

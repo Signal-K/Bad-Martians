@@ -96,7 +96,7 @@ func launchScene(g *engine.Game, arg any) *engine.Scene {
 	// first-time players: one line of coaching, pointing at the launch button
 	if tut := ses.Tut; tut != nil && !tut.Done {
 		o := s.Spawn("tutorial")
-		o.Layer = 30
+		o.Layer, o.AY = 30, 1 // coach and button both sit on the bottom edge
 		o.Add(DrawFunc(func(_ engine.Camera, r engine.Renderer) {
 			drawCoach(r, blink, engine.Rect{X: 360, Y: 440, W: 350, H: 48}, "Name your rover, then send it out.",
 				engine.Rect{X: goBtn.X, Y: goBtn.Y, W: goBtn.W, H: goBtn.H})

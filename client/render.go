@@ -14,6 +14,7 @@ import (
 	"golang.org/x/image/font/gofont/gobold"
 
 	"github.com/signal-k/haphazard-martians/engine"
+	"github.com/signal-k/haphazard-martians/game"
 )
 
 var fontSrc *text.GoTextFaceSource
@@ -55,24 +56,29 @@ func newRenderer() *ebitenRenderer {
 	return &ebitenRenderer{faces: map[int]*text.GoTextFace{}, scale: 1}
 }
 
-// begin starts a frame on dst, fitting the virtual screen inside it. Drawing
-// is clipped to the virtual screen: the ground is painted 60 m deep, and on a
-// portrait phone it would otherwise spill into the letterbox bar below.
-func (e *ebitenRenderer) begin(dst *ebiten.Image, vw, vh float64) {
+// begin starts a frame on dst. The whole framebuffer is drawn on: the design
+// area is centred in it and scenes paint the overscan themselves.
+func (e *ebitenRenderer) begin(dst *ebiten.Image) {
 	b := dst.Bounds()
-	e.scale, e.ox, e.oy = fit(float64(b.Dx()), float64(b.Dy()), vw, vh)
-	area := image.Rect(int(math.Floor(e.ox)), int(math.Floor(e.oy)), int(math.Ceil(e.ox+vw*e.scale)), int(math.Ceil(e.oy+vh*e.scale)))
-	e.dst = dst.SubImage(area.Add(b.Min)).(*ebiten.Image)
+	e.scale, e.ox, e.oy = fit(float64(b.Dx()), float64(b.Dy()))
+	e.dst = dst
 	e.vs, e.is = e.vs[:0], e.is[:0]
 }
 
 // end flushes whatever is still batched.
 func (e *ebitenRenderer) end() { e.flush() }
 
-// fit is the scale and centring offset that letterboxes vw x vh into w x h.
-func fit(w, h, vw, vh float64) (s, ox, oy float64) {
-	s = math.Min(w/vw, h/vh)
-	return s, (w - vw*s) / 2, (h - vh*s) / 2
+// overscan is the extra visible area, per side, in design units, for a w x h
+// display. The design area always fits whole; the rest is overscan.
+func overscan(w, h float64) engine.Vec2 {
+	s := math.Min(w/game.ScreenW, h/game.ScreenH)
+	return engine.V(math.Max(0, (w/s-game.ScreenW)/2), math.Max(0, (h/s-game.ScreenH)/2))
+}
+
+// fit is the scale and offset that centre the design area in a w x h display.
+func fit(w, h float64) (s, ox, oy float64) {
+	s = math.Min(w/game.ScreenW, h/game.ScreenH)
+	return s, (w - game.ScreenW*s) / 2, (h - game.ScreenH*s) / 2
 }
 
 func (e *ebitenRenderer) flush() {

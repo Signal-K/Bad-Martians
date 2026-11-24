@@ -35,7 +35,7 @@ func TestExpeditionCheckpointResumeAndClear(t *testing.T) {
 	e.Name = "Curiosity"
 	e.Finish(true, StarterDesign(), 700, 10, 14)
 	SaveExpedition(h.h, e)
-	h.g.Load(SceneMenu, nil)
+	h.g.Load(SceneMap, nil)
 	h.frames(2, engine.Input{})
 	h.clickButton("Resume expedition")
 	h.clickButton("Start Mission 2")
@@ -96,7 +96,7 @@ func TestExpeditionBayLimitsByCredits(t *testing.T) {
 
 func TestExpeditionOpensFromMenuThroughBriefing(t *testing.T) {
 	h := newHarness(t)
-	h.g.Load(SceneMenu, nil)
+	h.g.Load(SceneMap, nil)
 	h.frames(2, engine.Input{})
 	h.clickButton("Expedition · 3 missions")
 	if h.g.Scene().Name != SceneBriefing {

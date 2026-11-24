@@ -70,7 +70,7 @@ func TestEveryGameSceneIsEditable(t *testing.T) {
 
 func TestEditorHostFlag(t *testing.T) {
 	h := newHarness(t)
-	h.g.Load(SceneMenu, nil)
+	h.g.Load(SceneMap, nil)
 	h.frames(2, engine.Input{})
 	h.g.Tick(engine.FixedDT, engine.Input{ToggleEdit: true})
 	if !h.g.Ed.On {
