@@ -15,6 +15,7 @@
 
   let auth = null;
   try { auth = JSON.parse(LS.get('hm.auth') || 'null'); } catch {}
+  let ready = Promise.resolve();
   let queue = [];
   try { queue = JSON.parse(LS.get('hm.queue') || '[]'); } catch {}
   const saveQueue = () => LS.set('hm.queue', JSON.stringify(queue.slice(-500)));
@@ -325,18 +326,16 @@
   if (auth && !DEMO) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
-    window.haphazard.ready = pb('/api/collections/users/auth-refresh', { method: 'POST', signal: controller.signal })
+    ready = pb('/api/collections/users/auth-refresh', { method: 'POST', signal: controller.signal })
       .then((record) => setAuth(record))
       .catch((e) => { if (e.status === 401 || e.status === 403) signOut(); })
       .finally(() => clearTimeout(timeout));
   } else if (CLERK_KEY && !LS.get('hm.signedOut')) {
     // If this origin already has a Clerk session, restore account progress
     // before WASM builds the menu. With no session this is a harmless no-op.
-    window.haphazard.ready = loadClerk()
+    ready = loadClerk()
       .then((clerk) => clerk.session && exchange(clerk))
       .catch(() => {});
-  } else {
-    window.haphazard.ready = Promise.resolve();
   }
   addEventListener('online', flush);
   addEventListener('online', flushCaptures);
@@ -436,6 +435,7 @@
     body: p.body, par: p.par, lesson: p.lesson, expedition: p.expedition });
 
   window.haphazard = {
+    ready,
     photo: (name, bytes) => { photo(name, bytes); },
     load: (k) => LS.get('hm.' + k),
     save: (k, v) => LS.set('hm.' + k, v),
