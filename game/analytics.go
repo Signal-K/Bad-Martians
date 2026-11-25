@@ -18,6 +18,7 @@ const (
 	EvRunAbandoned  = "hm_run_abandoned"  // level, how (abort|restart), progress, time
 	EvAccountOpened = "hm_account_opened" // sync state, has_username
 	EvDailyStarted  = "hm_daily_started"  // date, level
+	EvDailyWon      = "hm_daily_won"      // date, level, stars: the first win of a daily mission
 )
 
 // Track emits one analytics event through the host.

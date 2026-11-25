@@ -64,6 +64,7 @@ func resultScene(g *engine.Game, arg any) *engine.Scene {
 					prog.ClaimedMissions[m.Date] = true
 					prog.FreeRetries += m.FreeRetry
 					ra.AwardedRetries = m.FreeRetry
+					Track(g.Host, EvDailyWon, map[string]any{"date": m.Date, "level": lvl.ID, "stars": ra.Stars}) // the first win on this device
 				}
 			}
 			prog.Save(g.Host)
