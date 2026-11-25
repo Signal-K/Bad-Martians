@@ -20,6 +20,6 @@ gzip -9 -n -c web/game.wasm > "$OUT/game.wasm.gz"
 cat > "$OUT/config.js" <<'JS'
 // Haphazard Martians on playlandnam.space/martians/. Landnam's deploy rewrites
 // this file with its Clerk key (web/scripts/martians-config.mjs).
-window.HM_CONFIG = { api: "https://signal-k-starsailors.fly.dev", clerk: "", shareAuth: "pocketbase_auth", wasm: "game.wasm.gz", wasmGzip: true, sw: "/sw.js" };
+window.HM_CONFIG = { api: "https://signal-k-pocketbase.fly.dev", clerk: "", shareAuth: "pocketbase_auth", wasm: "game.wasm.gz", wasmGzip: true, sw: "/sw.js" };
 JS
 echo "built $(git rev-parse --short HEAD 2>/dev/null): $(du -h "$OUT/game.wasm.gz" | cut -f1) game.wasm.gz in $OUT"
