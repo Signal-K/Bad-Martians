@@ -4,13 +4,14 @@ import (
 	"strings"
 	"testing"
 	"testing/fstest"
+	"time"
 )
 
 const goodLevel = `{"id":1,"name":"A","blurb":"b","biome":"plains","length":80,"seed":1,"credits":12,"par":14,"hill":1,"traction":1,"mix":{"soil":1}}`
 
 func TestShippedDataLoads(t *testing.T) {
-	if len(LevelDefs) != 22 {
-		t.Fatalf("want 22 campaign levels, got %d", len(LevelDefs))
+	if len(LevelDefs) != 23 {
+		t.Fatalf("want 23 campaign levels, got %d", len(LevelDefs))
 	}
 	for i, d := range LevelDefs {
 		if d.ID != i+1 || d.Biome == "" || d.Traction <= 0 {
@@ -133,4 +134,16 @@ func itoa(n int) string {
 		s = string(rune('0'+n%10)) + s
 	}
 	return s
+}
+
+// The daily mission follows the player's own midnight, not UTC.
+func TestTodayIsLocal(t *testing.T) {
+	old := time.Local
+	defer func() { time.Local = old }()
+	for _, off := range []int{-11, 0, 14} {
+		time.Local = time.FixedZone("test", off*3600)
+		if want := time.Now().In(time.Local).Format("2006-01-02"); Today() != want {
+			t.Errorf("UTC%+d: Today() = %s, want %s", off, Today(), want)
+		}
+	}
 }

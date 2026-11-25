@@ -218,8 +218,8 @@ sides on a wide phone). The client sets it whenever the window changes shape.
 
 ## Chapters and the Mars map
 
-The 22 missions are grouped into chapters (`game/chapters.go`): Gale Crater (1–10),
-Polar Ice Caps (11–15), Mount Sharp (16–20), Phobos (21) and Deimos (22). Missions keep
+The 23 missions are grouped into chapters (`game/chapters.go`): Gale Crater (1–10),
+Polar Ice Caps (11–15), Mount Sharp (16–20), Phobos (21), Deimos (22) and the Moon (23). Missions keep
 their numbers and still unlock in order, so a chapter is a contiguous ID range; a test
 checks the ranges tile the campaign and that moon chapters hold only moon missions.
 To add missions, extend a chapter's `Last` or append a chapter, then give it a `Pin`.

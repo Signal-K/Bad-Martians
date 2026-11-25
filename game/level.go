@@ -21,7 +21,7 @@ type LevelDef struct {
 	Name     string
 	Blurb    string
 	Biome    string
-	Body     string // "mars" (or empty), "phobos" or "deimos" (KES-490)
+	Body     string // "mars" (or empty), "phobos", "deimos" or "moon" (KES-490)
 	Length   float64
 	Seed     uint64
 	Credits  int     // base parts budget

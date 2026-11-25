@@ -15,7 +15,7 @@ import (
 
 func main() {
 	scene := flag.String("scene", "", "open one scene on its own fixture (menu, build, run, result, review, style)")
-	level := flag.Int("level", 1, "level the build, launch and run fixtures open on (21 Phobos, 22 Deimos)")
+	level := flag.Int("level", 1, "level the build, launch and run fixtures open on (21 Phobos, 22 Deimos, 23 Moon)")
 	flag.Parse()
 	if game.GetLevel(*level) != nil {
 		game.FixtureLevel = *level

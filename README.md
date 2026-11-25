@@ -6,9 +6,10 @@ score depends on finishing, samples and time. The three-mission expedition
 challenges you to make one credit budget last across the whole route. Surviving
 rovers can be rebuilt at full part value; crashes lose their cost. An under-par
 finish earns two credits for the next stage.
-The campaign ends on Mars's moons: Phobos (level 21) and Deimos (level 22) run
-under their own low gravity, with black skies, Mars on the horizon and their own
-ground colours. Open one alone with `?scene=run&level=21` (or `-level 21`).
+The campaign ends off Mars: Phobos (level 21), Deimos (level 22) and Earth's Moon
+(level 23) run under their own low gravity, with black skies, their own ground
+colours, and Mars (or Earth, for the Moon) in the sky. Open one alone with
+`?scene=run&level=21` (or `-level 21`).
 The lander hops between completed expedition stages; continue when ready to
 enter the next rover bay with the surviving design and budget.
 The terrain

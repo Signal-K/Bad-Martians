@@ -7,7 +7,7 @@ import (
 
 // KES-490: the campaign ends on Mars's moons, under their own gravity.
 func TestMoonLevels(t *testing.T) {
-	want := map[int]string{21: "phobos", 22: "deimos"}
+	want := map[int]string{21: "phobos", 22: "deimos", 23: "moon"}
 	for id, body := range want {
 		def := LevelDefs[id-1]
 		if def.Body != body {

@@ -1,0 +1,20 @@
+{
+  "id": 23,
+  "name": "Tranquility Rilles",
+  "blurb": "The Moon: grey regolith, sharp rilles and Earth overhead. Low pull, firm ground.",
+  "biome": "plains",
+  "body": "moon",
+  "length": 150,
+  "seed": 623,
+  "credits": 46,
+  "par": 50,
+  "hill": 2.6,
+  "traction": 0.9,
+  "mix": {
+    "soil": 4,
+    "bedrock": 2,
+    "big_rock": 1
+  },
+  "gaps": 2,
+  "gap_width": 3
+}
