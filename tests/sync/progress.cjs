@@ -40,7 +40,10 @@ const auth = JSON.stringify({token:'token-a', record:{id:'a',email:'a'}});
 const wait = async () => { for (let i=0; i<30; i++) await new Promise(r => setImmediate(r)); };
 (async () => {
   const ipad = browser({'hm.auth': auth, 'hm.hm.progress': JSON.stringify({levels:{1:{stars:3,best:12,score:90}}, free_retries:2})});
+  ipad.bridge.emit('scene', JSON.stringify({name:'map'}));
+  assert.equal(ipad.element('acct').hidden, false, 'account control is visible on the chapter map');
   await wait();
+  assert.match(ipad.element('acct').textContent, /synced/, 'successful synchronization is visible');
   assert.equal(rows.length, 1, 'legacy progress uploaded');
   const mac = browser({'hm.auth': auth});
   await wait();
@@ -48,14 +51,17 @@ const wait = async () => { for (let i=0; i<30; i++) await new Promise(r => setIm
   offline = true;
   mac.bridge.save('hm.progress', JSON.stringify({levels:{1:{stars:2,best:15,score:70},2:{stars:1,best:30,score:20}},free_retries:1}));
   await wait();
+  assert.match(mac.element('acct').textContent, /sync pending/, 'offline synchronization is visible');
   assert.equal(JSON.parse(mac.bridge.load('hm.progress')).levels['2'].stars, 1, 'offline save kept');
   offline = false;
   for (const handler of mac.handlers['window:online']) handler();
   await wait();
+  assert.match(mac.element('acct').textContent, /synced/, 'status recovers after reconnecting');
   assert.equal(JSON.parse(mac.bridge.load('hm.progress')).levels['1'].stars, 3, 'merge retains better result');
   assert.equal(JSON.parse(mac.bridge.load('hm.progress')).levels['2'].stars, 1, 'merge retains offline result');
   assert.equal(JSON.parse(mac.bridge.load('hm.progress')).free_retries, 1, 'spent retry stays spent');
   mac.handlers['acct:click']();
+  assert.equal(mac.element('acct').textContent, 'Sign in to sync');
   assert.equal(mac.bridge.load('hm.progress'), null, 'sign out hides account save');
   mac.element('email').value = 'b'; mac.element('pw').value = 'password';
   await mac.handlers['form:submit']({preventDefault(){}, submitter:{value:'signin'}});
