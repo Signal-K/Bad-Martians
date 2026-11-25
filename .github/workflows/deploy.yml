@@ -19,8 +19,9 @@ jobs:
       - run: go test ./engine ./physics ./game
       - run: scripts/build-dist.sh
         env:
-          HM_API_URL: ${{ vars.HM_API_URL }}
-          HM_CLERK_KEY: ${{ vars.HM_CLERK_KEY }}
+          # Public values; the repository variables override them. Without a default, a missing variable silently ships the no-backend demo.
+          HM_API_URL: ${{ vars.HM_API_URL || 'https://signal-k-pocketbase.fly.dev' }}
+          HM_CLERK_KEY: ${{ vars.HM_CLERK_KEY || 'pk_live_Y2xlcmsucGxheWxhbmRuYW0uc3BhY2Uk' }}
       - uses: actions/upload-artifact@v4
         with: { name: dist, path: dist }
 
