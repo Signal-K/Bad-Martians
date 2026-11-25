@@ -39,6 +39,13 @@ until you sign in. Once signed in, campaign progress, tutorial and school
 completion, and expedition checkpoints sync across devices. Existing browser
 progress is adopted when you sign in; reconnecting retries an offline sync.
 
+Leaderboard runs are checked on the server (`runcheck/`, `game.CheckRun`): the
+score must be one the scoring rules can produce for the samples and time, the
+design must be legal and cost what it says, and a player is limited to 20 runs a
+minute. It cannot replay a drive, because the client does not record stick inputs.
+The standalone server registers it; the shared Star Sailors backend must call
+`runcheck.Register(app)` too, or production keeps accepting any score.
+
 ## Layout
 
 | Path | What |

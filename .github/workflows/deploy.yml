@@ -20,8 +20,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with: { go-version-file: go.mod }
-      - run: go vet ./engine ./physics ./game ./client
-      - run: go test ./engine ./physics ./game
+      - run: go vet ./engine ./physics ./game ./client ./runcheck
+      - run: go test ./engine ./physics ./game ./runcheck
       - run: scripts/build-dist.sh
         env:
           # Public values; the repository variables override them. Without a default, a missing variable silently ships the no-backend demo.

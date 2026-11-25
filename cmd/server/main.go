@@ -13,12 +13,15 @@ import (
 	"github.com/pocketbase/pocketbase/plugins/migratecmd"
 
 	_ "github.com/signal-k/haphazard-martians/migrations"
+	"github.com/signal-k/haphazard-martians/runcheck"
 	"github.com/signal-k/haphazard-martians/web"
 )
 
 func main() {
 	app := pocketbase.New()
 	migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{Automigrate: true})
+
+	runcheck.Register(app) // reject forged or flooded leaderboard runs (MAR-62)
 
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 		// WEB_DIR serves the PWA from disk (live reload while developing);
