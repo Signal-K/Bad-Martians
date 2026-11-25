@@ -3,6 +3,7 @@ package game
 import (
 	"fmt"
 	"math"
+	"time"
 
 	"github.com/signal-k/haphazard-martians/engine"
 )
@@ -310,6 +311,7 @@ func mapScene(g *engine.Game, _ any) *engine.Scene {
 			m, label = *next, "Coming "+next.Date
 		}
 		dm := AddButton(s, 320, 466, 316, 60, label, func() {
+			Track(g.Host, EvDailyStarted, map[string]any{"date": m.Date, "level": m.Level.ID})
 			g.Load(SceneBuild, NewSessionFor(g.Host, BuildLevel(m.Level)))
 		}).Pin(0, 1)
 		dm.Disabled = !ok
@@ -331,14 +333,37 @@ func mapScene(g *engine.Game, _ any) *engine.Scene {
 			}
 		}
 	}
-	sl := "Shape school"
-	if n := SchoolDone(g.Host); n > 0 && n < len(Lessons) {
-		sl = fmt.Sprintf("Shape school %d/%d", n, len(Lessons))
+	// Shape school and the style sheet are archived for the first release (MAR):
+	// their scenes and tests stay, but nothing on the map opens them.
+	acct := LoadAccount(g.Host)
+	label := "Account"
+	switch {
+	case acct.Username != "":
+		label = acct.Username
+	case acct.SignedIn:
+		label = "Set username"
+	case acct.Sync != SyncDemo:
+		label = "Sign in"
 	}
-	sc := AddButton(s, 648, 466, 216, 60, sl, func() { g.Load(SceneBuild, LessonSession(NextLesson(g.Host))) }).Pin(0, 1)
-	sc.Icon = IconRover
-	st := AddButton(s, ScreenW-84, 466, 60, 60, "Style sheet", func() { g.Load(SceneStyle, nil) }).Pin(0, 1)
-	st.Icon, st.HideLabel = IconGear, true
+	ac := AddButton(s, ScreenW-24-300, 466, 300, 60, clip(label, 18), func() { g.Load(SceneAccount, nil) }).Pin(0, 1)
+	ac.Icon = IconGear
+	ac.Custom = func(b *Button, r engine.Renderer) {
+		fill, ink, line := colTile, colInk, colInk
+		if b.Held {
+			fill, ink = colInk, colTile
+		}
+		r.Rect(b.X, b.Y, b.W, b.H, fill, true)
+		outline(r, b.X, b.Y, b.W, b.H, line)
+		r.Text("Account", b.X+14, b.Y+8, sizeSmall, colNeon, engine.AlignLeft)
+		r.Text(clip(label, 18), b.X+14, b.Y+28, 18, ink, engine.AlignLeft)
+		text, good := acct.SyncLine(time.Now())
+		_ = text
+		dot := colWarn
+		if good {
+			dot = colGood
+		}
+		r.Circle(engine.V(b.X+b.W-20, b.Y+b.H/2), 6, dot, true)
+	}
 
 	s.OnUpdate = func(dt float64) {
 		clock += dt

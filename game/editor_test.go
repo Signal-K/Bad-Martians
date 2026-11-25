@@ -77,15 +77,15 @@ func TestEditorHostFlag(t *testing.T) {
 		t.Fatal("toggle key should open the editor")
 	}
 	// An edit made in the editor survives closing it: move a button, then play.
-	b := h.button("Style sheet")
+	b := h.button("Sign in")
 	x := b.X
 	h.click(b.X+b.W/2, b.Y+b.H/2)
 	h.g.Tick(engine.FixedDT, engine.Input{Pointer: engine.V(b.X+b.W/2, b.Y+b.H/2), Down: true})
 	h.g.Tick(engine.FixedDT, engine.Input{Pointer: engine.V(b.X+b.W/2, b.Y+b.H/2+30), Down: true})
 	h.g.Tick(engine.FixedDT, engine.Input{})
 	h.g.Tick(engine.FixedDT, engine.Input{ToggleEdit: true})
-	if h.button("Style sheet").X != x || h.button("Style sheet").Y != 466+30 {
-		t.Fatalf("button should have moved down only: %v,%v", h.button("Style sheet").X, h.button("Style sheet").Y)
+	if h.button("Sign in").X != x || h.button("Sign in").Y != 466+30 {
+		t.Fatalf("button should have moved down only: %v,%v", h.button("Sign in").X, h.button("Sign in").Y)
 	}
 }
 

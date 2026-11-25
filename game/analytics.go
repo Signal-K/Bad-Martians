@@ -16,6 +16,8 @@ const (
 	EvTestDrop      = "hm_test_drop"      // level, verdict
 	EvBuildLaunched = "hm_build_launched" // level, cost, cells, parts by kind, expedition, lesson
 	EvRunAbandoned  = "hm_run_abandoned"  // level, how (abort|restart), progress, time
+	EvAccountOpened = "hm_account_opened" // sync state, has_username
+	EvDailyStarted  = "hm_daily_started"  // date, level
 )
 
 // Track emits one analytics event through the host.

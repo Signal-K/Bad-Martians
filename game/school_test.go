@@ -1,6 +1,7 @@
 package game
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/signal-k/haphazard-martians/engine"
@@ -62,7 +63,9 @@ func TestShapeSchoolFlow(t *testing.T) {
 	h := newHarness(t)
 	h.g.Load(SceneMap, nil)
 	h.frames(2, engine.Input{})
-	h.clickButton("Shape school")
+	// Shape school is archived: no map button opens it, but the lessons still work.
+	h.g.Load(SceneBuild, LessonSession(NextLesson(h.h)))
+	h.frames(2, engine.Input{})
 	if h.g.Scene().Name != SceneBuild {
 		t.Fatalf("expected the bay, got %s", h.g.Scene().Name)
 	}
@@ -98,5 +101,20 @@ func TestShapeSchoolFlow(t *testing.T) {
 	h.clickButton("Next lesson")
 	if h.g.Scene().Name != SceneBuild {
 		t.Fatalf("Next lesson opens the bay, got %s", h.g.Scene().Name)
+	}
+}
+
+// The first release archives Shape school and the style sheet: neither is
+// reachable from the map any more.
+func TestMapHidesArchivedScenes(t *testing.T) {
+	h := newHarness(t)
+	h.g.Load(SceneMap, nil)
+	h.frames(2, engine.Input{})
+	for _, o := range h.g.Scene().Objects {
+		if b, ok := engine.Get[*Button](o); ok {
+			if b.Label == "Style sheet" || strings.HasPrefix(b.Label, "Shape school") {
+				t.Fatalf("archived button %q is on the map", b.Label)
+			}
+		}
 	}
 }

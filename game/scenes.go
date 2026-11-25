@@ -15,6 +15,8 @@ const (
 	SceneTravel = "travel"
 	SceneReview = "review"
 	SceneStyle  = "style"
+	// SceneAccount shows sync state, username, daily history and the leaderboard.
+	SceneAccount = "account"
 	// SceneBriefing hands out an expedition's kit before its first mission.
 	SceneBriefing = "briefing"
 )
@@ -71,6 +73,10 @@ func Setup(g *engine.Game) {
 		Name: SceneTravel, Title: "Travel to the next site", Type: engine.TypeTravel, Layout: LayoutTravel,
 		Fixture: func(*engine.Game) any { e := NewExpedition(); e.Index = 1; e.Rover = StarterDesign(); return e },
 	}, travelScene)
+	g.RegisterScene(engine.SceneMeta{
+		Name: SceneAccount, Title: "Account", Type: engine.TypeMenu, Layout: LayoutCenter,
+		Fixture: func(*engine.Game) any { return nil },
+	}, accountScene)
 	g.RegisterScene(engine.SceneMeta{
 		Name: SceneStyle, Title: "Style sheet", Type: engine.TypeDebug, Layout: LayoutCenter,
 		Fixture: func(*engine.Game) any { return nil },

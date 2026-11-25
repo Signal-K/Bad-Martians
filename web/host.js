@@ -17,7 +17,7 @@
   try { auth = JSON.parse(LS.get('hm.auth') || 'null'); } catch {}
   let queue = [];
   try { queue = JSON.parse(LS.get('hm.queue') || '[]'); } catch {}
-  const saveQueue = () => LS.set('hm.queue', JSON.stringify(queue.slice(-500)));
+  const saveQueue = () => { LS.set('hm.queue', JSON.stringify(queue.slice(-500))); publishAccount(); };
 
   async function pb(path, opts = {}) {
     const headers = { 'Content-Type': 'application/json' };
@@ -59,7 +59,7 @@
   // the most recently edited value. Legacy local saves are adopted only once.
   const saveKeys = ['hm.progress', 'hm.tutorial', 'hm.school', 'expedition-v1'];
   const storageKey = (k) => 'hm.' + k;
-  let owner = null, syncing = false, syncAgain = false, syncFailed = false, synced = false;
+  let owner = null, syncing = false, syncAgain = false, syncFailed = false, synced = false, lastSync = 0;
   const device = (() => {
     let id = LS.get('hm.sync.device');
     if (!id) { id = Array.from(crypto.getRandomValues(new Uint8Array(15)), n => 'abcdefghijklmnopqrstuvwxyz0123456789'[n % 36]).join(''); LS.set('hm.sync.device', id); }
@@ -104,6 +104,7 @@
     if (owner === id) return;
     if (owner) for (const k of saveKeys) { const v = LS.get(storageKey(k)); if (v !== null) LS.set('hm.sync.local.' + owner + '.' + k, v); }
     owner = id;
+    lastSync = id ? Number(LS.get('hm.sync.at.' + id)) || 0 : 0;
     if (!id) { for (const k of saveKeys) LS.del(storageKey(k)); if (window.haphazard?.refreshProgress) window.haphazard.refreshProgress(); return; }
     const legacyOwner = LS.get('hm.sync.legacyOwner');
     let state = readState(id);
@@ -179,6 +180,7 @@
       }
       syncFailed = false;
       synced = true;
+      lastSync = Date.now(); LS.set('hm.sync.at.' + id, String(lastSync));
       if (changed && window.haphazard?.refreshProgress) window.haphazard.refreshProgress();
     } catch (e) { syncFailed = true; render(); console.warn('Game progress sync failed; local save retained.', e); }
     finally { syncing = false; render(); if (syncAgain) { syncAgain = false; syncProgress(); } }
@@ -259,15 +261,106 @@
   const btn = $('acct'), dlg = $('dlg'), msg = $('msg');
   const CLERK_KEY = !DEMO && cfg && cfg.clerk ? String(cfg.clerk).trim() : '';
   let step = 'password'; // Clerk only: 'password', then 'signup-code' or 'reset-code'
-  function render() { if (DEMO) { btn.hidden = true; return; } btn.textContent = auth ? auth.record.email + (syncFailed ? ' · sync pending' : syncing || !synced ? ' · syncing…' : ' · synced') : 'Sign in to sync'; btn.title = auth ? 'Click to sign out' : 'Sign in to sync progress'; }
+  function render() {
+    if (DEMO) { btn.hidden = true; publishAccount(); return; }
+    btn.textContent = auth ? (profile && profile.username ? profile.username : auth.record.email) + (syncFailed ? ' · sync pending' : syncing || !synced ? ' · syncing…' : ' · synced') : 'Sign in to sync';
+    btn.title = auth ? 'Open your account' : 'Sign in to sync progress';
+    publishAccount();
+  }
+  // ---- account page (the game reads these two keys; see game/account.go) ----
+  let profile = null, profileError = '';
+  function syncState() {
+    if (DEMO) return 'demo';
+    if (!auth) return 'guest';
+    if (syncFailed) return 'pending';
+    return syncing || !synced ? 'syncing' : 'synced';
+  }
+  function publishAccount() {
+    LS.set('hm.account', JSON.stringify({
+      signed_in: !!auth, email: auth ? auth.record.email : '', username: profile ? profile.username : '',
+      sync: syncState(), last_sync: lastSync, queued: queue.length, error: profileError,
+    }));
+  }
+  let board = { updated: 0, failed: false, rows: [] };
+  try { const b = JSON.parse(LS.get('hm.leaderboard') || 'null'); if (b && Array.isArray(b.rows)) board = b; } catch {}
+  async function fetchBoard() {
+    if (DEMO) return;
+    try {
+      const data = await pb('/api/collections/hm_leaderboard/records?perPage=25&sort=-score,-stars&fields=username,score,stars,missions');
+      board = { updated: Date.now(), failed: false, rows: data.items.map(r => ({ username: r.username, score: r.score, stars: r.stars, missions: r.missions })) };
+    } catch { board = { ...board, failed: true }; } // offline, or a backend without the view: keep the last copy
+    LS.set('hm.leaderboard', JSON.stringify(board));
+  }
+  async function fetchProfile() {
+    if (DEMO || !auth) { profile = null; return; }
+    const id = auth.record.id;
+    try {
+      const data = await pb('/api/collections/hm_profiles/records?perPage=1&filter=' + encodeURIComponent(`user = "${id.replace(/["\\]/g, '')}"`));
+      if (auth && auth.record.id === id) { profile = data.items[0] || null; if (profile) LS.set('hm.profile.' + id, JSON.stringify(profile)); }
+    } catch {
+      try { profile = JSON.parse(LS.get('hm.profile.' + id) || 'null'); } catch { profile = null; } // offline: last known name
+    }
+  }
+  async function refreshAccount() {
+    await Promise.all([fetchProfile(), fetchBoard()]);
+    render();
+  }
+  async function saveUsername(raw) {
+    const name = String(raw || '').trim().toLowerCase();
+    if (!/^[a-z0-9_]{3,20}$/.test(name)) return 'Use 3 to 20 letters, numbers or underscores.';
+    if (profile && profile.username === name) return '';
+    try {
+      const body = JSON.stringify({ user: auth.record.id, username: name });
+      profile = profile
+        ? await pb('/api/collections/hm_profiles/records/' + profile.id, { method: 'PATCH', body })
+        : await pb('/api/collections/hm_profiles/records', { method: 'POST', body });
+      LS.set('hm.profile.' + auth.record.id, JSON.stringify(profile));
+      track('hm_username_set', {});
+      profileError = '';
+      fetchBoard().then(render);
+      render();
+      return '';
+    } catch (e) {
+      const code = e.body && e.body.data && e.body.data.username && e.body.data.username.code;
+      if (code === 'validation_not_unique') return 'That username is taken. Try another.';
+      if (e.status === 401 || e.status === 403) return 'Sign in again to set a username.';
+      return 'Could not save the username. Check your connection and try again.';
+    }
+  }
+  function askUsername() {
+    if (!auth) return;
+    let d = document.getElementById('userdlg');
+    if (!d) {
+      d = document.createElement('dialog');
+      d.id = 'userdlg';
+      d.innerHTML = '<form id="userform"><h2>Choose a username</h2>' +
+        '<p class="note">Shown on the leaderboard. 3 to 20 letters, numbers or underscores. Never your email.</p>' +
+        '<input id="userin" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="20" enterkeyhint="done">' +
+        '<p id="usererr" class="err" role="alert"></p>' +
+        '<div class="row"><button type="button" id="userno">Cancel</button><button type="submit" class="primary">Save</button></div></form>';
+      document.body.appendChild(d);
+      for (const t of ['keydown', 'keyup', 'keypress']) d.addEventListener(t, (e) => e.stopPropagation());
+      d.querySelector('#userno').addEventListener('click', () => d.close());
+      d.querySelector('#userform').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const err = await saveUsername(d.querySelector('#userin').value);
+        d.querySelector('#usererr').textContent = err;
+        if (!err) d.close();
+      });
+    }
+    d.querySelector('#userin').value = profile ? profile.username : '';
+    d.querySelector('#usererr').textContent = '';
+    d.showModal();
+    d.querySelector('#userin').focus();
+  }
   function signOut() {
-    auth = null; syncFailed = false; synced = false; activateOwner(null); LS.del('hm.auth');
+    auth = null; profile = null; syncFailed = false; synced = false; activateOwner(null); LS.del('hm.auth');
     // Leaving the game does not sign the player out of Landnam; it only stops
     // the shared session from signing them straight back in here.
     if (CLERK_KEY || (cfg && cfg.shareAuth)) LS.set('hm.signedOut', '1');
     render();
   }
-  async function setAuth(r) { auth = { token: r.token, record: r.record }; activateOwner(auth.record.id); syncProgress(); LS.set('hm.auth', JSON.stringify(auth)); LS.del('hm.signedOut'); render(); flush(); flushCaptures(); }
+  async function setAuth(r) { auth = { token: r.token, record: r.record }; activateOwner(auth.record.id); syncProgress(); fetchProfile().then(render); LS.set('hm.auth', JSON.stringify(auth)); LS.del('hm.signedOut'); render(); flush(); flushCaptures(); }
   async function login(email, password) {
     await setAuth(await pb('/api/collections/users/auth-with-password', { method: 'POST', body: JSON.stringify({ identity: email, password }) }));
   }
@@ -356,13 +449,16 @@
   }
 
   btn.addEventListener('click', async () => {
-    if (auth) { signOut(); return; }
+    if (auth) { window.haphazard.open('account'); return; }
+    startSignIn();
+  });
+  async function startSignIn() {
     if (CLERK_KEY) {
       // already signed in to Landnam on this domain: no form needed
       try { const clerk = await loadClerk(); if (clerk.session) { await exchange(clerk); return; } } catch {}
     }
     showStep('password'); dlg.showModal();
-  });
+  }
   $('close').addEventListener('click', () => dlg.close());
   $('form').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -511,6 +607,7 @@
         persistence: 'localStorage',
         person_profiles: 'identified_only',
         disable_session_recording: true,
+        disable_surveys: false, // popover surveys are configured in PostHog, never in the game
         autocapture: false,
         capture_pageview: true,
         loaded: (p) => {
@@ -537,7 +634,11 @@
       if (ev === 'track') { track(p.event, p.props || {}); return; }
       if (ev === 'run') track('hm_run_finished', runProps(p));
       if (ev === 'scene') track('hm_scene', { name: p.name });
-      if (ev === 'scene') { btn.hidden = DEMO || !['menu', 'map'].includes(p.name); return; } // keep account controls off the in-game HUD
+      if (ev === 'scene') { btn.hidden = DEMO || p.name !== 'menu'; return; } // the map has its own Account button; keep controls off the in-game HUD
+      if (ev === 'account_open') { refreshAccount(); return; }
+      if (ev === 'account_username') { askUsername(); return; }
+      if (ev === 'account_sync') { syncProgress(); return; }
+      if (ev === 'account_toggle') { if (auth) signOut(); else startSignIn(); return; }
       if (ev === 'prompt') { setTimeout(() => askText(p), 0); return; } // a text field in the game
       if (DEMO) return; // nothing to send to: progress is already saved locally
       if (ev === 'review') { queueReview(p); return; }

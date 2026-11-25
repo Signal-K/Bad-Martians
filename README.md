@@ -28,6 +28,12 @@ make desktop        # native window (needs Ebitengine's platform deps)
 
 Go 1.27 (the PocketBase dependency pins it; the Go tool fetches it automatically).
 Controls: hold the **Gas** / **Reverse** buttons (touch) or →/← (keyboard).
+Account page (map, bottom right): shows whether this device is synced, lets a
+signed-in player set a username, lists their daily mission history and shows the
+leaderboard (best score per mission, summed; players without a username are not
+listed, and emails are never public). Shape school and the style sheet are archived:
+their scenes and tests remain (`?scene=style`, `LessonSession`), but nothing on the
+map opens them.
 Sign-in is optional: without it, progress stays in the browser and events queue
 until you sign in. Once signed in, campaign progress, tutorial and school
 completion, and expedition checkpoints sync across devices. Existing browser
@@ -42,7 +48,7 @@ progress is adopted when you sign in; reconnecting retries an offline sync.
 | `game/` | Haphazard Martians: terrain classes, procedural levels, parts and rover, scenes (menu, build, run, result, travel, style), progress. No rendering or platform code. |
 | `client/` | Ebitengine adapter: the only code that touches a graphics library. |
 | `cmd/wasm`, `web/` | Browser build and PWA shell (manifest, service worker, account dialog, PocketBase bridge). |
-| `cmd/server`, `migrations/` | PocketBase backend (auth, `hm_runs`, `hm_labels`) that also serves the PWA. |
+| `cmd/server`, `migrations/` | PocketBase backend (auth, `hm_runs`, `hm_labels`, `hm_saves`, `hm_profiles`, `hm_leaderboard`) that also serves the PWA. |
 | `cmd/desktop` | Native dev build. |
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for design decisions and [docs/PHYSICS.md](docs/PHYSICS.md) for the physics solver comparison.
