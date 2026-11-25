@@ -30,6 +30,12 @@ printf 'window.HM_CONFIG = { api: %s, clerk: %s, build: %s, posthog: { key: %s, 
 # A new build id makes returning players refetch the shell instead of keeping the old game.
 sed -i "s/haphazard-martians-v1/haphazard-martians-${BUILD_ID}/" dist/sw.js
 cp deploy/_headers dist/_headers
+# Which dated missions this build carries. The daily workflow reads the live copy to confirm the host really serves them.
+python3 - "$BUILD_ID" <<'PY'
+import glob, json, sys
+dates = sorted(json.load(open(p, encoding="utf-8"))["date"] for p in glob.glob("game/data/missions/*.json"))
+json.dump({"build": sys.argv[1], "dates": dates}, open("dist/missions.json", "w"))
+PY
 
 size=$(stat -c %s dist/game.wasm)
 echo "build ${BUILD_ID}: game.wasm ${size} bytes, backend '${API_URL:-none (demo)}', sign-in '$([ -n "$CLERK_KEY" ] && echo clerk || echo password)'"

@@ -8,6 +8,11 @@ on:
   push:
   pull_request:
 
+# Daily delivery shares this group so two production deploys never overlap.
+concurrency:
+  group: production-deploy-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
