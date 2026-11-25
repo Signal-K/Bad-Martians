@@ -142,8 +142,8 @@ func TestTodayIsLocal(t *testing.T) {
 	defer func() { time.Local = old }()
 	for _, off := range []int{-11, 0, 14} {
 		time.Local = time.FixedZone("test", off*3600)
-		if want := time.Now().In(time.Local).Format("2006-01-02"); Today() != want {
-			t.Errorf("UTC%+d: Today() = %s, want %s", off, Today(), want)
+		if want := time.Now().In(time.Local).Format("2006-01-02"); localToday() != want {
+			t.Errorf("UTC%+d: localToday() = %s, want %s", off, localToday(), want)
 		}
 	}
 }

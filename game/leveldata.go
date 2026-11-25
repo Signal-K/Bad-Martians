@@ -231,7 +231,9 @@ func LoadMissions(fsys fs.FS) ([]Mission, error) {
 // so a new mission starts at midnight where the player is. In the browser,
 // Local is the browser's own UTC offset. Tests replace it so scenes stay
 // deterministic.
-var Today = func() string { return time.Now().Format("2006-01-02") }
+var Today = localToday
+
+func localToday() string { return time.Now().Format("2006-01-02") }
 
 // CurrentMission is today's mission, or the most recent earlier one. When none
 // has started yet, ok is false and next is the first upcoming mission, if any.
