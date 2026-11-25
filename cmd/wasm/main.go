@@ -59,6 +59,7 @@ func main() {
 		app.Edit(mode)
 		return nil
 	}))
+	bridge.Set("refreshProgress", js.FuncOf(func(js.Value, []js.Value) any { app.RefreshProgress(); return nil }))
 	bridge.Set("scenes", js.FuncOf(func(js.Value, []js.Value) any { return app.SceneList() }))
 	// haphazard.text(s) answers a "prompt" event (the phone text box for the rover name).
 	bridge.Set("text", js.FuncOf(func(_ js.Value, a []js.Value) any {

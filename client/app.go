@@ -22,6 +22,7 @@ type App struct {
 	r *ebitenRenderer
 
 	mu      sync.Mutex
+	refresh bool    // refresh a progress screen on the next update
 	pending string  // scene a host asked to open, applied on the next Update
 	edit    int     // editor request from the host: 1 on, 2 off, 3 toggle
 	text    *string // text a host prompt returned, applied on the next Update
@@ -48,6 +49,13 @@ func New(host engine.Host, scene string) *App {
 func (a *App) Open(scene string) {
 	a.mu.Lock()
 	a.pending = scene
+	a.mu.Unlock()
+}
+
+// RefreshProgress refreshes the map when account progress arrives.
+func (a *App) RefreshProgress() {
+	a.mu.Lock()
+	a.refresh = true
 	a.mu.Unlock()
 }
 
@@ -141,6 +149,8 @@ func (a *App) readInput() engine.Input {
 func (a *App) Update() error {
 	a.mu.Lock()
 	p := a.pending
+	refresh := a.refresh
+	a.refresh = false
 	a.pending = ""
 	ed := a.edit
 	a.edit = 0
@@ -149,6 +159,8 @@ func (a *App) Update() error {
 	a.mu.Unlock()
 	if p != "" {
 		a.G.OpenStandalone(p)
+	} else if refresh && a.G.Scene() != nil && a.G.Scene().Name == game.SceneMap {
+		a.G.Load(game.SceneMap, nil)
 	}
 	in := a.readInput()
 	if txt != nil {

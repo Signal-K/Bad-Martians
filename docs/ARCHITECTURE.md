@@ -122,7 +122,9 @@ and contact shadows. The drive and the rover bay share every one of these.
 
 - **Web/PWA** (`cmd/wasm` + `web/`): `web/host.js` implements `Host` with
   `localStorage` and PocketBase. Run and label events queue offline and flush
-  once signed in. A service worker caches the shell.
+  once signed in. Private per-device saves merge campaign achievements and sync
+  checkpoints, tutorial, and school progress; offline saves retry on reconnect.
+  A service worker caches the shell.
 - **Native shells**: Ebitengine supports `ebitenmobile`, which wraps the same
   Go code in an iOS framework / Android AAR, so a Swift or Kotlin app only
   needs to host the view and implement `Host`. Nothing in `engine/`, `physics/`
@@ -136,6 +138,7 @@ collection rules.
 
 | Collection | Access |
 |---|---|
+| `hm_saves` | Read and update own per-device saves; unique per (user, device) |
 | `hm_runs` | Public read (leaderboard); create only as yourself; carries score |
 | `hm_labels` | Read own; create as yourself; unique per (user, level, segment) |
 

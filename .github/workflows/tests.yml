@@ -45,6 +45,7 @@ jobs:
               - 'web/**'
               - 'tests/container/backend_smoke.py'
               - 'tests/progress-sync.cjs'
+              - 'tests/sync/**'
               - 'scripts/build-dist.sh'
               - 'scripts/build-landnam.sh'
               - 'go.mod'
@@ -83,7 +84,9 @@ jobs:
           HM_POSTHOG_KEY: "off" # CI browser runs stay out of analytics
       - name: Cross-device progress restore tests
         if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.visual == 'true' || github.event_name == 'workflow_dispatch'
-        run: node tests/progress-sync.cjs
+        run: |
+          node tests/progress-sync.cjs
+          node tests/sync/progress.cjs
       - name: Backend smoke test
         if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
         run: |
