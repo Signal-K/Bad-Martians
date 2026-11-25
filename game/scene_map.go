@@ -36,6 +36,8 @@ func moonRad(c *Chapter) float64 {
 		return 20
 	case "deimos":
 		return 15
+	case "moon":
+		return 18
 	}
 	return 0
 }
@@ -156,7 +158,7 @@ func mapScene(g *engine.Game, _ any) *engine.Scene {
 		centre := engine.V(mapCX, mapCY)
 		// the moons' orbits
 		for i := range Chapters {
-			if c := &Chapters[i]; c.IsMoon() {
+			if c := &Chapters[i]; c.IsMoon() && Bodies[c.Body].Orbits {
 				rad := placePos(c).Sub(centre).Len()
 				arcLine(r, centre, rad, -0.9, 0.9, 1.5, colInk.Alpha(46))
 			}

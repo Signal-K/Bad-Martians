@@ -33,6 +33,8 @@ var Chapters = []Chapter{
 		Blurb: "The nearer moon: dark, grooved ground at a third of Mars's pull. Every bump is a long hop."},
 	{Key: "deimos", Name: "Deimos", First: 22, Last: 22, Body: "deimos", Pin: engine.V(2.7, 0.1),
 		Blurb: "The far moon: smooth pale dust and almost no grip. Keep the wheels on the ground."},
+	{Key: "moon", Name: "The Moon", First: 23, Last: 23, Body: "moon", Pin: engine.V(3.55, -0.3),
+		Blurb: "Earth's Moon: grey regolith and rilles under a blue Earth. The last stop of the expedition."},
 }
 
 // IsMoon reports whether the chapter is off Mars.

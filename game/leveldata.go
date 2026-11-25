@@ -147,7 +147,7 @@ func (f levelFile) def() (LevelDef, error) {
 		return d, fmt.Errorf("level %d: biome %q not one of %v", f.ID, f.Biome, Biomes)
 	}
 	if _, known := Bodies[f.Body]; f.Body != "" && !known {
-		return d, fmt.Errorf("level %d: body %q not mars, phobos or deimos", f.ID, f.Body)
+		return d, fmt.Errorf("level %d: body %q is not a known world", f.ID, f.Body)
 	}
 	total := 0.0
 	for k, w := range f.Mix {
@@ -227,9 +227,13 @@ func LoadMissions(fsys fs.FS) ([]Mission, error) {
 	return ms, nil
 }
 
-// Today is the date (YYYY-MM-DD, UTC) used to pick the daily mission. Tests
-// replace it so scenes stay deterministic.
-var Today = func() string { return time.Now().UTC().Format("2006-01-02") }
+// Today is the player's local date (YYYY-MM-DD) used to pick the daily mission,
+// so a new mission starts at midnight where the player is. In the browser,
+// Local is the browser's own UTC offset. Tests replace it so scenes stay
+// deterministic.
+var Today = localToday
+
+func localToday() string { return time.Now().Format("2006-01-02") }
 
 // CurrentMission is today's mission, or the most recent earlier one. When none
 // has started yet, ok is false and next is the first upcoming mission, if any.

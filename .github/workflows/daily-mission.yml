@@ -1,33 +1,87 @@
-name: Daily mission build
+name: Daily mission delivery
+# Every day just after UTC midnight: check that an authored mission exists for today and for the days ahead,
+# check that the live host serves it, and if it does not, build and deploy the default branch to production.
+# A red run is the alert: no mission authored, a short runway, or the deploy did not reach the live host.
+# Repository secrets: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID. Variables: HM_API_URL, HM_CLERK_KEY.
 on:
   schedule:
     - cron: '5 0 * * *'
   workflow_dispatch:
 permissions:
   contents: read
+# Never overlap a push deploy.
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+env:
+  LIVE_URL: https://martians.playlandnam.space
+  MIN_RUNWAY_DAYS: 3   # fail below this many days of missions ahead
+  WARN_RUNWAY_DAYS: 7  # warn below this many
 jobs:
-  mission:
+  deliver:
     runs-on: ubuntu-latest
+    env:
+      CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with: { go-version-file: go.mod }
       # The game tests validate every authored mission, including duplicate dates/IDs.
       - run: go test ./game
-      - name: Require a mission for today (UTC)
+      - name: Require today's mission and a runway of future ones (UTC)
         run: |
           python3 - <<'PY'
-          import datetime, glob, json, sys
-          today = datetime.datetime.now(datetime.timezone.utc).date().isoformat()
-          matches = [p for p in glob.glob('game/data/missions/*.json')
-                     if json.load(open(p, encoding='utf-8')).get('date') == today]
-          if len(matches) != 1:
-              sys.exit(f'Expected one mission for {today}; found {len(matches)}')
-          print(f'Mission for {today}: {matches[0]}')
+          import datetime, glob, json, os, sys
+          today = datetime.datetime.now(datetime.timezone.utc).date()
+          dates = sorted(json.load(open(p, encoding='utf-8'))['date'] for p in glob.glob('game/data/missions/*.json'))
+          if today.isoformat() not in dates:
+              sys.exit(f'::error::No mission authored for {today}')
+          # Consecutive days from today with a mission.
+          runway, d = 0, today
+          while d.isoformat() in dates:
+              runway += 1; d += datetime.timedelta(days=1)
+          print(f'Mission for {today}; {runway} consecutive days authored (last {(d - datetime.timedelta(days=1)).isoformat()})')
+          if runway < int(os.environ['MIN_RUNWAY_DAYS']):
+              sys.exit(f'::error::Only {runway} days of missions left; author more')
+          if runway < int(os.environ['WARN_RUNWAY_DAYS']):
+              print(f'::warning::Only {runway} days of missions left; author more soon')
           PY
-      - run: scripts/build-dist.sh
+      - name: Does the live host already serve today's mission?
+        id: live
+        run: |
+          today=$(date -u +%F)
+          if curl -fsS --retry 2 "$LIVE_URL/missions.json?t=$(date +%s)" | python3 -c "import json,sys; sys.exit(0 if '$today' in json.load(sys.stdin)['dates'] else 1)"; then
+            echo "current=true" >> "$GITHUB_OUTPUT"; echo "Live host is up to date."
+          else
+            echo "current=false" >> "$GITHUB_OUTPUT"; echo "::warning::Live host is missing today's mission; redeploying."
+          fi
+      - name: Require Cloudflare secrets to redeploy
+        if: ${{ steps.live.outputs.current == 'false' && env.CF_TOKEN == '' }}
+        run: echo "::error::Live host is stale and CLOUDFLARE_API_TOKEN is not set"; exit 1
+      - name: Build
+        if: ${{ steps.live.outputs.current == 'false' }}
+        run: scripts/build-dist.sh
         env:
-          HM_API_URL: ${{ vars.HM_API_URL }}
-          HM_CLERK_KEY: ${{ vars.HM_CLERK_KEY }}
-      - uses: actions/upload-artifact@v4
-        with: { name: daily-mission-build, path: dist }
+          # A dated build id gives returning players a fresh service worker cache.
+          HM_BUILD_ID: daily-${{ github.sha }}
+          HM_API_URL: ${{ vars.HM_API_URL || 'https://signal-k-pocketbase.fly.dev' }}
+          HM_CLERK_KEY: ${{ vars.HM_CLERK_KEY || 'pk_live_Y2xlcmsucGxheWxhbmRuYW0uc3BhY2Uk' }}
+      - name: Deploy to production
+        if: ${{ steps.live.outputs.current == 'false' }}
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: "4"
+          command: deploy
+      - name: Verify live delivery
+        if: ${{ steps.live.outputs.current == 'false' }}
+        run: |
+          today=$(date -u +%F)
+          for i in 1 2 3 4 5 6; do
+            if curl -fsS "$LIVE_URL/missions.json?t=$(date +%s)" | python3 -c "import json,sys; sys.exit(0 if '$today' in json.load(sys.stdin)['dates'] else 1)"; then
+              echo "Live host serves $today."; exit 0
+            fi
+            sleep 20
+          done
+          echo "::error::Deployed, but the live host still does not serve $today"; exit 1
