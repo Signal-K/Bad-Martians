@@ -20,11 +20,9 @@ func briefingScene(g *engine.Game, arg any) *engine.Scene {
 		drawPanel(r, 28, 116, 500, 330, "Your budget")
 		r.Text(fmt.Sprintf("%d credits", e.Credits), 52, 158, 38, colNeon, engine.AlignLeft)
 		for i, ln := range []string{
-			"Build and modify your rover with these credits.",
-			"Surviving parts can be reused or swapped.",
-			"Lost rovers cost their full value.",
-			"Finish under par for +2 credits next stage.",
-			"Finish the expedition to earn a free retry.",
+			"One budget for every stage.",
+			"A crash costs the rover's full value.",
+			"Finish under par for +2 credits.",
 		} {
 			r.Text(ln, 52, 230+float64(i)*32, sizeSmall, colMuted, engine.AlignLeft)
 		}
@@ -41,14 +39,6 @@ func briefingScene(g *engine.Game, arg any) *engine.Scene {
 			}
 			r.Text(fmt.Sprintf("Mission %d · %s", l.ID, l.Name), 604, y, sizeBody, colInk, engine.AlignLeft)
 			r.Text(fmt.Sprintf("%.0f m", l.Length), 912, y+2, sizeSmall, colMuted, engine.AlignRight)
-		}
-		for i, ln := range []string{
-			"A finished mission keeps your rover.",
-			"A crash, or scrapping a stuck rover,",
-			"costs the rover’s full value.",
-			"No credits for a basic rover: it is over.",
-		} {
-			r.Text(ln, 576, 316+float64(i)*24, sizeSmall, colMuted, engine.AlignLeft)
 		}
 	})
 	addBack(s, func() { g.Load(SceneMap, nil) })

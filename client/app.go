@@ -40,7 +40,11 @@ func New(host engine.Host, scene string) *App {
 	g := engine.NewGame(game.ScreenW, game.ScreenH, host)
 	game.Setup(g)
 	if scene == "" || !g.OpenStandalone(scene) {
-		g.Load(game.SceneMap, nil)
+		if game.FirstOpen(host) { // a new player builds and drives before reading anything
+			g.Load(game.SceneBuild, game.FirstMissionSession(host))
+		} else {
+			g.Load(game.SceneMap, nil)
+		}
 	}
 	return &App{G: g, r: newRenderer()}
 }

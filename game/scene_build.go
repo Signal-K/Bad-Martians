@@ -41,6 +41,21 @@ var skipBox = engine.Rect{X: 560, Y: 10, W: 84, H: 44}
 // bayTools is the order of the parts tray; "" is the eraser.
 var bayTools = []Kind{KFrame, KWheel, KMotor, KMast, KGripMotor, ""}
 
+// bayToolsFor is the parts tray for a level: the first mission leaves out the
+// grip motor so a new player meets four parts, not five.
+func bayToolsFor(l *Level) []Kind {
+	if l.ID != LevelDefs[0].ID {
+		return bayTools
+	}
+	out := make([]Kind, 0, len(bayTools))
+	for _, k := range bayTools {
+		if k != KGripMotor {
+			out = append(out, k)
+		}
+	}
+	return out
+}
+
 // CanAdd is how many more of part k fit in the budget: the number on its tray
 // tile. The mast is 1 until one is placed (placing another moves it).
 func CanAdd(d Design, k Kind, budget int) int {
@@ -152,6 +167,9 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 	guide := false             // the parts guide overlay is open
 	var bayButtons []*Button   // hidden while the guide is open
 	tut := ses.Tut
+	// The first mission teaches four parts; the grip motor arrives with the
+	// missions that need it (playtest feedback: too much, too soon).
+	tools := bayToolsFor(lvl)
 	lesson := LessonOf(ses)
 	// The shapes sidebar is a crutch for the first two missions and the shape
 	// school; after that players build from the parts tray.
@@ -186,7 +204,7 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 		return engine.V(x+bCell/2, y+bCell/2)
 	}
 	toolIndex := func(k Kind) int {
-		for i, t := range bayTools {
+		for i, t := range tools {
 			if t == k {
 				return i
 			}
@@ -197,7 +215,7 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 		return bGuideX + bGuideW + bTileGap + float64(i)*(bTileW+bTileGap)
 	}
 	tileAt := func(p engine.Vec2) (Kind, bool) {
-		for i, k := range bayTools {
+		for i, k := range tools {
 			x := tileX(i)
 			if p.X >= x && p.X <= x+bTileW && p.Y >= bTrayY+8 && p.Y <= bTrayY+8+bTileH {
 				return k, true
@@ -529,7 +547,7 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 
 	// parts tray: one tile per part, with what it looks like on the rover,
 	// its cost and how many more you can add
-	for i, k := range bayTools {
+	for i, k := range tools {
 		k := k
 		name := "Erase"
 		if k != "" {
@@ -850,7 +868,7 @@ func buildScene(g *engine.Game, arg any) *engine.Scene {
 				if dx > 0 {
 					step = -1
 				}
-				pick(bayTools[(toolIndex(tool)+step+len(bayTools))%len(bayTools)])
+				pick(tools[(toolIndex(tool)+step+len(tools))%len(tools)])
 				stopTest()
 				swiped = true
 			}
