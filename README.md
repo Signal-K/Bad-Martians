@@ -11,7 +11,7 @@ The campaign ends off Mars: Phobos (level 21), Deimos (level 22) and Earth's Moo
 colours, and Mars (or Earth, for the Moon) in the sky. Open one alone with
 `?scene=run&level=21` (or `-level 21`). Phobos's loose ground also gives the wheels
 less grip (`Body.Grip`). Each level keeps a ghost of your fastest win, drawn
-beside the live rover on later attempts; it is stored on the device only.
+beside the live rover on later attempts; it is stored on the device only. See [docs/ROADMAP.md](docs/ROADMAP.md) for what comes next.
 The lander hops between completed expedition stages; continue when ready to
 enter the next rover bay with the surviving design and budget.
 The terrain
