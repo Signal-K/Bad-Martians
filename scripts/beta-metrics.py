@@ -4,7 +4,7 @@
 hm_runs, hm_profiles and hm_leaderboard are publicly readable (the leaderboard
 needs it), so this works against production with just the API URL:
 
-    HM_API_URL=https://signal-k-starsailors.fly.dev scripts/beta-metrics.py [--days 7]
+    HM_API_URL=https://signal-k-pocketbase.fly.dev scripts/beta-metrics.py [--days 7]
 
 It answers, from the game's own records: how many players, how many reach a
 first win, win rate by mission, how many come back on a later day, how many

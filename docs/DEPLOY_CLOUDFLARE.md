@@ -80,8 +80,9 @@ later is the `wrangler.jsonc` route below plus deleting that folder.
 
 ### Connecting to the Star Sailors backend (decided, KES-494)
 
-The game uses the **shared Star Sailors PocketBase** (`signal-k-starsailors` on
-Fly, deployed from `Signal-K/tickets-please`) and **Landnam's Clerk instance**.
+The game uses the **shared Star Sailors PocketBase** (`signal-k-pocketbase` on
+Fly, `https://signal-k-pocketbase.fly.dev`, deployed from `Signal-K/tickets-please`;
+the older `signal-k-starsailors` app is not the one the game uses) and **Landnam's Clerk instance**.
 A player has one account across Landnam and this game, and nothing new costs
 money: no new Fly app, no new Clerk instance, no new domain.
 
@@ -102,7 +103,7 @@ money: no new Fly app, no new Clerk instance, no new domain.
   staging already runs on one), and the zone is on the same Cloudflare account,
   so the deploy creates the DNS record.
 - **Configuration** (GitHub repository variables, both public):
-  `HM_API_URL=https://signal-k-starsailors.fly.dev` and `HM_CLERK_KEY` = the same
+  `HM_API_URL=https://signal-k-pocketbase.fly.dev` and `HM_CLERK_KEY` = the same
   value as Landnam's `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` variable (`pk_live_…`).
   The production key only works on `playlandnam.space` hosts, so a
   `*.workers.dev` preview built with it cannot sign in; previews stay demo or

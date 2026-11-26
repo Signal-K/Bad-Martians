@@ -101,7 +101,9 @@ func TestDesignRules(t *testing.T) {
 
 // Levels must be bit-identical on every platform, or a run recorded on one
 // device could not be checked on another. Hash values were taken on amd64 and
-// must match under GOOS=js GOARCH=wasm too (see docs/PHYSICS.md).
+// must match under GOOS=js GOARCH=wasm too (see docs/PHYSICS.md); all 23 were
+// checked identical on both on 26 Nov 2026 (wasm needs a minimal environment:
+// -exec="env -i PATH=$PATH $(go env GOROOT)/lib/wasm/go_js_wasm_exec").
 func TestLevelTerrainGolden(t *testing.T) {
 	for _, def := range LevelDefs {
 		l := BuildLevel(def)
@@ -120,7 +122,13 @@ func TestLevelTerrainGolden(t *testing.T) {
 
 var goldenTerrain = map[int]uint64{
 	1: 0xb67c4e8e94c2a439, 2: 0x8543c9d91d1cd041, 3: 0xc8bc62061a4bd331,
-	4: 0x632f59947b7da089, 5: 0x59623bb489b88f1a, 9: 0x4a4816960508af8e,
+	4: 0x632f59947b7da089, 5: 0x59623bb489b88f1a, 6: 0x4788db925cb3ca10,
+	7: 0x8241255e5b27327b, 8: 0x19463c9fdbe6f19b, 9: 0x4a4816960508af8e,
+	10: 0xf7d1981661f7bf70, 11: 0x69d83337177d062f, 12: 0xed22824d7ed5dc81,
+	13: 0x2468007f7fdc2487, 14: 0xc6b5fcea1f662ef3, 15: 0x3b07cfd5efdbe6a0,
+	16: 0xdb35bad35f376ef3, 17: 0xc35d3dd0f9223aec, 18: 0xc1847fa32d079479,
+	19: 0x2ed8367a4eec2a19, 20: 0xc32e13e96704ea9c, 21: 0x4fecd728526e2ab1,
+	22: 0xfc4c39b954e58256, 23: 0x9ac28b3388640e72,
 }
 
 // A rover whose motor wheel never touches the ground goes nowhere: after a few
