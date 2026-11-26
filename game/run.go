@@ -96,6 +96,13 @@ const physH = engine.FixedDT / 10
 const (
 	leanAccel = 10.0 // rad/s² of lean at full stick
 	leanSpin  = 2.6  // rad/s: leaning stops adding spin past this
+	// With a wheel on the ground the rover pivots on it, and spin about the
+	// centre of mass becomes a hop when that wheel is pushed into the ground
+	// (2.6 rad/s lifted it ~1.5 m, and leaning through the landing pumped it
+	// again). Rolling a wheelie needs far less.
+	leanSpinGround = 0.9
+	liftoffRise    = 1.0 // m/s of climb that means the rover has left the ground
+	groundedGap    = 0.4 // m of clearance still counted as on the ground
 )
 
 func NewRun(l *Level, d Design) *Run {
@@ -163,25 +170,41 @@ func (r *Run) lean(dt float64) {
 	bs := r.Rover.Bodies
 	c := physics.Center(bs)
 	h := r.World.SubstepDT(dt)
-	var l, inertia float64
+	var l, inertia, climbing, mass float64
 	for _, b := range bs {
 		m := 1 / b.InvMass
 		d, v := b.Pos.Sub(c), b.Vel(h)
+		climbing += m * v.Y
+		mass += m
 		l += m * (d.X*v.Y - d.Y*v.X)
 		inertia += m * d.Dot(d)
 	}
 	if inertia < 1e-6 {
 		return
 	}
-	if w := l / inertia; w*r.Lean > leanSpin {
+	climbing /= mass
+	grounded := false
+	for _, b := range bs {
+		// OnGround flickers while a rover rests (gravity lifts it off between
+		// substeps), so count anything within a hand's breadth of the surface.
+		if b.OnGround || b.Pos.Y-b.Radius-r.World.Terrain.HeightAt(b.Pos.X) < groundedGap {
+			grounded = true
+			break
+		}
+	}
+	if grounded && climbing > liftoffRise {
+		grounded = false // leaving the ground at a ramp lip: that is air
+	}
+	limit := leanSpin
+	if grounded {
+		limit = leanSpinGround
+	}
+	if w := l / inertia; w*r.Lean > limit {
 		return
 	}
 	k := r.Lean * leanAccel * dt
-	for _, b := range bs { // half strength with a wheel down: easier to balance
-		if b.OnGround {
-			k /= 2
-			break
-		}
+	if grounded { // half strength with a wheel down: easier to balance
+		k /= 2
 	}
 	for _, b := range bs {
 		d := b.Pos.Sub(c)

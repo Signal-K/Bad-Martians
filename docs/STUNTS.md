@@ -62,14 +62,24 @@ line in the debrief) but are not part of `Score()`. The server rebuilds every
 leaderboard score from level, samples and time (`CheckRun`) and cannot replay a
 stunt.
 
-## Known issue: lean-pumping
+## Lean-pumping (fixed in the lean control, MAR-89)
 
-Leaning in the air adds spin with no energy cost, and landing with spin makes
-the rover rebound for 2 to 3 seconds, even on flat ground at the start line. A
-bot that leans in the air hops along a whole level and earns about 1,900 points
-against 200 for plain driving. The landing-only and new-ground rules slow this
-but do not stop it. Stunt points must stay out of the score until the rebound is
-fixed (see the ticket on MAR-87).
+The rebound was not the collision code. Holding lean on the ground spun the
+rover about its centre of mass at up to 2.6 rad/s while a wheel was down; the
+wheel pushed into the surface and the spin became a hop of about 1.5 m, and
+leaning through the landing pumped it again. A rover resting on flat ground
+with lean held bounced for the whole drive, and a bot leaning in the air
+earned about 1,900 points against 200 for plain driving.
+
+Now (`Run.lean`): with any wheel within 0.4 m of the surface, lean is capped
+at 0.9 rad/s (enough to hold a wheelie), unless the rover is climbing away at
+more than 1 m/s, which counts as air so ramp flips still work. Measured: a
+resting rover with lean held stays put, and landings under held lean rebound
+0.3 m or less (were 1.1 to 1.6 m). `TestHoldingLeanDoesNotFarmStunts` holds
+lean for a whole Kicker Flats drive and caps stunt points at 600.
+
+Stunt points are still outside the score. That now waits only on MAR-87
+(replaying stunts on the server), not on the physics.
 
 ## Tests
 
@@ -87,5 +97,5 @@ points, count, backflips, frontflips, wheelie_s, best_air.
 ## Still to build
 
 - A marker on the ramp and an upcoming-jump hint (MAR-86).
-- Fix the landing rebound, then count stunts in the score (MAR-87).
+- Count stunts in the score once the server can replay them (MAR-87).
 - More ramp levels, and ramps on the moons, where air is long.

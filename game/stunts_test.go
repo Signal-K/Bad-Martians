@@ -297,3 +297,22 @@ func TestUnlandedFlipPaysNothing(t *testing.T) {
 		t.Fatalf("an unlanded jump paid %d", st.Points)
 	}
 }
+
+// Holding lean down for a whole drive used to pump spin into every landing,
+// so the rover hopped along flat ground farming flips. It must now behave like
+// a rover with a stuck button, not a stunt machine.
+func TestHoldingLeanDoesNotFarmStunts(t *testing.T) {
+	for _, dir := range []float64{1, -1} {
+		m, _ := MissionFor("2026-12-21")
+		r := NewRun(BuildLevel(m.Level), StarterDesign())
+		r.Speed = DriveSpeed
+		for i := 0; i < 60*60 && r.Outcome == Running; i++ {
+			r.Lean = dir
+			r.Step(1.0/60, 1)
+		}
+		t.Logf("lean %+.0f held: outcome %v, %d stunt points (%d back, %d front)", dir, r.Outcome, r.Stunts.Points, r.Stunts.Backflips, r.Stunts.Frontflips)
+		if r.Stunts.Points > 600 {
+			t.Errorf("holding lean %+.0f farmed %d stunt points", dir, r.Stunts.Points)
+		}
+	}
+}
