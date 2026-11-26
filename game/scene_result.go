@@ -20,6 +20,7 @@ type ResultArg struct {
 	TopSpeed float64 // m/s
 	MaxAir   float64 // longest jump, seconds
 	Damaged  bool    // a frame or the mast hit the ground during the drive
+	Ghost    *Ghost  // this run's recording, kept if it is the level's best
 	Recorded bool    // progress saved and run event sent (set on first show)
 
 	Cause Cause // why a failed run failed
@@ -55,6 +56,9 @@ func resultScene(g *engine.Game, arg any) *engine.Scene {
 	if !ra.Recorded {
 		ra.Recorded = true
 		if ra.Outcome == Won {
+			if cur := prog.Levels[lvl.ID].Best; ra.Ghost.valid() && (cur == 0 || ra.Time < cur || LoadGhost(g.Host, lvl.ID) == nil) {
+				SaveGhost(g.Host, lvl.ID, ra.Ghost)
+			}
 			prog.Record(lvl.ID, ra.Stars, ra.Time, ra.Score.Total())
 			for _, m := range Missions {
 				if m.Level.ID == lvl.ID && !prog.ClaimedMissions[m.Date] {
@@ -109,6 +113,10 @@ func resultScene(g *engine.Game, arg any) *engine.Scene {
 	}
 	exp := ses.Exp
 	best := prog.Levels[lvl.ID].Score
+	bestTime := ""
+	if t := prog.Levels[lvl.ID].Best; t > 0 {
+		bestTime = " · " + fmtTime(t)
+	}
 	grade := GradeFor(lvl, ra)
 	clock := 0.0
 	s.OnUpdate = func(dt float64) { clock += dt }
@@ -190,7 +198,7 @@ func resultScene(g *engine.Game, arg any) *engine.Scene {
 			r.Text(fmt.Sprintf("%.0f", tally(6, float64(ra.Score.Total()))), 520, 336, 24, colNeon, engine.AlignRight)
 			rover := ra.roverName()
 			parts := fmt.Sprintf("%s cost %d credits", rover, ses.Design.Cost())
-			r.Text(fmt.Sprintf("Best %d   ·   %s", best, parts), 56, 380, sizeSmall, colMuted, engine.AlignLeft)
+			r.Text(fmt.Sprintf("Best %d%s   ·   %s", best, bestTime, parts), 56, 380, sizeSmall, colMuted, engine.AlignLeft)
 		}
 
 		drawPanel(r, 572, 124, 360, 310, "Rover")

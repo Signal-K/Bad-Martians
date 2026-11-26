@@ -273,6 +273,9 @@ func menuScene(g *engine.Game, arg any) *engine.Scene {
 		best := "not yet run"
 		if lp.Score > 0 {
 			best = fmt.Sprintf("best %d", lp.Score)
+			if lp.Best > 0 {
+				best += " · " + fmtTime(lp.Best)
+			}
 		}
 		r.Text(best, 640, rtBottom+60, sizeSmall, colMuted, engine.AlignCenter)
 	})

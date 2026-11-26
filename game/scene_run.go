@@ -16,6 +16,8 @@ func runScene(g *engine.Game, arg any) *engine.Scene {
 	s.Cam.Zoom = 38
 	s.Cam.Pos = run.Rover.Center()
 	endTimer := 0.0
+	ghost := LoadGhost(g.Host, lvl.ID)
+	rec := NewGhostRecorder(run)
 
 	ro := s.Spawn("rover")
 	ro.Layer = 5
@@ -25,6 +27,9 @@ func runScene(g *engine.Game, arg any) *engine.Scene {
 		drawSky(r, cam.Pos.X, BodyOf(lvl.LevelDef))
 		t := lvl.Terrain
 		drawTerrain(r, cam, t, BodyOf(lvl.LevelDef))
+		if ghost != nil {
+			ghost.Draw(r, cam, run.Time)
+		}
 		roverShadows(r, cam, t, run.Rover)
 		gb := cam.ToScreen(engine.V(lvl.GoalX, t.HeightAt(lvl.GoalX)))
 		r.Line(gb, gb.Add(engine.V(0, -4*cam.Zoom)), 4, colInk)
@@ -260,6 +265,7 @@ func runScene(g *engine.Game, arg any) *engine.Scene {
 		flash = max(0, flash-dt/1.6)
 		run.Lean = lean
 		run.Step(dt, th)
+		rec.Observe(run)
 		run.Debris(dt)
 		if boom >= 0 {
 			boom += dt
@@ -279,7 +285,7 @@ func runScene(g *engine.Game, arg any) *engine.Scene {
 				g.Load(SceneResult, &ResultArg{Session: ses, Outcome: run.Outcome, Stars: run.Stars(), Cause: cause,
 					Time: run.Time, Samples: run.SamplesGot(), Total: len(run.Got), Score: run.Score(),
 					Distance: run.Progress() * (lvl.GoalX - lvl.StartX), TopSpeed: run.TopSpeed, MaxAir: run.MaxAir,
-					Damaged: run.Damaged()})
+					Damaged: run.Damaged(), Ghost: rec.Ghost(run.Time)})
 			}
 		}
 	}

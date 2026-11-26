@@ -16,6 +16,9 @@ type Body struct {
 	// make a rover drift for minutes after one bump, so they are stylised: low
 	// enough that hops are long and grip is light, high enough to drive.
 	Gravity float64
+	// Grip scales the friction of every contact: loose regolith and dust give
+	// the wheels less to bite on than Mars's rock. Zero means 1.
+	Grip float64
 	// Ground tint: every ground colour is mixed this far toward Tint.
 	Tint    engine.Color
 	TintMix float64
@@ -33,7 +36,7 @@ type Body struct {
 var Bodies = map[string]*Body{
 	"mars": {Key: "mars", Name: "Mars", Gravity: 3.71},
 	// Phobos is very dark (albedo about 0.07), grey-brown, grooved and cratered.
-	"phobos": {Key: "phobos", Name: "Phobos", Gravity: 1.6, Tint: engine.RGB(92, 82, 76), TintMix: 0.72,
+	"phobos": {Key: "phobos", Name: "Phobos", Gravity: 1.6, Grip: 0.8, Tint: engine.RGB(92, 82, 76), TintMix: 0.72,
 		Airless: true, Orbits: true, MarsSize: 120, Ridges: [3]engine.Color{engine.RGB(70, 64, 62), engine.RGB(58, 52, 50), engine.RGB(46, 41, 40)}},
 	// Deimos is smaller and smoother, its craters filled with pale dust.
 	"deimos": {Key: "deimos", Name: "Deimos", Gravity: 1.15, Tint: engine.RGB(148, 132, 116), TintMix: 0.62,
@@ -56,7 +59,9 @@ func BodyOf(d LevelDef) *Body {
 // NewWorldFor is physics.NewWorld under the level's gravity.
 func NewWorldFor(d LevelDef) *physics.World {
 	w := physics.NewWorld()
-	w.Gravity = physics.V(0, -BodyOf(d).Gravity)
+	b := BodyOf(d)
+	w.Gravity = physics.V(0, -b.Gravity)
+	w.Grip = b.Grip
 	return w
 }
 

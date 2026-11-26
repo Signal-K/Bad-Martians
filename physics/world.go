@@ -97,10 +97,13 @@ const (
 )
 
 type World struct {
-	Gravity    Vec
-	Terrain    *Terrain
-	Bodies     []*Body
-	Cons       []*Constraint
+	Gravity Vec
+	Terrain *Terrain
+	Bodies  []*Body
+	Cons    []*Constraint
+	// Grip scales every contact's friction (a loose, dusty world is below 1).
+	// Zero means 1, so a hand-built World keeps its old behaviour.
+	Grip       float64
 	Substeps   int
 	Iterations int
 	Damping    float64 // 1/s air damping
@@ -255,6 +258,9 @@ func (w *World) collide(h float64) {
 		}
 		vt := disp.Dot(tan)
 		mu := mat.Friction * b.Friction
+		if w.Grip > 0 {
+			mu *= w.Grip
+		}
 		maxCorr := mu * d
 		if b.Wheel {
 			roll := b.Omega * h * b.Radius

@@ -53,3 +53,13 @@ func TestUnknownBodyRejected(t *testing.T) {
 		t.Fatalf("deimos level: %+v %v", d, err)
 	}
 }
+
+// Phobos's loose regolith gives the wheels less to bite on; Mars is unchanged.
+func TestBodyGrip(t *testing.T) {
+	if g := NewWorldFor(LevelDefs[0]).Grip; g != 0 && g != 1 {
+		t.Errorf("Mars grip %.2f, want 1", g)
+	}
+	if g := NewWorldFor(LevelDefs[20]).Grip; g >= 1 || g <= 0 {
+		t.Errorf("Phobos grip %.2f, want below Mars's", g)
+	}
+}
