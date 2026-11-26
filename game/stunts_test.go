@@ -163,3 +163,73 @@ func TestStarterDriveOnMissionOneIsNotAStuntShow(t *testing.T) {
 		t.Fatalf("flat-out drive flipped the rover: %+v", r.Stunts.Awarded)
 	}
 }
+
+// throw lifts the starter rover clear of the ground and spins it about its
+// centre at omega rad/s (positive = nose up, a backflip), then lets the real
+// physics bring it down. It reports the stunts the run awarded.
+func throw(t *testing.T, lift, omega float64) *Run {
+	t.Helper()
+	r := NewRun(GetLevel(1), StarterDesign())
+	r.Speed = DriveSpeed
+	c := r.Rover.Center()
+	for _, b := range r.Rover.Bodies {
+		d := b.Pos.Sub(c)
+		b.Pos.Y += lift
+		b.Prev = b.Pos.Sub(physics.V(-d.Y, d.X).Mul(omega * physH))
+	}
+	airborne := false
+	for i := 0; i < 60*12 && r.Outcome == Running; i++ {
+		r.Step(1.0/60, 0)
+		grounded := false
+		for _, b := range r.Rover.Bodies {
+			grounded = grounded || b.OnGround
+		}
+		airborne = airborne || !grounded
+		if airborne && grounded {
+			break
+		}
+	}
+	if !airborne {
+		t.Fatal("the rover never left the ground")
+	}
+	return r
+}
+
+func TestRealPhysicsBackflip(t *testing.T) {
+	r := throw(t, 6, 5)
+	t.Logf("backflip throw: %+v points=%d", r.Stunts.Awarded, r.Stunts.Points)
+	if r.Stunts.Backflips < 1 || r.Stunts.Frontflips != 0 {
+		t.Fatalf("a nose-up spin should be a backflip: back %d, front %d", r.Stunts.Backflips, r.Stunts.Frontflips)
+	}
+	if r.Stunts.Points < StuntFlipPoints {
+		t.Fatalf("the flip paid %d, want at least %d", r.Stunts.Points, StuntFlipPoints)
+	}
+}
+
+func TestRealPhysicsFrontflip(t *testing.T) {
+	r := throw(t, 6, -5)
+	t.Logf("frontflip throw: %+v points=%d", r.Stunts.Awarded, r.Stunts.Points)
+	if r.Stunts.Frontflips < 1 || r.Stunts.Backflips != 0 {
+		t.Fatalf("a nose-down spin should be a frontflip: back %d, front %d", r.Stunts.Backflips, r.Stunts.Frontflips)
+	}
+}
+
+func TestRealPhysicsStraightDropFlipsNothing(t *testing.T) {
+	r := throw(t, 6, 0)
+	t.Logf("straight drop: %+v points=%d", r.Stunts.Awarded, r.Stunts.Points)
+	if r.Stunts.Backflips+r.Stunts.Frontflips != 0 {
+		t.Fatalf("a straight drop flipped: %+v", r.Stunts.Awarded)
+	}
+}
+
+// Stunts are shown but never scored: the verified leaderboard score must be
+// identical with or without them.
+func TestStuntsDoNotChangeScore(t *testing.T) {
+	r := throw(t, 6, 5)
+	if r.Stunts.Points == 0 {
+		t.Skip("no stunt points to compare")
+	}
+	if got, want := r.Score(), ScoreFor(r.Level, r.Outcome == Won, r.SamplesGot(), r.Time); got != want {
+		t.Fatalf("stunts leaked into the score: %+v vs %+v", got, want)
+	}
+}

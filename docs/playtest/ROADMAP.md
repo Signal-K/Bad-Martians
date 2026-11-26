@@ -1,57 +1,77 @@
-# Playtest roadmap and readiness
+# Playtest roadmap: learn how people use it
 
-The decision framework (bars, sample size, what to build for each result)
-lives in Linear: "Beta pipeline and next-version goals". This file adds what
-the 26 Nov playtest feedback requires, and how PostHog answers it.
+We have a first version, a long wishlist, and no idea yet which of it matters.
+This plan is for finding out how people actually play, so the next build comes
+from what we see, including things we did not think of. It supersedes the
+go/no-go framing in the Linear document "Beta pipeline and next-version goals"
+(that document stays as the record of the first guess).
 
-## Playtest steps
+## What we want to learn
 
-1. **Onboarding fix** (shipped): first open goes to the bay, systems unlock by
-   wins, word budgets per screen.
-2. **Beta week**: bug fixes only. Read the dashboards daily.
-3. **Watched sessions**: three to five newcomers, at least one child, playing
-   unprompted. Record where they stall (see "Session script").
-4. **Read-out** (end of Cycle 12): compare to the bars below, pick version 2.
+| Question | Where we look |
+| -- | -- |
+| What do people try to do that we did not design for? | Watched sessions, the "what did you try?" prompt, rover designs in `hm_runs` |
+| Where do they stall, and what do they do next? | Tutorial and funnel events, watched sessions |
+| Why do they play: win, tinker, show off, explore? | Playstyle groups (below), watched sessions |
+| What do they ask for? | Survey "what would you most like next?", free text, what they say aloud |
+| Which parts, places and tricks do they ignore? | `hm_build_launched` parts mix, `hm_run_stunts`, level win rates |
+| Does the early game teach itself? | New-player funnel, `hm_tier_reached`, watched sessions with a child |
 
-## Onboarding and complexity measures
+## Playstyles, the main output
 
-| Question | Event | Bar (proposal) |
-| -- | -- | -- |
-| Do new players start building straight away? | `hm_first_open` then `hm_tutorial_step` | 80% do tutorial step 1 within 60 s |
-| Where does the tutorial lose people? | `hm_tutorial_step` by step, `hm_tutorial_done` skipped | no step loses more than 20% |
-| Do they reach a first drive? | `hm_build_launched` after `hm_first_open` | 60% within 5 min |
-| Do they reach a first win? | `hm_run_finished` won | 40% (existing bar) |
-| Is pacing right? | `hm_tier_reached` tier 1 and 2 | 60% of first-win players reach tier 2 |
-| Did the text cut work? | before/after funnel on 26 Nov | first-drive rate up |
+Group players from behaviour, then describe each group in plain words: what
+they did, what stopped them, what they asked for.
 
-## Stunt measures
-
-| Question | Event | Bar (proposal) |
-| -- | -- | -- |
-| Do players try tricks? | `hm_run_stunts` | 25% of drives with a win also earn stunt points |
-| Which tricks? | `hm_run_stunts` backflips, frontflips, wheelie_s, best_air | one trick is not 90% of points |
-| Does it replace the goal? | win rate with stunts vs without | win rate does not fall |
-
-## Playstyles
-
-Group players from the data, not by guessing:
 - **Racers**: low time, few samples, rarely scrape.
-- **Collectors**: all samples, over par.
-- **Tinkerers**: many `hm_build_launched` per mission, parts mix varies.
-- **Stunters**: stunt points above the median.
-Each group's retention and difficulty tell us which version 2 bet it needs.
+- **Collectors**: every sample, over par.
+- **Tinkerers**: many builds per mission, varied parts.
+- **Stunters**: stunt points above the median, or repeated flip attempts.
+- **Bouncers**: quit in the first two minutes. The most important group.
 
-## When can version 2 start?
+## Ways of seeing, in order of value
 
-All of these, with at least 30 players:
-1. The existing bars in the Linear doc are met or consciously overridden.
-2. The onboarding bars above are met.
-3. Watched sessions show no new blocking confusion.
-4. No stop condition (lost progress, crash on load, unwinnable mission, fake leaderboard entry) is open.
-If we reach 30 players and miss a bar, the answer is a fix, not version 2.
+1. **Watched sessions** (3 to 5, one with a child). Say only "play this".
+   Note the first tap, first read, first "what do I do", first drive, first win,
+   when they stop, and what they thought the goal was.
+2. **Surprise log.** One line per surprise, in the Beta log, as it happens: a
+   design nobody planned, a trick, a misunderstanding, an exploit.
+3. **One free-text prompt** after a drive: "What did you try that didn't work?"
+4. **Events** (PostHog dashboard "Haphazard Martians release"), for scale and to
+   check what the sessions suggest: new-player funnel, tiers reached, drives
+   and wins by mission, daily missions, return, stunts.
+5. **Rover designs**, the richest data we have: look at what players build, not
+   just whether they won.
 
-## Session script (watched play)
+## Wishlist as hypotheses
 
-Say only "play this". Do not explain. Note: first thing they tap, first thing
-they read, first time they say "what do I do", first drive, first win, when
-they stop. Ask afterwards: what did you think the goal was?
+Each wishlist item says what we would have to see to justify building it.
+Fill in the evidence column as it comes; add rows for things players show us.
+
+| Wishlist item | Build it if we see | Evidence so far |
+| -- | -- | -- |
+| More parts, chassis, arms (MAR-21) | Builds converge on one design; players hit the credit limit and rebuild a lot | none yet |
+| New locations | Players finish content quickly, daily win rate high | none yet |
+| Friends and race ghosts (MAR-31) | Players return for dailies, check the leaderboard, ask "who beat me" | none yet |
+| Story objectives (MAR-32, MAR-33) | Players ask what the point is, or drop out after the first win | none yet |
+| Real-image review (MAR-26) | Players return and ask for purpose beyond the score | none yet |
+| Stunt levels (MAR-85) | Players try flips and fail, or stunt points are a large share of play | none yet |
+| Better onboarding | Bouncers are a large group; sessions show stalls before the first drive | none yet |
+
+## Safety checks, not goals
+
+If one of these happens, fix it before learning anything else: progress lost
+on sync, a crash on load on a common phone, a mission that cannot be won, a
+fake leaderboard entry visible to everyone, a production backend missing a
+collection the game writes to.
+
+## How many people
+
+There is no player-count gate. Under about 30 players, treat patterns as
+hints and say so. A pattern seen in three watched sessions and the events
+together is worth acting on; a number alone is not.
+
+## Read-out
+
+At the end of Cycle 12, write one page: the playstyle groups and what each
+needs, the surprises, the wishlist table with evidence filled in, and the one
+or two things to build next, including anything not on the wishlist.

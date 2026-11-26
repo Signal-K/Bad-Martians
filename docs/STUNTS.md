@@ -37,6 +37,13 @@ and impact emphasis on the terrain layer; both are follow-up tickets.
 `hm_run_stunts` once per finished drive that earned points: level, body,
 points, count, backflips, frontflips, wheelie_s, best_air.
 
+## Tests
+
+`game/stunts_test.go`: rule tests on hand-posed rovers, and real-physics
+tests that throw the starter rover into the air with a spin and check a
+nose-up spin is a backflip, nose-down a frontflip, a straight drop neither,
+and that stunts never change `Score()`. Run: `go test ./game -run 'Stunt|RealPhysics'`.
+
 ## Still to build
 
 - Levels with jumps and ramps, so tricks are reachable without luck.
