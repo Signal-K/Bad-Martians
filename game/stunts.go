@@ -42,6 +42,15 @@ const (
 	StuntPopupSeconds  = 1.6
 )
 
+// Anti-farming. Leaning in the air pumps spin into every bounce, so a rover can
+// hop on the spot and spin forever. Jump stunts therefore pay only on landing,
+// and only for a jump that gets somewhere.
+const (
+	StuntMinJump   = 2.5 // metres from take-off to landing
+	StuntNewGround = 6.0 // a paid jump must land this far past the last paid one
+	StuntMaxFlips  = 3   // flips paid for one jump
+)
+
 // Stunt is one awarded trick.
 type Stunt struct {
 	Kind   StuntKind
@@ -68,7 +77,10 @@ type Stunts struct {
 
 	air      float64 // seconds airborne in this jump
 	spin     float64 // rotation accumulated this jump
-	flips    int     // flips already paid in this jump
+	takeX    float64 // where this jump left the ground
+	paidX    float64 // where the last paid jump landed
+	paid     bool    // a jump has been paid
+	wasAir   bool
 	wheelie  float64 // seconds of the current wheelie
 	paidSecs int     // whole wheelie seconds already paid
 	lapse    float64 // seconds since the wheelie condition last held
@@ -142,35 +154,52 @@ func (s *Stunts) Update(rv *Rover, dt float64) {
 		}
 	}
 	if grounded {
-		s.land()
+		s.land(rv.Center().X)
 		s.updateWheelie(a, f, dt)
 		return
 	}
-	// airborne: wheelies end, rotation and time accumulate
+	// airborne: wheelies end, rotation and time accumulate; nothing pays until
+	// the rover lands
 	s.endWheelie()
+	if !s.wasAir {
+		s.wasAir, s.takeX = true, rv.Center().X
+	}
 	s.air += dt
 	s.spin += d
-	owed := int(math.Abs(s.spin)/(2*math.Pi) + (1 - flipCredit))
-	for s.flips < owed {
+}
+
+// land closes a jump. Flips and long airtime pay now, if the jump covered real
+// ground and landed past the last paid one; either way the jump starts over.
+func (s *Stunts) land(x float64) {
+	if !s.wasAir {
+		return
+	}
+	spin, air, from := s.spin, s.air, s.takeX
+	s.wasAir, s.air, s.spin = false, 0, 0
+	if x-from < StuntMinJump || (s.paid && x < s.paidX+StuntNewGround) {
+		return
+	}
+	paid := false
+	owed := min(StuntMaxFlips, int(math.Abs(spin)/(2*math.Pi)+(1-flipCredit)))
+	for n := 1; n <= owed; n++ {
 		kind := StuntBackflip
-		if s.spin < 0 {
+		if spin < 0 {
 			kind = StuntFrontflip
 			s.Frontflips++
 		} else {
 			s.Backflips++
 		}
-		s.flips++
-		s.award(Stunt{Kind: kind, Points: StuntFlipPoints, Count: s.flips})
+		s.award(Stunt{Kind: kind, Points: StuntFlipPoints, Count: n})
+		paid = true
 	}
-}
-
-// land closes a jump: long airtime pays, and the spin starts over.
-func (s *Stunts) land() {
-	if s.air >= StuntAirtimeMin {
-		s.award(Stunt{Kind: StuntAirtime, Points: StuntAirtimePoints, Secs: s.air})
-		s.BestAir = math.Max(s.BestAir, s.air)
+	if air >= StuntAirtimeMin {
+		s.award(Stunt{Kind: StuntAirtime, Points: StuntAirtimePoints, Secs: air})
+		s.BestAir = math.Max(s.BestAir, air)
+		paid = true
 	}
-	s.air, s.spin, s.flips = 0, 0, 0
+	if paid {
+		s.paid, s.paidX = true, x
+	}
 }
 
 func (s *Stunts) endWheelie() {

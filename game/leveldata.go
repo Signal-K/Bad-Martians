@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/fs"
+	"math"
 	"sort"
 	"strings"
 	"time"
@@ -34,6 +35,15 @@ type levelFile struct {
 	MaxWidth int                `json:"max_width,omitempty"`
 	MaxParts int                `json:"max_parts,omitempty"`
 	MaxMotor int                `json:"max_motors,omitempty"`
+	Ramps    []rampFile         `json:"ramps,omitempty"`
+}
+
+// rampFile is a launch ramp in a level file (see Ramp).
+type rampFile struct {
+	At   float64 `json:"at"`
+	Rise float64 `json:"rise"`
+	Run  float64 `json:"run"`
+	Fall float64 `json:"fall,omitempty"`
 }
 
 // Reward is what a mission pays out on completion.
@@ -107,6 +117,9 @@ func (f levelFile) def() (LevelDef, error) {
 	d := LevelDef{ID: f.ID, Name: f.Name, Blurb: f.Blurb, Biome: f.Biome, Body: f.Body, Length: f.Length,
 		Seed: f.Seed, Credits: f.Credits, Par: f.Par, Hill: f.Hill, Traction: f.Traction,
 		Gaps: f.Gaps, GapWidth: f.GapWidth, MaxWidth: f.MaxWidth, MaxParts: f.MaxParts, MaxMotor: f.MaxMotor}
+	if err := f.addRamps(&d); err != nil {
+		return d, err
+	}
 	switch {
 	case f.ID <= 0:
 		return d, fmt.Errorf("id must be positive")
@@ -309,3 +322,42 @@ func mustLoad() ([]LevelDef, []Mission) {
 // LevelDefs is the campaign, loaded from data/levels at startup. Missions are
 // the dated, hand-authored extras from data/missions.
 var LevelDefs, Missions = mustLoad()
+
+// Ramp limits, so a typo cannot make an impossible or unfair jump.
+const (
+	maxRamps     = 4
+	maxRampAngle = 45 * math.Pi / 180
+	rampGap      = 6.0  // metres of ground between two ramps
+	rampClearEnd = 10.0 // a ramp's landing ends this far before the finish
+)
+
+// addRamps validates the file's ramps and adds them to d.
+func (f levelFile) addRamps(d *LevelDef) error {
+	if len(f.Ramps) > maxRamps {
+		return fmt.Errorf("level %d: at most %d ramps", f.ID, maxRamps)
+	}
+	for i, r := range f.Ramps {
+		rp := Ramp{At: r.At, Rise: r.Rise, Run: r.Run, Fall: r.Fall}
+		switch {
+		case r.At < 0.1 || r.At > 0.8:
+			return fmt.Errorf("level %d ramp %d: at %.2f must be between 0.1 and 0.8", f.ID, i+1, r.At)
+		case r.Rise < 0.3 || r.Rise > 6:
+			return fmt.Errorf("level %d ramp %d: rise %.2f must be between 0.3 and 6 m", f.ID, i+1, r.Rise)
+		case r.Run < 2 || r.Run > 24:
+			return fmt.Errorf("level %d ramp %d: run %.2f must be between 2 and 24 m", f.ID, i+1, r.Run)
+		case r.Fall < 0 || r.Fall > 10:
+			return fmt.Errorf("level %d ramp %d: fall %.2f must be between 0 and 10 m", f.ID, i+1, r.Fall)
+		case rp.Angle() > maxRampAngle:
+			return fmt.Errorf("level %d ramp %d: steeper than 45 degrees", f.ID, i+1)
+		case rp.End(f.Length) > f.Length-rampClearEnd:
+			return fmt.Errorf("level %d ramp %d: ends too close to the finish", f.ID, i+1)
+		}
+		for _, o := range d.Ramps {
+			if rp.Foot(f.Length) < o.End(f.Length)+rampGap && o.Foot(f.Length) < rp.End(f.Length)+rampGap {
+				return fmt.Errorf("level %d ramp %d: overlaps another ramp", f.ID, i+1)
+			}
+		}
+		d.Ramps = append(d.Ramps, rp)
+	}
+	return nil
+}

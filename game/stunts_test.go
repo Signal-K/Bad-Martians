@@ -9,14 +9,19 @@ import (
 
 // stuntRover is a two-wheel rover pose we can pitch by hand.
 func stuntRover() (*Rover, *physics.Body, *physics.Body) {
-	a := &physics.Body{Wheel: true, Pos: physics.V(0, 1)}
-	f := &physics.Body{Wheel: true, Pos: physics.V(2, 1)}
+	testX = 0
+	a := &physics.Body{Wheel: true, Pos: physics.V(0, 1), InvMass: 1}
+	f := &physics.Body{Wheel: true, Pos: physics.V(2, 1), InvMass: 1}
 	return &Rover{Bodies: []*physics.Body{a, f}}, a, f
 }
 
+// testX is how far along the course the posed rover is; jumps pay only when
+// the rover travels, so the helpers advance it.
+var testX float64
+
 // pitch puts the rover at an angle (rad, positive nose up) about its middle.
 func pitch(a, f *physics.Body, ang float64) {
-	c := physics.V(1, 1)
+	c := physics.V(1+testX, 1)
 	a.Pos = physics.V(c.X-math.Cos(ang), c.Y-math.Sin(ang))
 	f.Pos = physics.V(c.X+math.Cos(ang), c.Y+math.Sin(ang))
 }
@@ -27,6 +32,7 @@ func spinFor(st *Stunts, rv *Rover, a, f *physics.Body, turns, secs float64) {
 	a.OnGround, f.OnGround = false, false
 	n := int(secs / dt)
 	for i := 1; i <= n; i++ {
+		testX += 6 * dt // a real jump travels
 		pitch(a, f, 2*math.Pi*turns*float64(i)/float64(n))
 		st.Update(rv, dt)
 	}
@@ -58,6 +64,7 @@ func TestBackflipAndFrontflip(t *testing.T) {
 		st := NewStunts(rv)
 		land(st, rv, a, f)
 		spinFor(st, rv, a, f, tc.turns, 0.9)
+		land(st, rv, a, f) // flips pay on landing
 		if got := count(st, tc.kind); got != tc.n {
 			t.Errorf("%.1f turns: %d %s, want %d", tc.turns, got, tc.kind, tc.n)
 		}
@@ -90,6 +97,8 @@ func TestAirtimePaysOnlyWhenLongEnough(t *testing.T) {
 		land(st, rv, a, f)
 		a.OnGround, f.OnGround = false, false
 		for i := 0; i < int(tc.secs*60); i++ {
+			testX += 6.0 / 60
+			pitch(a, f, 0)
 			st.Update(rv, 1.0/60)
 		}
 		land(st, rv, a, f)
@@ -143,6 +152,7 @@ func TestTakeReturnsEachStuntOnce(t *testing.T) {
 	st := NewStunts(rv)
 	land(st, rv, a, f)
 	spinFor(st, rv, a, f, 1, 0.9)
+	land(st, rv, a, f)
 	if n := len(st.Take()); n != 1 {
 		t.Fatalf("first take: %d, want 1", n)
 	}
@@ -175,7 +185,7 @@ func throw(t *testing.T, lift, omega float64) *Run {
 	for _, b := range r.Rover.Bodies {
 		d := b.Pos.Sub(c)
 		b.Pos.Y += lift
-		b.Prev = b.Pos.Sub(physics.V(-d.Y, d.X).Mul(omega * physH))
+		b.Prev = b.Pos.Sub(physics.V(-d.Y*omega+6, d.X*omega).Mul(physH)) // spinning, and travelling at 6 m/s
 	}
 	airborne := false
 	for i := 0; i < 60*12 && r.Outcome == Running; i++ {
@@ -231,5 +241,59 @@ func TestStuntsDoNotChangeScore(t *testing.T) {
 	}
 	if got, want := r.Score(), ScoreFor(r.Level, r.Outcome == Won, r.SamplesGot(), r.Time); got != want {
 		t.Fatalf("stunts leaked into the score: %+v vs %+v", got, want)
+	}
+}
+
+// Spinning in the air without going anywhere is not a stunt: lean pumps spin
+// into bounces, so hopping on the spot would otherwise pay forever.
+func TestHoppingOnTheSpotPaysNothing(t *testing.T) {
+	rv, a, f := stuntRover()
+	st := NewStunts(rv)
+	land(st, rv, a, f)
+	for hop := 0; hop < 5; hop++ {
+		a.OnGround, f.OnGround = false, false
+		for i := 1; i <= 120; i++ { // two seconds up, a full turn, straight up and down
+			pitch(a, f, 2*math.Pi*float64(i)/120)
+			st.Update(rv, 1.0/60)
+		}
+		land(st, rv, a, f)
+	}
+	if st.Points != 0 {
+		t.Fatalf("hopping on the spot paid %d: %+v", st.Points, st.Awarded)
+	}
+}
+
+// A second jump that lands where the last paid one did is not new ground.
+func TestRepeatJumpOnTheSameGroundPaysOnce(t *testing.T) {
+	rv, a, f := stuntRover()
+	st := NewStunts(rv)
+	land(st, rv, a, f)
+	spinFor(st, rv, a, f, 1, 0.9)
+	land(st, rv, a, f)
+	first := st.Points
+	if first == 0 {
+		t.Fatal("the first jump should pay")
+	}
+	back := testX
+	for i := 0; i < 2; i++ { // jump again, landing short of new ground
+		testX = back - 4
+		land(st, rv, a, f)
+		spinFor(st, rv, a, f, 1, 0.9)
+		testX = back // lands level with the paid jump, not past it
+		land(st, rv, a, f)
+	}
+	if st.Points != first {
+		t.Fatalf("repeats on paid ground paid %d more", st.Points-first)
+	}
+}
+
+// A flip the rover does not survive to land never pays.
+func TestUnlandedFlipPaysNothing(t *testing.T) {
+	rv, a, f := stuntRover()
+	st := NewStunts(rv)
+	land(st, rv, a, f)
+	spinFor(st, rv, a, f, 2, 1.2) // spins twice, then the run ends in the air
+	if st.Points != 0 {
+		t.Fatalf("an unlanded jump paid %d", st.Points)
 	}
 }
