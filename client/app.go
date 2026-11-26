@@ -41,6 +41,7 @@ func New(host engine.Host, scene string) *App {
 	game.Setup(g)
 	if scene == "" || !g.OpenStandalone(scene) {
 		if game.FirstOpen(host) { // a new player builds and drives before reading anything
+			game.Track(host, game.EvFirstOpen, map[string]any{"route": "bay"})
 			g.Load(game.SceneBuild, game.FirstMissionSession(host))
 		} else {
 			g.Load(game.SceneMap, nil)

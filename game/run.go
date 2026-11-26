@@ -73,6 +73,10 @@ type Run struct {
 	Scrapes  int
 	scraping []bool
 
+	// Stunts watches for flips, wheelies and airtime (stunts.go). Its points
+	// are shown to the player and are not part of Score().
+	Stunts *Stunts
+
 	// for Diagnose: the rover's built shape, its length, its speed at each
 	// crevasse edge, and the cause frozen when the run failed
 	built             []engine.Vec2
@@ -101,6 +105,7 @@ func NewRun(l *Level, d Design) *Run {
 	r := &Run{Level: l, World: w, Got: make([]bool, len(l.Samples))}
 	r.Rover = SpawnRover(w, d, x, l.Terrain.HeightAt(x))
 	r.scraping = make([]bool, len(r.Rover.Bodies))
+	r.Stunts = NewStunts(r.Rover)
 	r.lastC = r.Rover.Center()
 	r.BestX = r.lastC.X
 	r.measure()
@@ -224,6 +229,7 @@ func (r *Run) Step(dt, throttle float64) {
 	r.lean(dt)
 	r.World.Step(dt)
 	r.stats(dt)
+	r.Stunts.Update(r.Rover, dt)
 	r.watchGaps((r.Rover.Center().X - r.lastC.X) / dt)
 	for i, b := range r.Rover.Bodies {
 		hit := b.OnGround && !b.Wheel
