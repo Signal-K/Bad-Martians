@@ -22,6 +22,7 @@ type ResultArg struct {
 	Damaged  bool    // a frame or the mast hit the ground during the drive
 	Ghost    *Ghost  // this run's recording, kept if it is the level's best
 	Recorded bool    // progress saved and run event sent (set on first show)
+	Inputs   string  // recorded stick inputs, sent with a win so the server can replay it
 
 	Cause Cause // why a failed run failed
 
@@ -77,8 +78,12 @@ func resultScene(g *engine.Game, arg any) *engine.Scene {
 		for _, c := range ses.Design.Cells {
 			design = append(design, map[string]any{"x": c.X, "y": c.Y, "k": string(c.K)})
 		}
+		inputs := ""
+		if ra.Outcome == Won { // only a win is replayed; keep the offline queue small
+			inputs = ra.Inputs
+		}
 		payload, _ := json.Marshal(map[string]any{
-			"level": lvl.ID, "won": ra.Outcome == Won, "outcome": ra.Outcome.Message(), "stars": ra.Stars,
+			"level": lvl.ID, "inputs": inputs, "won": ra.Outcome == Won, "outcome": ra.Outcome.Message(), "stars": ra.Stars,
 			"time": math.Round(ra.Time*10) / 10, "samples": ra.Samples, "score": ra.Score.Total(),
 			"cost": ses.Design.Cost(), "design": design, "rover": ses.Name, "damaged": ra.Damaged,
 			"distance": math.Round(ra.Distance*10) / 10, "progress": math.Round(ra.Distance/math.Max(1, lvl.GoalX-lvl.StartX)*100) / 100,

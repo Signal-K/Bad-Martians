@@ -29,7 +29,7 @@
   }
 
   const toRecord = (ev, p) => {
-    if (ev === 'run') return ['hm_runs', { level: p.level, won: p.won, stars: p.stars, time: p.time, samples: p.samples, score: p.score, cost: p.cost, design: p.design }];
+    if (ev === 'run') return ['hm_runs', { level: p.level, won: p.won, stars: p.stars, time: p.time, samples: p.samples, score: p.score, cost: p.cost, design: p.design, inputs: p.inputs || '' }];
     if (ev === 'label') return ['hm_labels', { level: p.level, segment: p.segment, x0: p.x0, x1: p.x1, class: p.class, gold: p.gold, correct: p.correct }];
     return null;
   };
@@ -612,6 +612,11 @@
         capture_pageview: true,
         loaded: (p) => {
           p.register({ game: 'haphazard-martians', build: cfg.build || 'dev' });
+          // First-touch source: the visit that brought the player (docs/LAUNCH_LINKS.md) is
+          // stamped on every later event, so a funnel can be broken down by utm_source.
+          const q = new URLSearchParams(location.search), utm = {};
+          for (const k of ['utm_source', 'utm_medium', 'utm_campaign']) if (q.get(k)) utm[k] = q.get(k).slice(0, 64);
+          if (Object.keys(utm).length) p.register_once(utm);
           ph = p;
           while (phQueue.length) { const [e, pr] = phQueue.shift(); p.capture(e, pr); }
         },

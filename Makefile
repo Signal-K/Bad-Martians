@@ -1,4 +1,4 @@
-.PHONY: all wasm server run test desktop clean playtest
+.PHONY: all wasm server run test test-wasm desktop clean playtest
 GOROOT_DIR := $(shell go env GOROOT)
 
 all: wasm server
@@ -17,6 +17,13 @@ run: wasm
 
 test:
 	go test ./...
+
+# The server replays drives recorded in browsers (MAR-62), so the sim must give
+# the same bits under WASM. Runs the replay tests in Node with a clean
+# environment (a big one overflows the WASM argument limit).
+test-wasm:
+	printf '#!/bin/sh\nexec env -i PATH="$$PATH" "$(GOROOT_DIR)/lib/wasm/go_js_wasm_exec" "$$@"\n' > bin-wasmexec.sh && chmod +x bin-wasmexec.sh
+	GOOS=js GOARCH=wasm go test ./game -run 'Replay|CheckRun|InputRecorder' -exec $(CURDIR)/bin-wasmexec.sh; rc=$$?; rm -f bin-wasmexec.sh; exit $$rc
 
 desktop:
 	go run ./cmd/desktop

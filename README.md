@@ -42,12 +42,17 @@ until you sign in. Once signed in, campaign progress, tutorial and school
 completion, and expedition checkpoints sync across devices. Existing browser
 progress is adopted when you sign in; reconnecting retries an offline sync.
 
-Leaderboard runs are checked on the server (`runcheck/`, `game.CheckRun`): the
-score must be one the scoring rules can produce for the samples and time, the
-design must be legal and cost what it says, and a player is limited to 20 runs a
-minute. It cannot replay a drive, because the client does not record stick inputs.
+Leaderboard runs are checked on the server (`runcheck/`, `game.CheckRun`). A
+win must carry the stick inputs the client recorded; the server drives the same
+rover on the same level with them (`game.Replay`) and the drive has to finish
+with the same samples, stars and time. The score must be one the scoring rules
+produce for that, the design must be legal and cost what it says, and a player is
+limited to 20 runs a minute. The sim is bit-identical on every platform, so a
+browser's drive replays exactly on the server (`make test-wasm` checks it).
 The standalone server registers it; the shared Star Sailors backend must call
-`runcheck.Register(app)` too, or production keeps accepting any score.
+`runcheck.Register(app)` and run this repo's migrations (4 adds `hm_runs.inputs`),
+or production keeps accepting any score. Deploy the game build first: a
+cached older client sends wins without inputs, which the server refuses.
 
 ## Layout
 

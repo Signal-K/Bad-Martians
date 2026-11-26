@@ -18,6 +18,7 @@ func runScene(g *engine.Game, arg any) *engine.Scene {
 	endTimer := 0.0
 	ghost := LoadGhost(g.Host, lvl.ID)
 	rec := NewGhostRecorder(run)
+	inputs := &InputRecorder{} // replayed by the server to check a win (MAR-62)
 
 	ro := s.Spawn("rover")
 	ro.Layer = 5
@@ -262,6 +263,7 @@ func runScene(g *engine.Game, arg any) *engine.Scene {
 				Track(g.Host, EvTutorialDone, map[string]any{"skipped": false})
 			}
 		}
+		th, lean = inputs.Next(th, lean)
 		flash = max(0, flash-dt/1.6)
 		run.Lean = lean
 		run.Step(dt, th)
@@ -285,7 +287,7 @@ func runScene(g *engine.Game, arg any) *engine.Scene {
 				g.Load(SceneResult, &ResultArg{Session: ses, Outcome: run.Outcome, Stars: run.Stars(), Cause: cause,
 					Time: run.Time, Samples: run.SamplesGot(), Total: len(run.Got), Score: run.Score(),
 					Distance: run.Progress() * (lvl.GoalX - lvl.StartX), TopSpeed: run.TopSpeed, MaxAir: run.MaxAir,
-					Damaged: run.Damaged(), Ghost: rec.Ghost(run.Time)})
+					Damaged: run.Damaged(), Ghost: rec.Ghost(run.Time), Inputs: inputs.Encode()})
 			}
 		}
 	}

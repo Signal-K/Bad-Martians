@@ -16,16 +16,18 @@ type RunClaim struct {
 	Cost    int
 	Time    float64
 	Design  json.RawMessage // [{x, y, k}, ...]
+	Inputs  string          // recorded stick inputs (InputRecorder.Encode); required to claim a win
 }
 
 // CheckRun is the server-side sanity check for a submitted run (MAR-62). It
 // returns "" when the claim is plausible, or the first reason it is not.
 //
-// It cannot replay the drive: the client does not record stick inputs, so a
-// design alone does not reproduce a win. What it does catch is a record that
-// cannot have come from the real game: unknown level, a score the scoring rules
-// cannot produce for those samples and that time, more samples than the level
-// holds, or a rover that is illegal or does not cost what it says.
+// A claimed win must carry the recorded stick inputs, and the server drives the
+// same design on the same level with them (Replay). The replay has to win, with
+// the same samples, stars and time. Beyond that it catches a record that cannot
+// have come from the real game: unknown level, a score the scoring rules cannot
+// produce for those samples and that time, more samples than the level holds, or
+// a rover that is illegal or does not cost what it says.
 func CheckRun(c RunClaim) string {
 	l := GetLevel(c.Level)
 	if l == nil {
@@ -72,6 +74,22 @@ func CheckRun(c RunClaim) string {
 	}
 	if l.MaxParts > 0 && len(d.Cells) > l.MaxParts {
 		return fmt.Sprintf("%d parts, lander carries %d", len(d.Cells), l.MaxParts)
+	}
+	if c.Won {
+		run, err := Replay(l, d, c.Inputs)
+		if err != nil {
+			return err.Error()
+		}
+		switch {
+		case run.Outcome != Won:
+			return "the recorded drive does not reach the finish"
+		case run.SamplesGot() != c.Samples:
+			return fmt.Sprintf("the recorded drive collects %d samples, claimed %d", run.SamplesGot(), c.Samples)
+		case run.Stars() != c.Stars:
+			return fmt.Sprintf("the recorded drive earns %d stars, claimed %d", run.Stars(), c.Stars)
+		case math.Abs(run.Time-c.Time) > 0.051: // sent rounded to 0.1 s
+			return fmt.Sprintf("the recorded drive takes %.1fs, claimed %.1fs", run.Time, c.Time)
+		}
 	}
 	return ""
 }

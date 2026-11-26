@@ -34,7 +34,7 @@ func Register(app core.App) {
 		if why := game.CheckRun(game.RunClaim{
 			Level: r.GetInt("level"), Won: r.GetBool("won"), Stars: r.GetInt("stars"),
 			Samples: r.GetInt("samples"), Score: r.GetInt("score"), Cost: r.GetInt("cost"),
-			Time: r.GetFloat("time"), Design: []byte(r.GetString("design")),
+			Time: r.GetFloat("time"), Design: []byte(r.GetString("design")), Inputs: r.GetString("inputs"),
 		}); why != "" {
 			e.App.Logger().Warn("hm_runs rejected", "user", r.GetString("user"), "why", why)
 			return apis.NewBadRequestError("Run rejected: "+why, nil)
