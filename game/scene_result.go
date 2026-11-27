@@ -19,6 +19,7 @@ type ResultArg struct {
 	Distance float64 // metres of the course covered
 	TopSpeed float64 // m/s
 	MaxAir   float64 // longest jump, seconds
+	Stunts   *Stunts // tricks from the drive; shown, not scored
 	Damaged  bool    // a frame or the mast hit the ground during the drive
 	Ghost    *Ghost  // this run's recording, kept if it is the level's best
 	Recorded bool    // progress saved and run event sent (set on first show)
@@ -57,10 +58,14 @@ func resultScene(g *engine.Game, arg any) *engine.Scene {
 	if !ra.Recorded {
 		ra.Recorded = true
 		if ra.Outcome == Won {
+			before := DisclosureTier(prog)
 			if cur := prog.Levels[lvl.ID].Best; ra.Ghost.valid() && (cur == 0 || ra.Time < cur || LoadGhost(g.Host, lvl.ID) == nil) {
 				SaveGhost(g.Host, lvl.ID, ra.Ghost)
 			}
 			prog.Record(lvl.ID, ra.Stars, ra.Time, ra.Score.Total())
+			if after := DisclosureTier(prog); after > before {
+				Track(g.Host, EvTierReached, map[string]any{"tier": after, "wins": WonMissions(prog)})
+			}
 			for _, m := range Missions {
 				if m.Level.ID == lvl.ID && !prog.ClaimedMissions[m.Date] {
 					if prog.ClaimedMissions == nil {
@@ -204,6 +209,9 @@ func resultScene(g *engine.Game, arg any) *engine.Scene {
 			rover := ra.roverName()
 			parts := fmt.Sprintf("%s cost %d credits", rover, ses.Design.Cost())
 			r.Text(fmt.Sprintf("Best %d%s   ·   %s", best, bestTime, parts), 56, 380, sizeSmall, colMuted, engine.AlignLeft)
+			if ra.Stunts != nil && ra.Stunts.Points > 0 {
+				r.Text(fmt.Sprintf("Stunts +%d", ra.Stunts.Points), 56, 404, sizeSmall, colChipLt, engine.AlignLeft)
+			}
 		}
 
 		drawPanel(r, 572, 124, 360, 310, "Rover")

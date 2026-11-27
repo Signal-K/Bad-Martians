@@ -2,6 +2,7 @@ package game
 
 import (
 	"encoding/json"
+	"math"
 
 	"github.com/signal-k/haphazard-martians/engine"
 )
@@ -19,6 +20,9 @@ const (
 	EvAccountOpened = "hm_account_opened" // sync state, has_username
 	EvDailyStarted  = "hm_daily_started"  // date, level
 	EvDailyWon      = "hm_daily_won"      // date, level, stars: the first win of a daily mission
+	EvFirstOpen     = "hm_first_open"     // a new player was sent straight to the first rover bay
+	EvTierReached   = "hm_tier_reached"   // tier, wins: the map showed more of the game
+	EvRunStunts     = "hm_run_stunts"     // level, points, backflips, frontflips, wheelie_s, best_air, count: once per finished drive
 )
 
 // Track emits one analytics event through the host.
@@ -54,5 +58,14 @@ func sessionProps(ses *Session) map[string]any {
 	if ses.Exp != nil {
 		p["expedition_stage"] = ses.Exp.Index + 1
 	}
+	return p
+}
+
+// stuntProps describe a finished drive's tricks for analytics.
+func stuntProps(ses *Session, st *Stunts) map[string]any {
+	p := sessionProps(ses)
+	p["points"], p["count"] = st.Points, len(st.Awarded)
+	p["backflips"], p["frontflips"] = st.Backflips, st.Frontflips
+	p["wheelie_s"], p["best_air"] = math.Round(st.WheelieSecs*10)/10, math.Round(st.BestAir*10)/10
 	return p
 }

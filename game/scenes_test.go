@@ -44,6 +44,15 @@ func newHarness(t *testing.T) *harness {
 	return hs
 }
 
+// unlockAll saves enough wins that the map shows every tier of the game.
+func (h *harness) unlockAll() {
+	p := LoadProgress(h.h)
+	for _, d := range LevelDefs[:tierFullWins] {
+		p.Levels[d.ID] = LevelProgress{Stars: 1, Score: 100}
+	}
+	p.Save(h.h)
+}
+
 func (h *harness) frames(n int, in engine.Input) {
 	for i := 0; i < n; i++ {
 		h.g.Tick(engine.FixedDT, in)
@@ -236,6 +245,7 @@ func TestLegacyReviewCreditsSurviveChangedTerrain(t *testing.T) {
 
 func TestDailyMissionOpensWithReward(t *testing.T) {
 	h := newHarness(t)
+	h.unlockAll()
 	h.g.Load(SceneMap, nil)
 	h.frames(2, engine.Input{})
 	h.clickButton("Daily mission") // not locked behind the campaign
@@ -251,6 +261,7 @@ func TestDailyMissionOpensWithReward(t *testing.T) {
 
 func TestDailyMissionOnlyAdvertisesAvailableRewards(t *testing.T) {
 	h := newHarness(t)
+	h.unlockAll()
 	h.g.Load(SceneMap, nil)
 	h.frames(2, engine.Input{})
 	r := &textR{}

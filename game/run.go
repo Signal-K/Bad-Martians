@@ -73,6 +73,10 @@ type Run struct {
 	Scrapes  int
 	scraping []bool
 
+	// Stunts watches for flips, wheelies and airtime (stunts.go). Its points
+	// are shown to the player and are not part of Score().
+	Stunts *Stunts
+
 	// for Diagnose: the rover's built shape, its length, its speed at each
 	// crevasse edge, and the cause frozen when the run failed
 	built             []engine.Vec2
@@ -92,6 +96,13 @@ const physH = engine.FixedDT / 10
 const (
 	leanAccel = 10.0 // rad/s² of lean at full stick
 	leanSpin  = 2.6  // rad/s: leaning stops adding spin past this
+	// With a wheel on the ground the rover pivots on it, and spin about the
+	// centre of mass becomes a hop when that wheel is pushed into the ground
+	// (2.6 rad/s lifted it ~1.5 m, and leaning through the landing pumped it
+	// again). Rolling a wheelie needs far less.
+	leanSpinGround = 0.9
+	liftoffRise    = 1.0 // m/s of climb that means the rover has left the ground
+	groundedGap    = 0.4 // m of clearance still counted as on the ground
 )
 
 func NewRun(l *Level, d Design) *Run {
@@ -101,6 +112,7 @@ func NewRun(l *Level, d Design) *Run {
 	r := &Run{Level: l, World: w, Got: make([]bool, len(l.Samples))}
 	r.Rover = SpawnRover(w, d, x, l.Terrain.HeightAt(x))
 	r.scraping = make([]bool, len(r.Rover.Bodies))
+	r.Stunts = NewStunts(r.Rover)
 	r.lastC = r.Rover.Center()
 	r.BestX = r.lastC.X
 	r.measure()
@@ -158,25 +170,41 @@ func (r *Run) lean(dt float64) {
 	bs := r.Rover.Bodies
 	c := physics.Center(bs)
 	h := r.World.SubstepDT(dt)
-	var l, inertia float64
+	var l, inertia, climbing, mass float64
 	for _, b := range bs {
 		m := 1 / b.InvMass
 		d, v := b.Pos.Sub(c), b.Vel(h)
+		climbing += m * v.Y
+		mass += m
 		l += m * (d.X*v.Y - d.Y*v.X)
 		inertia += m * d.Dot(d)
 	}
 	if inertia < 1e-6 {
 		return
 	}
-	if w := l / inertia; w*r.Lean > leanSpin {
+	climbing /= mass
+	grounded := false
+	for _, b := range bs {
+		// OnGround flickers while a rover rests (gravity lifts it off between
+		// substeps), so count anything within a hand's breadth of the surface.
+		if b.OnGround || b.Pos.Y-b.Radius-r.World.Terrain.HeightAt(b.Pos.X) < groundedGap {
+			grounded = true
+			break
+		}
+	}
+	if grounded && climbing > liftoffRise {
+		grounded = false // leaving the ground at a ramp lip: that is air
+	}
+	limit := leanSpin
+	if grounded {
+		limit = leanSpinGround
+	}
+	if w := l / inertia; w*r.Lean > limit {
 		return
 	}
 	k := r.Lean * leanAccel * dt
-	for _, b := range bs { // half strength with a wheel down: easier to balance
-		if b.OnGround {
-			k /= 2
-			break
-		}
+	if grounded { // half strength with a wheel down: easier to balance
+		k /= 2
 	}
 	for _, b := range bs {
 		d := b.Pos.Sub(c)
@@ -224,6 +252,7 @@ func (r *Run) Step(dt, throttle float64) {
 	r.lean(dt)
 	r.World.Step(dt)
 	r.stats(dt)
+	r.Stunts.Update(r.Rover, dt)
 	r.watchGaps((r.Rover.Center().X - r.lastC.X) / dt)
 	for i, b := range r.Rover.Bodies {
 		hit := b.OnGround && !b.Wheel

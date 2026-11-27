@@ -1,0 +1,29 @@
+{
+  "date": "2026-12-21",
+  "title": "Kicker flats",
+  "story": "Two launch ramps on the flats. Hit them fast, and see what you can do in the air.",
+  "reward": {
+    "credits": 4,
+    "free_retry": 1
+  },
+  "level": {
+    "id": 132,
+    "name": "Kicker Flats",
+    "blurb": "Firm ground and two ramps. Stunts pay on landing.",
+    "biome": "plains",
+    "length": 140,
+    "seed": 841,
+    "credits": 36,
+    "par": 27,
+    "hill": 0.8,
+    "traction": 1.0,
+    "mix": {
+      "soil": 4,
+      "bedrock": 1
+    },
+    "ramps": [
+      { "at": 0.3, "rise": 1.5, "run": 5, "fall": 3 },
+      { "at": 0.6, "rise": 2.5, "run": 6, "fall": 4 }
+    ]
+  }
+}

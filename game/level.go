@@ -36,6 +36,51 @@ type LevelDef struct {
 	MaxWidth int     // columns of the bay the lander can carry: a long rover will not fit
 	MaxParts int     // parts the lander can carry
 	MaxMotor int     // motor wheels the lander's power can drive
+
+	// Ramps are launch ramps for stunts, added after every other terrain
+	// feature so a level without them is unchanged (see Ramp).
+	Ramps []Ramp
+}
+
+// Ramp is a launch ramp: the ground climbs Rise metres over Run metres from a
+// foot at At (a fraction of the level's length), stays level for a moment at the
+// lip, then falls back to the ground over Fall metres, so a rover that arrives
+// with speed leaves the ground at the ramp's angle and lands on the way down.
+// It is added on top of the ground that is there, hills and all.
+type Ramp struct {
+	At   float64 // foot of the ramp, as a fraction of the level length
+	Rise float64 // metres gained by the lip
+	Run  float64 // metres from foot to lip
+	Fall float64 // metres from lip back down to the ground; 0 means DefaultRampFall
+}
+
+// DefaultRampFall is the landing slope's length when a ramp does not set one.
+const DefaultRampFall = 3.0
+
+// Foot, Lip and End are the ramp's x positions on a level of the given length.
+func (r Ramp) Foot(length float64) float64 { return math.Round(length*r.At/terrainDX) * terrainDX }
+func (r Ramp) Lip(length float64) float64  { return r.Foot(length) + r.Run }
+func (r Ramp) End(length float64) float64  { return r.Lip(length) + r.fall() }
+func (r Ramp) fall() float64 {
+	if r.Fall > 0 {
+		return r.Fall
+	}
+	return DefaultRampFall
+}
+
+// Angle is the launch angle in radians.
+func (r Ramp) Angle() float64 { return math.Atan2(r.Rise, r.Run) }
+
+// rampProfile is how far up the ramp (0..1) a point t of the way along it
+// stands: a rounded foot that turns into a straight slope, so the launch angle
+// is constant. Products are wrapped in float64() so no platform fuses them.
+func rampProfile(t float64) float64 {
+	const a = 0.2 // share of the ramp that is the rounded foot
+	const s = 1 / (1 - a/2)
+	if t < a {
+		return float64(float64(s*t) * t / (2 * a))
+	}
+	return float64(s*a/2) + float64(s*(t-a))
 }
 
 // BayWidth is how many grid columns the rover may use.
@@ -190,6 +235,21 @@ func BuildLevel(def LevelDef) *Level {
 				}
 			}
 			L.Gaps = append(L.Gaps, [2]float64{x0, x1})
+		}
+	}
+
+	// Launch ramps go last, on top of everything else, so adding one never
+	// moves any other feature of the level.
+	for _, rp := range def.Ramps {
+		x0, x1, x2 := rp.Foot(def.Length), rp.Lip(def.Length), rp.End(def.Length)
+		for i := range h {
+			x := -terrainPad + float64(i)*terrainDX
+			switch {
+			case x > x0 && x <= x1:
+				h[i] += float64(rp.Rise * rampProfile((x-x0)/rp.Run))
+			case x > x1 && x < x2:
+				h[i] += float64(rp.Rise * (1 - smooth((x-x1)/rp.fall())))
+			}
 		}
 	}
 

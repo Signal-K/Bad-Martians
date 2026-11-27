@@ -138,6 +138,7 @@ func legPoints(a, b engine.Vec2) []engine.Vec2 {
 func mapScene(g *engine.Game, _ any) *engine.Scene {
 	s := newScene()
 	prog := LoadProgress(g.Host)
+	tier := DisclosureTier(prog)
 	here := CurrentChapter(prog) // where the rover is parked
 	sel := here
 	if selChapter >= 0 && selChapter < len(Chapters) {
@@ -257,6 +258,9 @@ func mapScene(g *engine.Game, _ any) *engine.Scene {
 		r.Rect(viewL(), 0, viewR()-viewL(), rtTop, colTile.Alpha(215), true)
 		r.Rect(viewL(), rtTop-1, viewR()-viewL(), 2, colInk.Alpha(60), true)
 		r.Text("HAPHAZARD MARTIANS", 24, 8, 26, colInk, engine.AlignLeft)
+		if tier < TierLearning { // nothing to count yet
+			return
+		}
 		stars, total, won := 0, 0, 0
 		for _, lp := range prog.Levels {
 			stars += lp.Stars
@@ -279,9 +283,15 @@ func mapScene(g *engine.Game, _ any) *engine.Scene {
 		r.Rect(viewL(), mapPanel, viewR()-viewL(), 2, colInk.Alpha(60), true)
 		r.Text(fmt.Sprintf("Chapter %d of %d", sel+1, len(Chapters)), 24, mapPanel+10, sizeSmall, colNeon, engine.AlignLeft)
 		r.Text(c.Name, 24, mapPanel+28, 24, colInk, engine.AlignLeft)
-		r.Text(c.Blurb, 24, mapPanel+58, sizeSmall, colMuted, engine.AlignLeft)
+		blurb := c.Blurb
+		if tier < TierLearning {
+			blurb = firstSentence(blurb)
+		}
+		r.Text(blurb, 24, mapPanel+58, sizeSmall, colMuted, engine.AlignLeft)
 		var meta string
 		switch {
+		case tier < TierLearning && c.Unlocked(prog):
+			return
 		case !c.Unlocked(prog):
 			meta = fmt.Sprintf("Locked · win mission %d to reach it", c.First-1)
 		default:
@@ -294,77 +304,84 @@ func mapScene(g *engine.Game, _ any) *engine.Scene {
 	ent.Primary, ent.Icon = true, IconRight
 
 	// other ways to play, along the bottom
-	savedExpedition := LoadExpedition(g.Host)
-	expeditionLabel := fmt.Sprintf("Expedition · %d missions", len(ExpeditionLevels))
-	if savedExpedition != nil {
-		expeditionLabel = "Resume expedition"
-	}
-	ex := AddButton(s, 24, 466, 284, 60, expeditionLabel, func() {
+	if tier >= TierFull { // the expedition's one-budget economy comes last
+		savedExpedition := LoadExpedition(g.Host)
+		expeditionLabel := fmt.Sprintf("Expedition · %d missions", len(ExpeditionLevels))
 		if savedExpedition != nil {
-			g.Load(SceneBriefing, savedExpedition)
-		} else {
-			g.Load(SceneBriefing, NewExpedition())
+			expeditionLabel = "Resume expedition"
 		}
-	}).Pin(0, 1)
-	ex.Icon = IconRover
-	if m, ok, next := CurrentMission(); ok || next != nil {
-		label := "Daily mission"
-		if !ok {
-			m, label = *next, "Coming "+next.Date
-		}
-		dm := AddButton(s, 320, 466, 316, 60, label, func() {
-			Track(g.Host, EvDailyStarted, map[string]any{"date": m.Date, "level": m.Level.ID})
-			g.Load(SceneBuild, NewSessionFor(g.Host, BuildLevel(m.Level)))
-		}).Pin(0, 1)
-		dm.Disabled = !ok
-		dm.Custom = func(b *Button, r engine.Renderer) {
-			fill, ink, sub, line := colTile, colInk, colMuted, colInk
-			switch {
-			case b.Disabled:
-				line, ink, sub = colMuted.Alpha(90), colMuted.Alpha(120), colMuted.Alpha(100)
-			case b.Held:
-				fill, ink, sub = colInk, colTile, colTile
+		ex := AddButton(s, 24, 466, 284, 60, expeditionLabel, func() {
+			if savedExpedition != nil {
+				g.Load(SceneBriefing, savedExpedition)
+			} else {
+				g.Load(SceneBriefing, NewExpedition())
 			}
-			r.Rect(b.X, b.Y, b.W, b.H, fill, true)
-			outline(r, b.X, b.Y, b.W, b.H, line)
-			r.Text(label, b.X+14, b.Y+8, sizeSmall, colNeon, engine.AlignLeft)
-			r.Text(m.Title, b.X+14, b.Y+28, 18, ink, engine.AlignLeft)
-			r.Text(fmt.Sprintf("+%d build credits", m.Reward.Credits), b.X+b.W-14, b.Y+8, sizeSmall, sub, engine.AlignRight)
-			if m.FreeRetry > 0 && !prog.ClaimedMissions[m.Date] {
-				r.Text(fmt.Sprintf("+%d free retry on win", m.FreeRetry), b.X+b.W-14, b.Y+34, 11, sub, engine.AlignRight)
+		}).Pin(0, 1)
+		ex.Icon = IconRover
+	}
+	if tier >= TierLearning {
+		if m, ok, next := CurrentMission(); ok || next != nil {
+			label := "Daily mission"
+			if !ok {
+				m, label = *next, "Coming "+next.Date
+			}
+			dm := AddButton(s, 320, 466, 316, 60, label, func() {
+				Track(g.Host, EvDailyStarted, map[string]any{"date": m.Date, "level": m.Level.ID})
+				g.Load(SceneBuild, NewSessionFor(g.Host, BuildLevel(m.Level)))
+			}).Pin(0, 1)
+			dm.Disabled = !ok
+			dm.Custom = func(b *Button, r engine.Renderer) {
+				fill, ink, sub, line := colTile, colInk, colMuted, colInk
+				switch {
+				case b.Disabled:
+					line, ink, sub = colMuted.Alpha(90), colMuted.Alpha(120), colMuted.Alpha(100)
+				case b.Held:
+					fill, ink, sub = colInk, colTile, colTile
+				}
+				r.Rect(b.X, b.Y, b.W, b.H, fill, true)
+				outline(r, b.X, b.Y, b.W, b.H, line)
+				r.Text(label, b.X+14, b.Y+8, sizeSmall, colNeon, engine.AlignLeft)
+				r.Text(m.Title, b.X+14, b.Y+28, 18, ink, engine.AlignLeft)
+				r.Text(fmt.Sprintf("+%d build credits", m.Reward.Credits), b.X+b.W-14, b.Y+8, sizeSmall, sub, engine.AlignRight)
+				if m.FreeRetry > 0 && !prog.ClaimedMissions[m.Date] {
+					r.Text(fmt.Sprintf("+%d free retry on win", m.FreeRetry), b.X+b.W-14, b.Y+34, 11, sub, engine.AlignRight)
+				}
 			}
 		}
 	}
 	// Shape school and the style sheet are archived for the first release (MAR):
 	// their scenes and tests stay, but nothing on the map opens them.
-	acct := LoadAccount(g.Host)
-	label := "Account"
-	switch {
-	case acct.Username != "":
-		label = acct.Username
-	case acct.SignedIn:
-		label = "Set username"
-	case acct.Sync != SyncDemo:
-		label = "Sign in"
-	}
-	ac := AddButton(s, ScreenW-24-300, 466, 300, 60, clip(label, 18), func() { g.Load(SceneAccount, nil) }).Pin(0, 1)
-	ac.Icon = IconGear
-	ac.Custom = func(b *Button, r engine.Renderer) {
-		fill, ink, line := colTile, colInk, colInk
-		if b.Held {
-			fill, ink = colInk, colTile
+	if tier >= TierLearning {
+		acct := LoadAccount(g.Host)
+		label := "Account"
+		switch {
+		case acct.Username != "":
+			label = acct.Username
+		case acct.SignedIn:
+			label = "Set username"
+		case acct.Sync != SyncDemo:
+			label = "Sign in"
 		}
-		r.Rect(b.X, b.Y, b.W, b.H, fill, true)
-		outline(r, b.X, b.Y, b.W, b.H, line)
-		r.Text("Account", b.X+14, b.Y+8, sizeSmall, colNeon, engine.AlignLeft)
-		r.Text(clip(label, 18), b.X+14, b.Y+28, 18, ink, engine.AlignLeft)
-		text, good := acct.SyncLine(time.Now())
-		_ = text
-		dot := colWarn
-		if good {
-			dot = colGood
+		ac := AddButton(s, ScreenW-24-300, 466, 300, 60, clip(label, 18), func() { g.Load(SceneAccount, nil) }).Pin(0, 1)
+		ac.Icon = IconGear
+		ac.Custom = func(b *Button, r engine.Renderer) {
+			fill, ink, line := colTile, colInk, colInk
+			if b.Held {
+				fill, ink = colInk, colTile
+			}
+			r.Rect(b.X, b.Y, b.W, b.H, fill, true)
+			outline(r, b.X, b.Y, b.W, b.H, line)
+			r.Text("Account", b.X+14, b.Y+8, sizeSmall, colNeon, engine.AlignLeft)
+			r.Text(clip(label, 18), b.X+14, b.Y+28, 18, ink, engine.AlignLeft)
+			text, good := acct.SyncLine(time.Now())
+			_ = text
+			dot := colWarn
+			if good {
+				dot = colGood
+			}
+			r.Circle(engine.V(b.X+b.W-20, b.Y+b.H/2), 6, dot, true)
 		}
-		r.Circle(engine.V(b.X+b.W-20, b.Y+b.H/2), 6, dot, true)
+
 	}
 
 	s.OnUpdate = func(dt float64) {

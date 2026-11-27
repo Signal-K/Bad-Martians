@@ -31,6 +31,7 @@ func TestExpeditionBudgetAndCarryover(t *testing.T) {
 
 func TestExpeditionCheckpointResumeAndClear(t *testing.T) {
 	h := newHarness(t)
+	h.unlockAll()
 	e := NewExpedition()
 	e.Name = "Curiosity"
 	e.Finish(true, StarterDesign(), 700, 10, 14)
@@ -96,6 +97,7 @@ func TestExpeditionBayLimitsByCredits(t *testing.T) {
 
 func TestExpeditionOpensFromMenuThroughBriefing(t *testing.T) {
 	h := newHarness(t)
+	h.unlockAll()
 	h.g.Load(SceneMap, nil)
 	h.frames(2, engine.Input{})
 	h.clickButton("Expedition · 3 missions")

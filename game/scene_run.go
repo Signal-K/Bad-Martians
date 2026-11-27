@@ -19,6 +19,8 @@ func runScene(g *engine.Game, arg any) *engine.Scene {
 	ghost := LoadGhost(g.Host, lvl.ID)
 	rec := NewGhostRecorder(run)
 	inputs := &InputRecorder{} // replayed by the server to check a win (MAR-62)
+	var popups []stuntPopup    // tricks just landed, floating up from the rover
+	reported := false
 
 	ro := s.Spawn("rover")
 	ro.Layer = 5
@@ -75,6 +77,19 @@ func runScene(g *engine.Game, arg any) *engine.Scene {
 		name := runName()
 		r.Text(name, 146, 62, sizeSmall, colInk, engine.AlignLeft)
 		r.Text(state, 146+textW(name, sizeSmall)+14, 62, sizeSmall, sc, engine.AlignLeft)
+		if run.Stunts.Points > 0 {
+			r.Text(fmt.Sprintf("Stunts +%d", run.Stunts.Points), 830, 62, sizeSmall, colChipLt, engine.AlignRight)
+		}
+	})
+	// stunt callouts float over the rover: clear, brief, out of the way
+	AddDraw(s, 9, func(cam engine.Camera, r engine.Renderer) {
+		at := cam.ToScreen(run.Rover.Center())
+		for i, p := range popups {
+			k := p.age / StuntPopupSeconds
+			y := at.Y - 64 - 34*float64(i) - 36*k
+			col := colChipLt.Alpha(uint8(255 * (1 - k*k)))
+			r.Text(p.text, at.X, y, 22, col, engine.AlignCenter)
+		}
 	})
 	// the verdict, over the middle of the world
 	AddDraw(s, 10, func(_ engine.Camera, r engine.Renderer) {
@@ -269,6 +284,22 @@ func runScene(g *engine.Game, arg any) *engine.Scene {
 		run.Step(dt, th)
 		rec.Observe(run)
 		run.Debris(dt)
+		for _, st := range run.Stunts.Take() {
+			popups = append(popups, stuntPopup{text: st.Label()})
+		}
+		keep := popups[:0]
+		for _, p := range popups {
+			if p.age += dt; p.age < StuntPopupSeconds {
+				keep = append(keep, p)
+			}
+		}
+		popups = keep
+		if run.Outcome != Running && !reported {
+			reported = true
+			if run.Stunts.Points > 0 {
+				Track(g.Host, EvRunStunts, stuntProps(ses, run.Stunts))
+			}
+		}
 		if boom >= 0 {
 			boom += dt
 		}
@@ -286,7 +317,7 @@ func runScene(g *engine.Game, arg any) *engine.Scene {
 				}
 				g.Load(SceneResult, &ResultArg{Session: ses, Outcome: run.Outcome, Stars: run.Stars(), Cause: cause,
 					Time: run.Time, Samples: run.SamplesGot(), Total: len(run.Got), Score: run.Score(),
-					Distance: run.Progress() * (lvl.GoalX - lvl.StartX), TopSpeed: run.TopSpeed, MaxAir: run.MaxAir,
+					Distance: run.Progress() * (lvl.GoalX - lvl.StartX), TopSpeed: run.TopSpeed, MaxAir: run.MaxAir, Stunts: run.Stunts,
 					Damaged: run.Damaged(), Ghost: rec.Ghost(run.Time), Inputs: inputs.Encode()})
 			}
 		}

@@ -36,7 +36,9 @@ func launchScene(g *engine.Game, arg any) *engine.Scene {
 		if ses.Spare != "" {
 			r.Text(fmt.Sprintf("Salvaged %s from last mission: +%d credits", partName(ses.Spare), ses.SpareCredits()), 120, y+28, sizeSmall, colGood, engine.AlignLeft)
 		}
-		r.Text("Finish without scraping a frame or the mast to salvage a part.", 120, y+54, sizeSmall, colMuted, engine.AlignLeft)
+		if ses.Level.ID != LevelDefs[0].ID { // salvage is a rule for later missions
+			r.Text("Finish without scraping a frame or the mast to salvage a part.", 120, y+54, sizeSmall, colMuted, engine.AlignLeft)
+		}
 		r.Text("Tap the name to type it. Shuffle for another.", 120, y+78, sizeSmall, colMuted, engine.AlignLeft)
 	})
 
