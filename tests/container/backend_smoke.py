@@ -48,14 +48,21 @@ with tempfile.TemporaryDirectory(prefix='haphazard-pb-') as data:
             users.append((user['id'], auth['token']))
         uid, token = users[0]
         uid2, token2 = users[1]
-        run = {'user': uid, 'level': 1, 'won': True, 'stars': 2, 'time': 42, 'score': 700}
+        # Wins are replayed on the server (MAR-62), so these are real drives of the starter rover:
+        # recorded inputs, and the time, samples, stars and score the game computes for them.
+        design = json.loads('[{"x":0,"y":0,"k":"wheel"},{"x":1,"y":0,"k":"frame"},{"x":2,"y":0,"k":"frame"},{"x":3,"y":0,"k":"motor"},{"x":1,"y":1,"k":"frame"},{"x":2,"y":1,"k":"mast"}]')
+        def win(user, level, inputs, time, score):
+            return {'user': user, 'level': level, 'won': True, 'stars': 1, 'samples': 2, 'time': time,
+                    'score': score, 'cost': 11, 'design': design, 'inputs': inputs}
+        l1 = win(uid, 1, '/2QA/2QAkWQA', 24.6, 929)
+        run = l1
         request('/api/collections/hm_runs/records', 'POST', run, expected=400)
         request('/api/collections/hm_runs/records', 'POST', run, token=token2, expected=400)
         created = request('/api/collections/hm_runs/records', 'POST', run, token=token)
         assert created['user'] == uid
         assert any(row['id'] == created['id'] for row in request('/api/collections/hm_runs/records')['items'])
         filtered = request('/api/collections/hm_runs/records?filter=' + urllib.parse.quote(f'user = "{uid}"') + '&fields=level,won,stars,time,score')
-        assert filtered['totalItems'] == 1 and filtered['items'][0]['stars'] == 2 and filtered['items'][0]['time'] == 42
+        assert filtered['totalItems'] == 1 and filtered['items'][0]['stars'] == 1 and filtered['items'][0]['time'] == 24.6
         label = {'user': uid, 'level': 1, 'segment': 1, 'class': 'soil'}
         created_label = request('/api/collections/hm_labels/records', 'POST', label, token=token)
         assert created_label['user'] == uid
@@ -74,16 +81,19 @@ with tempfile.TemporaryDirectory(prefix='haphazard-pb-') as data:
         request('/api/collections/hm_profiles/records/' + mine['id'], 'PATCH', {'username': 'hijack'}, token=token2, expected=404)
         request('/api/collections/hm_profiles/records/' + mine['id'], 'PATCH', {'username': 'ann_99'}, token=token)
         # a second win on the same level with a lower score must not lower the best
-        request('/api/collections/hm_runs/records', 'POST', {'user': uid, 'level': 1, 'won': True, 'stars': 1, 'time': 90, 'score': 300}, token=token)
-        request('/api/collections/hm_runs/records', 'POST', {'user': uid, 'level': 2, 'won': True, 'stars': 3, 'time': 50, 'score': 900}, token=token)
-        request('/api/collections/hm_runs/records', 'POST', {'user': uid, 'level': 3, 'won': False, 'stars': 0, 'time': 5, 'score': 0}, token=token)
+        request('/api/collections/hm_runs/records', 'POST', win(uid, 2, '/2QA8WQA', 18.6, 1145), token=token)
+        request('/api/collections/hm_runs/records', 'POST', win(uid, 2, '/1oA/FoA', 19.0, 1137), token=token)
+        # forged: a perfect score with no drive behind it, and a real drive claiming a better score
+        request('/api/collections/hm_runs/records', 'POST', dict(win(uid, 2, '', 5.0, 5000)), token=token, expected=400)
+        request('/api/collections/hm_runs/records', 'POST', dict(win(uid, 2, '/1oA/FoA', 19.0, 1145)), token=token, expected=400)
+        request('/api/collections/hm_runs/records', 'POST', {'user': uid, 'level': 1, 'won': False, 'stars': 0, 'time': 5, 'score': 0, 'cost': 11, 'design': design}, token=token)
         board = request('/api/collections/hm_leaderboard/records?sort=-score')
         assert board['totalItems'] == 1, board
         row = board['items'][0]
-        assert row['username'] == 'ann_99' and row['score'] == 1600 and row['stars'] == 5 and row['missions'] == 2, row
+        assert row['username'] == 'ann_99' and row['score'] == 2074 and row['stars'] == 2 and row['missions'] == 2, row
         assert 'email' not in row and 'user' not in row
         # a player with no username is not on the board
-        request('/api/collections/hm_runs/records', 'POST', {'user': uid2, 'level': 1, 'won': True, 'stars': 3, 'time': 20, 'score': 5000}, token=token2)
+        request('/api/collections/hm_runs/records', 'POST', win(uid2, 1, '/2QA/2QAkWQA', 24.6, 929), token=token2)
         assert request('/api/collections/hm_leaderboard/records')['totalItems'] == 1
         print('PASS usernames: validation, uniqueness, ownership; leaderboard: best per mission, public, usernames only')
         print('PASS PocketBase health, embedded web/WASM, signup, auth, runs, label privacy and uniqueness')
